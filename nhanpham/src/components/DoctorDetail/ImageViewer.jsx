@@ -1,6 +1,9 @@
+import { useState } from 'react';
 import { ZoomIn, ZoomOut, Undo, Redo, PenTool } from 'lucide-react';
 
 export const ImageViewer = ({ image }) => {
+    const [sliceValue, setSliceValue] = useState(75);
+
     if (!image) {
         return (
             <div className="bg-[#1a1a1a] border border-white/10 rounded-xl flex items-center justify-center h-[calc(100vh-110px)]">
@@ -62,6 +65,53 @@ export const ImageViewer = ({ image }) => {
                     className="max-w-full max-h-full object-contain"
                 />
             </div>
+
+            {/* Bottom Slider */}
+            <div className="px-4 py-3 border-t border-white/10 bg-[#141414]">
+                <div className="flex items-center gap-4">
+                    {/* Slice Label */}
+                    <span className="text-xs text-gray-400 font-medium min-w-[70px]">
+                        Slice #{sliceValue}
+                    </span>
+
+                    {/* Slider */}
+                    <input
+                        type="range"
+                        min="0"
+                        max="150"
+                        value={sliceValue}
+                        onChange={(e) => setSliceValue(Number(e.target.value))}
+                        className="flex-1 h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer slider-thumb"
+                    />
+                </div>
+            </div>
+
+            {/* Slider Styles */}
+            <style jsx>{`
+                .slider-thumb::-webkit-slider-thumb {
+                    appearance: none;
+                    width: 14px;
+                    height: 14px;
+                    border-radius: 50%;
+                    background: #14b8a6;
+                    cursor: pointer;
+                    border: 2px solid #0f172a;
+                }
+                .slider-thumb::-moz-range-thumb {
+                    width: 14px;
+                    height: 14px;
+                    border-radius: 50%;
+                    background: #14b8a6;
+                    cursor: pointer;
+                    border: 2px solid #0f172a;
+                }
+                .slider-thumb::-webkit-slider-thumb:hover {
+                    background: #0d9488;
+                }
+                .slider-thumb::-moz-range-thumb:hover {
+                    background: #0d9488;
+                }
+            `}</style>
         </div>
     );
 };

@@ -47,6 +47,7 @@ export const DoctorDetail = () => {
                             imageGroups={medicalImagesGroups}
                             selectedImage={selectedImage}
                             onImageSelect={setSelectedImage}
+                            patient={patient}
                         />
                     </div>
 
@@ -79,8 +80,8 @@ export const DoctorDetail = () => {
                                                     setDropdownOpen(false);
                                                 }}
                                                 className={`w-full text-left px-4 py-2 text-sm transition-colors ${activeTab === 'analysis'
-                                                        ? 'bg-teal-500/20 text-teal-400'
-                                                        : 'text-gray-300 hover:bg-white/5'
+                                                    ? 'bg-teal-500/20 text-teal-400'
+                                                    : 'text-gray-300 hover:bg-white/5'
                                                     }`}
                                             >
                                                 Analysis
@@ -91,8 +92,8 @@ export const DoctorDetail = () => {
                                                     setDropdownOpen(false);
                                                 }}
                                                 className={`w-full text-left px-4 py-2 text-sm transition-colors rounded-b-lg ${activeTab === 'recommendations'
-                                                        ? 'bg-teal-500/20 text-teal-400'
-                                                        : 'text-gray-300 hover:bg-white/5'
+                                                    ? 'bg-teal-500/20 text-teal-400'
+                                                    : 'text-gray-300 hover:bg-white/5'
                                                     }`}
                                             >
                                                 Recommendations
