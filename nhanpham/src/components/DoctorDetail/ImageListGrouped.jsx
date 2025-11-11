@@ -46,7 +46,10 @@ export const ImageListGrouped = ({ imageGroups, selectedImage, onImageSelect }) 
                                         </p>
                                     </div>
                                 </div>
-                                <span className="text-xs px-2 py-0.5 bg-teal-500/20 text-teal-400 rounded-full border border-teal-500/30">
+                                <span className={`text-xs px-2 py-0.5 rounded-full border ${isExpanded(group.id)
+                                        ? 'bg-teal-500/20 text-teal-400 border-teal-500/30'
+                                        : 'bg-white/5 text-gray-400 border-white/10'
+                                    }`}>
                                     {group.images.length}
                                 </span>
                             </button>

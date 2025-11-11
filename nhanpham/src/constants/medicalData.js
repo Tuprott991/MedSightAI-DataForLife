@@ -143,6 +143,8 @@ export const generateAnalysisData = (patientDiagnosis) => ({
     { label: "Density", value: "145 HU", status: "normal" },
     { label: "Volume", value: "12.5 cm³", status: "warning" },
     { label: "Growth Rate", value: "+5% (30d)", status: "critical" },
+    { label: "Contrast Enhancement", value: "42 HU", status: "normal" },
+    { label: "Attenuation", value: "38 HU", status: "normal" },
   ],
   recommendations: [
     "Follow-up imaging in 3 months",

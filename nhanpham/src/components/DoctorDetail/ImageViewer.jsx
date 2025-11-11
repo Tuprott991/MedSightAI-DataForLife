@@ -1,4 +1,4 @@
-import { Calendar } from 'lucide-react';
+import { ZoomIn, ZoomOut, Undo, Redo, PenTool } from 'lucide-react';
 
 export const ImageViewer = ({ image }) => {
     if (!image) {
@@ -11,19 +11,45 @@ export const ImageViewer = ({ image }) => {
 
     return (
         <div className="bg-[#1a1a1a] border border-white/10 rounded-xl overflow-hidden flex flex-col h-[calc(100vh-110px)]">
-            {/* Header */}
-            <div className="px-4 py-3 border-b border-white/10 bg-[#141414]">
+            {/* Header with Control Buttons */}
+            <div className="px-4 py-2.5 border-b border-white/10 bg-[#141414]">
                 <div className="flex items-center justify-between">
-                    <h3 className="text-base font-semibold text-white">{image.type}</h3>
-                    <div className="flex items-center gap-3 mt-1">
-                        <span className="text-xs text-gray-400 flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            {new Date().toLocaleDateString()}
-                        </span>
-                        <span className="text-xs px-2 py-0.5 bg-teal-500/20 border border-teal-500/30 rounded text-teal-400">
-                            {image.modality}
-                        </span>
-                        <span className="text-xs text-gray-500">Code: {image.imageCode}</span>
+                    {/* Group 1: Zoom and History Controls */}
+                    <div className="flex items-center gap-1">
+                        <button className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors">
+                            <ZoomIn className="w-4 h-4" />
+                        </button>
+                        <button className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors">
+                            <ZoomOut className="w-4 h-4" />
+                        </button>
+                        <div className="w-px h-4 bg-white/10 mx-1"></div>
+                        <button className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors">
+                            <Undo className="w-4 h-4" />
+                        </button>
+                        <button className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors">
+                            <Redo className="w-4 h-4" />
+                        </button>
+                    </div>
+
+                    {/* Group 2: Viewing Modes */}
+                    <div className="flex items-center gap-1">
+                        <button className="px-2.5 py-1.5 text-xs text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors">
+                            MIP
+                        </button>
+                        <button className="px-2.5 py-1.5 text-xs text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors">
+                            MPR
+                        </button>
+                        <button className="px-2.5 py-1.5 text-xs text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors">
+                            qCT
+                        </button>
+                    </div>
+
+                    {/* Group 3: Annotate */}
+                    <div className="flex items-center gap-1">
+                        <button className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors">
+                            <PenTool className="w-3.5 h-3.5" />
+                            <span>Annotate</span>
+                        </button>
                     </div>
                 </div>
             </div>
