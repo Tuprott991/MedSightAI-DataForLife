@@ -79,12 +79,20 @@ export const DoctorDetail = () => {
                     </div>
 
                     {/* Right Column - AI Analysis (2/7) */}
-                    <div className="lg:col-span-2 h-[calc(100vh-180px)] overflow-y-auto custom-scrollbar">
-                        <div className="space-y-3">
-                            <AIConfidence confidence={analysisData.aiConfidence} />
-                            <KeyFindings findings={analysisData.findings} />
-                            <Measurements metrics={analysisData.metrics} />
-                            <Recommendations recommendations={analysisData.recommendations} />
+                    <div className="lg:col-span-2">
+                        <div className="bg-[#1a1a1a] border border-white/10 rounded-xl overflow-hidden h-[calc(100vh-180px)] flex flex-col">
+                            {/* Header */}
+                            <div className="px-4 py-3 border-b border-white/10 bg-[#141414]">
+                                <h3 className="text-base font-semibold text-white">AI Analysis Report</h3>
+                            </div>
+
+                            {/* Scrollable Content */}
+                            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4">
+                                <AIConfidence confidence={analysisData.aiConfidence} />
+                                <KeyFindings findings={analysisData.findings} />
+                                <Measurements metrics={analysisData.metrics} />
+                                <Recommendations recommendations={analysisData.recommendations} />
+                            </div>
                         </div>
                     </div>
                 </div>

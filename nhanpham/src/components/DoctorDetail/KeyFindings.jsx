@@ -15,11 +15,9 @@ const getSeverityColor = (severity) => {
 
 export const KeyFindings = ({ findings }) => {
     return (
-        <div className="bg-[#1a1a1a] border border-white/10 rounded-xl overflow-hidden flex flex-col">
-            <div className="px-4 py-3 border-b border-white/10 bg-[#141414]">
-                <h3 className="text-sm font-semibold text-white">Key Findings</h3>
-            </div>
-            <div className="p-3 space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
+        <div>
+            <h3 className="text-sm font-semibold text-white mb-3">Key Findings</h3>
+            <div className="space-y-2">
                 {findings.map((finding) => (
                     <div key={finding.id} className="p-2.5 bg-[#0f0f0f] rounded-lg border border-white/5 flex items-start gap-2">
                         <AlertCircle className={`w-4 h-4 mt-0.5 shrink-0 ${getSeverityColor(finding.severity)}`} />

@@ -2,7 +2,7 @@ import { Brain } from 'lucide-react';
 
 export const AIConfidence = ({ confidence }) => {
     return (
-        <div className="bg-[#1a1a1a] border border-white/10 rounded-xl p-4">
+        <div>
             <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold text-white flex items-center gap-2">
                     <Brain className="w-4 h-4 text-teal-500" />
