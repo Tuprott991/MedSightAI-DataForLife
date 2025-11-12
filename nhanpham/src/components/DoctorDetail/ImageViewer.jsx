@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { ZoomIn, ZoomOut, Undo, Redo, PenTool } from 'lucide-react';
+import { ZoomIn, ZoomOut, Undo, Redo, PenTool, PanelLeft, PanelLeftClose } from 'lucide-react';
+import { useSidebar } from '../layout';
 
 export const ImageViewer = ({ image }) => {
     const [sliceValue, setSliceValue] = useState(75);
+    const { isLeftCollapsed, setIsLeftCollapsed } = useSidebar();
 
     if (!image) {
         return (
@@ -17,8 +19,22 @@ export const ImageViewer = ({ image }) => {
             {/* Header with Control Buttons */}
             <div className="px-4 py-2.5 border-b border-white/10 bg-[#141414]">
                 <div className="flex items-center justify-between">
-                    {/* Group 1: Zoom and History Controls */}
+                    {/* Group 1: Toggle Sidebar + Zoom and History Controls */}
                     <div className="flex items-center gap-1">
+                        {/* Toggle Sidebar Button */}
+                        <button
+                            onClick={() => setIsLeftCollapsed(!isLeftCollapsed)}
+                            className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors"
+                            title={isLeftCollapsed ? "Show sidebar" : "Hide sidebar"}
+                        >
+                            {isLeftCollapsed ? (
+                                <PanelLeft className="w-4 h-4" />
+                            ) : (
+                                <PanelLeftClose className="w-4 h-4" />
+                            )}
+                        </button>
+                        <div className="w-px h-4 bg-white/10 mx-1"></div>
+
                         <button className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors">
                             <ZoomIn className="w-4 h-4" />
                         </button>

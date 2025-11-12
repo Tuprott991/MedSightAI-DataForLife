@@ -106,21 +106,6 @@ export const Layout = () => {
                                 </div>
                             ) : (
                                 <div className="flex items-center gap-3">
-                                    {/* Toggle Sidebar Button (only on doctor/student detail pages) */}
-                                    {(isDoctorDetail || isStudentDetail) && (
-                                        <button
-                                            onClick={() => setIsLeftCollapsed(!isLeftCollapsed)}
-                                            className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-                                            title={isLeftCollapsed ? "Show sidebar" : "Hide sidebar"}
-                                        >
-                                            {isLeftCollapsed ? (
-                                                <PanelLeft className="w-5 h-5" />
-                                            ) : (
-                                                <PanelLeftClose className="w-5 h-5" />
-                                            )}
-                                        </button>
-                                    )}
-
                                     {/* Settings */}
                                     <button className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
                                         <Settings className="w-5 h-5" />
