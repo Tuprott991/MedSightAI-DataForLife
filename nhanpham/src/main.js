@@ -1,6 +1,11 @@
 import { app, BrowserWindow } from "electron";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import started from "electron-squirrel-startup";
+
+// ES Module equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 if (started) {
   app.quit();
