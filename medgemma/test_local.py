@@ -1,4 +1,6 @@
 from generate_report import generate_clinical_report_from_path
+import os
+import traceback
 
 patient_metadata = {
     "patient_id": "P0001",
@@ -13,15 +15,21 @@ patient_metadata = {
     "source": "test",
     "bbox": "none",
     "target": "no",
-    "disease_type": "healthy",
+    "disease_type": "Healthy",
     "indication": "Evaluation of chest symptoms.",
     "comparison_info": "None",
 }
 
-image_path = r"Images\h0001.png"   # đổi path tùy máy bạn
+image_path = os.path.join("Images", "h0001.png")
 
-result = generate_clinical_report_from_path(image_path, patient_metadata)
+print(">>> Starting test_local.py")
+print(">>> Image path:", image_path)
 
-print("===== REPORT RESULT =====")
-for k, v in result.items():
-    print(k, ":", v)
+try:
+    result = generate_clinical_report_from_path(image_path, patient_metadata)
+    print("===== REPORT RESULT =====")
+    print("patient_metadata:", result["patient_metadata"])
+    print("radiology_report:", result["radiology_report"])
+except Exception:
+    print(">>> ERROR OCCURRED:")
+    traceback.print_exc()
