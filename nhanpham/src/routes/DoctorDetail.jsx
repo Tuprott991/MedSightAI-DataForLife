@@ -45,8 +45,8 @@ export const DoctorDetail = () => {
             <div className="container mx-auto px-6 pt-6 pb-4">
                 {/* Three Column Layout: 2:3:2 ratio (responsive based on collapse) */}
                 <div className={`grid grid-cols-1 gap-4 ${isLeftCollapsed
-                        ? 'lg:grid-cols-6'
-                        : 'lg:grid-cols-7'
+                    ? 'lg:grid-cols-6'
+                    : 'lg:grid-cols-7'
                     }`}>
 
                     {/* Left Column - Image List (2/7 or hidden when collapsed) */}
@@ -67,7 +67,10 @@ export const DoctorDetail = () => {
                             ? 'lg:col-span-4'
                             : 'lg:col-span-3'
                     }>
-                        <ImageViewer image={selectedImage} />
+                        <ImageViewer
+                            image={selectedImage}
+                            patientInfo={patient}
+                        />
                     </div>
 
                     {/* Right Column - AI Analysis (2/7) */}

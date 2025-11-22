@@ -5,3 +5,6 @@ export { AIConfidence } from "./AIConfidence";
 export { KeyFindings } from "./KeyFindings";
 export { Measurements } from "./Measurements";
 export { Recommendations } from "./Recommendations";
+export { SimilarCasesButton } from "./SimilarCasesButton";
+export { SimilarCasesModal } from "./SimilarCasesModal";
+export { SimilarCaseCard } from "./SimilarCaseCard";

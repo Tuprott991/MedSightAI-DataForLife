@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { ZoomIn, ZoomOut, Undo, Redo, PenTool, PanelLeft, PanelLeftClose } from 'lucide-react';
 import { useSidebar } from '../layout';
+import { SimilarCasesButton } from './SimilarCasesButton';
+import { SimilarCasesModal } from './SimilarCasesModal';
 
-export const ImageViewer = ({ image }) => {
+export const ImageViewer = ({ image, patientInfo }) => {
     const [sliceValue, setSliceValue] = useState(75);
+    const [isModalOpen, setIsModalOpen] = useState(false);
     const { isLeftCollapsed, setIsLeftCollapsed } = useSidebar();
 
     if (!image) {
@@ -50,18 +53,8 @@ export const ImageViewer = ({ image }) => {
                         </button>
                     </div>
 
-                    {/* Group 2: Viewing Modes */}
-                    <div className="flex items-center gap-1">
-                        <button className="px-2.5 py-1.5 text-xs text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors">
-                            MIP
-                        </button>
-                        <button className="px-2.5 py-1.5 text-xs text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors">
-                            MPR
-                        </button>
-                        <button className="px-2.5 py-1.5 text-xs text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors">
-                            qCT
-                        </button>
-                    </div>
+                    {/* Group 2: Similar Cases Button */}
+                    <SimilarCasesButton onClick={() => setIsModalOpen(true)} />
 
                     {/* Group 3: Annotate */}
                     <div className="flex items-center gap-1">
@@ -128,6 +121,14 @@ export const ImageViewer = ({ image }) => {
                     background: #0d9488;
                 }
             `}</style>
+
+            {/* Similar Cases Modal */}
+            <SimilarCasesModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                currentImage={image}
+                patientInfo={patientInfo}
+            />
         </div>
     );
 };
