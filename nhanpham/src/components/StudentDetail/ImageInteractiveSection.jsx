@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ZoomIn, ZoomOut, RotateCw, Maximize2, Download } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCw, Maximize2 } from 'lucide-react';
 
 export const ImageInteractiveSection = ({ caseData }) => {
     const [zoom, setZoom] = useState(100);
@@ -62,12 +62,6 @@ export const ImageInteractiveSection = ({ caseData }) => {
                             className="px-2.5 py-1.5 text-xs text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors"
                         >
                             Reset
-                        </button>
-                        <button className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors">
-                            <Maximize2 className="w-4 h-4" />
-                        </button>
-                        <button className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors">
-                            <Download className="w-4 h-4" />
                         </button>
                     </div>
                 </div>

@@ -68,7 +68,7 @@ export const StudentDetail = () => {
     }
 
     return (
-        <div className="h-screen bg-[#0a0a0a] text-white overflow-hidden flex flex-col">
+        <div className="h-[91vh] bg-[#0a0a0a] text-white overflow-hidden flex flex-col">
             {/* Main Content - Fixed Height */}
             <div className="flex-1 overflow-hidden min-h-0">
                 <div className="h-full px-6 py-6">
