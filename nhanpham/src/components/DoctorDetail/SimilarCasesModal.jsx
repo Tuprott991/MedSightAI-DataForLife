@@ -8,6 +8,13 @@ export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo }
     const [similarCases, setSimilarCases] = useState([]);
     const [selectedCase, setSelectedCase] = useState(null);
 
+    // Reset selected case when modal opens
+    useEffect(() => {
+        if (isOpen) {
+            setSelectedCase(null); // Reset selection when modal opens
+        }
+    }, [isOpen]);
+
     // Fetch similar cases when modal opens
     useEffect(() => {
         const fetchSimilarCases = async () => {
