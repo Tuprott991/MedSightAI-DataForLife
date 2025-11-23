@@ -91,10 +91,7 @@ export const ChatbotSection = () => {
                         className={`flex gap-3 ${message.type === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
                     >
                         {/* Avatar */}
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${message.type === 'bot'
-                                ? 'bg-teal-500/20 text-teal-500'
-                                : 'bg-blue-500/20 text-blue-400'
-                            }`}>
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-teal-500/20 text-teal-500`}>
                             {message.type === 'bot' ? (
                                 <Bot className="w-4 h-4" />
                             ) : (
@@ -105,8 +102,8 @@ export const ChatbotSection = () => {
                         {/* Message Bubble */}
                         <div className={`flex-1 max-w-[80%] ${message.type === 'user' ? 'text-right' : ''}`}>
                             <div className={`inline-block px-4 py-2 rounded-lg text-sm ${message.type === 'bot'
-                                    ? 'bg-white/5 text-gray-200 border border-white/10'
-                                    : 'bg-teal-500 text-white'
+                                ? 'bg-white/5 text-gray-200 border border-white/10'
+                                : 'bg-teal-500 text-white'
                                 }`}>
                                 {message.text}
                             </div>

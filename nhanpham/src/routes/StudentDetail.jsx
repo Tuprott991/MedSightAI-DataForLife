@@ -6,6 +6,7 @@ import {
     SubmitSection,
     ChatbotSection
 } from '../components/StudentDetail';
+import { Toast } from '../components/custom/Toast';
 
 export const StudentDetail = () => {
     const { id } = useParams();
@@ -13,6 +14,7 @@ export const StudentDetail = () => {
     const [caseData, setCaseData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [annotations, setAnnotations] = useState([]);
+    const [toast, setToast] = useState(null);
 
     // Simulate API call to fetch case data
     useEffect(() => {
@@ -49,6 +51,11 @@ export const StudentDetail = () => {
         console.log('Student submitted diagnosis:', submissionData);
         console.log('Annotations:', submissionData.annotations);
         // TODO: Send to API
+        return { success: true };
+    };
+
+    const showToast = (type, message) => {
+        setToast({ type, message });
     };
 
     if (!patient) {
@@ -75,14 +82,22 @@ export const StudentDetail = () => {
 
     return (
         <div className="h-[91vh] bg-[#0a0a0a] text-white overflow-hidden flex flex-col">
+            {/* Toast Notification */}
+            {toast && (
+                <Toast
+                    type={toast.type}
+                    message={toast.message}
+                    onClose={() => setToast(null)}
+                />
+            )}
             {/* Main Content - Fixed Height */}
             <div className="flex-1 overflow-hidden min-h-0">
                 <div className="h-full px-6 py-6">
                     {/* Two Column Layout */}
                     <div className="grid grid-cols-1 lg:grid-cols-7 gap-6 h-full max-w-[1600px] mx-auto">
 
-                        {/* Left Column - Image + Submit (4/7) */}
-                        <div className="lg:col-span-4 flex flex-col gap-4 h-full min-h-0">
+                        {/* Left Column - Image + Submit (5/7) */}
+                        <div className="lg:col-span-5 flex flex-col gap-4 h-full min-h-0">
                             {/* Image Interactive Section - Takes remaining space */}
                             <ImageInteractiveSection
                                 caseData={caseData}
@@ -93,11 +108,12 @@ export const StudentDetail = () => {
                             <SubmitSection
                                 onSubmit={handleSubmitDiagnosis}
                                 annotations={annotations}
+                                showToast={showToast}
                             />
                         </div>
 
-                        {/* Right Column - Chatbot (3/7) */}
-                        <div className="lg:col-span-3 h-full min-h-0">
+                        {/* Right Column - Chatbot (2/7) */}
+                        <div className="lg:col-span-2 h-full min-h-0">
                             <ChatbotSection />
                         </div>
                     </div>

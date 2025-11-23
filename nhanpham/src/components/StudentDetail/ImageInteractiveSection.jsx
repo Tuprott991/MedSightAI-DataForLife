@@ -186,8 +186,8 @@ export const ImageInteractiveSection = ({ caseData, onAnnotationsChange }) => {
                         <button
                             onClick={togglePanMode}
                             className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded transition-colors ${panMode
-                                    ? 'bg-blue-500 text-white'
-                                    : 'text-gray-400 hover:text-white hover:bg-white/10'
+                                ? 'bg-teal-500 text-white'
+                                : 'text-gray-400 hover:text-white hover:bg-white/10'
                                 }`}
                             title="Pan/Move Image"
                         >
@@ -198,8 +198,8 @@ export const ImageInteractiveSection = ({ caseData, onAnnotationsChange }) => {
                         <button
                             onClick={toggleDrawMode}
                             className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded transition-colors ${drawMode
-                                    ? 'bg-teal-500 text-white'
-                                    : 'text-gray-400 hover:text-white hover:bg-white/10'
+                                ? 'bg-teal-500 text-white'
+                                : 'text-gray-400 hover:text-white hover:bg-white/10'
                                 }`}
                             title="Draw Bounding Box"
                         >
@@ -260,8 +260,8 @@ export const ImageInteractiveSection = ({ caseData, onAnnotationsChange }) => {
                             key={index}
                             onClick={(e) => handleBoxClick(index, e)}
                             className={`absolute border-2 pointer-events-auto cursor-pointer transition-all ${selectedBoxIndex === index
-                                    ? 'border-yellow-400 shadow-lg'
-                                    : 'border-teal-500'
+                                ? 'border-yellow-400 shadow-lg'
+                                : 'border-teal-500'
                                 }`}
                             style={{
                                 left: box.x,

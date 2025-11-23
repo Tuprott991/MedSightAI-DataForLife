@@ -12,7 +12,7 @@ export const PatientCard = ({ patient }) => {
             case 'Under Treatment':
                 return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
             case 'Stable':
-                return 'bg-green-500/20 text-green-400 border-green-500/30';
+                return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
             default:
                 return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
         }
@@ -21,7 +21,7 @@ export const PatientCard = ({ patient }) => {
     return (
         <div className="group bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden hover:bg-white/10 hover:border-teal-500/50 transition-all duration-300 hover:transform hover:scale-105 cursor-pointer">
             {/* Patient Image */}
-            <div className="relative h-48 overflow-hidden bg-linear-to-br from-teal-500/20 to-blue-500/20">
+            <div className="relative h-48 overflow-hidden bg-linear-to-br from-teal-500/20 to-emerald-500/20">
                 <img
                     src={patient.image}
                     alt={patient.name}

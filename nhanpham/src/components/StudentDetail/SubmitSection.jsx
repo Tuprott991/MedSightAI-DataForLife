@@ -1,13 +1,12 @@
 import { useState } from 'react';
-import { Send, CheckCircle2 } from 'lucide-react';
+import { Send } from 'lucide-react';
 
-export const SubmitSection = ({ onSubmit, annotations = [] }) => {
+export const SubmitSection = ({ onSubmit, annotations = [], showToast }) => {
     const [diagnosis, setDiagnosis] = useState('');
-    const [submitted, setSubmitted] = useState(false);
 
     const handleSubmit = () => {
         if (!diagnosis.trim()) {
-            alert('Please enter a diagnosis');
+            showToast?.('error', 'Please enter a diagnosis');
             return;
         }
 
@@ -17,11 +16,17 @@ export const SubmitSection = ({ onSubmit, annotations = [] }) => {
             timestamp: new Date().toISOString()
         };
 
-        onSubmit?.(submissionData);
-        setSubmitted(true);
-
-        // Reset after 3 seconds
-        setTimeout(() => setSubmitted(false), 3000);
+        try {
+            const result = onSubmit?.(submissionData);
+            if (result?.success !== false) {
+                showToast?.('success', 'Diagnosis submitted successfully!');
+                setDiagnosis('');
+            } else {
+                showToast?.('error', 'Failed to submit diagnosis. Please try again.');
+            }
+        } catch (error) {
+            showToast?.('error', 'Failed to submit diagnosis. Please try again.');
+        }
     };
 
     return (
@@ -46,23 +51,10 @@ export const SubmitSection = ({ onSubmit, annotations = [] }) => {
                     {/* Submit Button */}
                     <button
                         onClick={handleSubmit}
-                        disabled={submitted}
-                        className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all shrink-0 ${submitted
-                            ? 'bg-green-500 text-white cursor-not-allowed'
-                            : 'bg-teal-500 hover:bg-teal-600 text-white'
-                            }`}
+                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all shrink-0 bg-teal-500 hover:bg-teal-600 text-white"
                     >
-                        {submitted ? (
-                            <>
-                                <CheckCircle2 className="w-4 h-4" />
-                                <span>Submitted!</span>
-                            </>
-                        ) : (
-                            <>
-                                <Send className="w-4 h-4" />
-                                <span>Submit</span>
-                            </>
-                        )}
+                        <Send className="w-4 h-4" />
+                        <span>Submit</span>
                     </button>
                 </div>
             </div>
