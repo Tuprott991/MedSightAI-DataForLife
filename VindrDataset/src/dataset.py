@@ -79,8 +79,19 @@ class VinDrClassifierDataset(Dataset):
         img_id = self.image_ids[idx]
 
         # 1. Đọc ảnh (Dùng hàm read_dicom hoặc cv2 như cũ)
-        # ... (Code đọc ảnh giữ nguyên) ...
         # Giả sử ta có biến 'image' (H_orig, W_orig, 3)
+        img_id = self.image_ids[idx]
+
+        # --- SỬA ĐỔI ĐƯỜNG DẪN ---
+        # Kiểm tra file có đuôi .dicom hay không có đuôi
+        dicom_path = os.path.join(self.image_dir, f"{img_id}.dicom")
+        if not os.path.exists(dicom_path):
+            # Thử trường hợp file không có đuôi (một số dataset Kaggle như vậy)
+            dicom_path = os.path.join(self.image_dir, f"{img_id}")
+
+        # Đọc ảnh bằng hàm custom
+        image = self.read_dicom(dicom_path)
+
         h_orig, w_orig = image.shape[:2]
 
         # 2. Tạo Mask và Label Vector
