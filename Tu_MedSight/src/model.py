@@ -233,7 +233,8 @@ class MedicalConceptModel(nn.Module):
         # compute dot_all[k_query,k_proto] = <v_proj[:,k_query,:], p[k_proto,m,:]> -> result (B, K_query, K_proto, M)
         # We can use einsum
         # v_proj: (B, Kq, P), prot: (Kp, M, P) -> dots_all: (B, Kq, Kp, M)
-        dots_all = torch.einsum("bkp,kmp->bkkm", v_proj, prot)  # (B, K, K, M)
+        # Use different letters for query and proto: bip,jmp->bijm
+        dots_all = torch.einsum("bip,jmp->bijm", v_proj, prot)  # (B, K, K, M)
 
         # compute q' assignment over M for each (B, Kq, Kp)
         # q'_m = softmax_m( gamma * dots_all )
