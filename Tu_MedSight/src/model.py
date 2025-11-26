@@ -252,10 +252,14 @@ class MedicalConceptModel(nn.Module):
 
         # numerator:
         # Extract diagonal: for each batch b and concept i, take sim_all[b, i, i]
+        # sim_all shape: (B, K_query, K_proto)
         pos_sim = torch.diagonal(sim_all, dim1=1, dim2=2).transpose(0, 1)  # (B, K)
-        # pos_sim equals sim_k most of the time
+        
+        # denominator: sum over all K_proto concepts (dim=2)
+        # sim_all: (B, K_query, K_proto) -> sum over K_proto -> (B, K_query)
         numer = torch.exp(lambda_ * (pos_sim + delta))  # (B, K)
-        denom = torch.exp(lambda_ * sim_all).sum(dim=-1)  # (B, K)
+        denom = torch.exp(lambda_ * sim_all).sum(dim=2)  # (B, K) - sum over K_proto dimension
+        
         loss_matrix = -torch.log((numer + 1e-12) / (denom + 1e-12))  # (B, K)
         loss = loss_matrix.mean()
         return loss
