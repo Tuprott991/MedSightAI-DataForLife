@@ -5,6 +5,8 @@ from PIL import Image
 import torch
 from torch.utils.data import Dataset
 from torchvision import transforms
+import pydicom
+import cv2
 
 
 class VinDrCXRDataset(Dataset):
@@ -103,17 +105,47 @@ class VinDrCXRDataset(Dataset):
     def __len__(self):
         return len(self.image_ids)
     
+    def read_dicom(self, path):
+        """Read and process DICOM image."""
+        try:
+            dcm = pydicom.dcmread(path)
+            image = dcm.pixel_array
+            
+            # Handle Photometric Interpretation (invert if MONOCHROME1)
+            if hasattr(dcm, 'PhotometricInterpretation'):
+                if dcm.PhotometricInterpretation == 'MONOCHROME1':
+                    image = np.amax(image) - image
+            
+            # Normalize to 0-255 (uint8)
+            image = image - np.min(image)
+            image = image / (np.max(image) + 1e-8)
+            image = (image * 255).astype(np.uint8)
+            
+            # Convert grayscale to RGB
+            if len(image.shape) == 2:
+                image = np.stack([image] * 3, axis=-1)
+            
+            # Convert to PIL Image
+            return Image.fromarray(image)
+        except Exception as e:
+            print(f"Error reading DICOM {path}: {e}")
+            # Return black image if error
+            return Image.fromarray(np.zeros((512, 512, 3), dtype=np.uint8))
+    
     def __getitem__(self, idx):
         # Get image ID
         image_id = self.image_ids[idx]
         
-        # Load image
-        image_path = os.path.join(self.image_dir, f'{image_id}.png')
+        # Load DICOM image
+        # Try multiple file extensions
+        image_path = os.path.join(self.image_dir, f'{image_id}.dicom')
         if not os.path.exists(image_path):
-            # Try .jpg extension
-            image_path = os.path.join(self.image_dir, f'{image_id}.jpg')
+            image_path = os.path.join(self.image_dir, f'{image_id}.dcm')
+        if not os.path.exists(image_path):
+            # Try without extension (some datasets store DICOM without extension)
+            image_path = os.path.join(self.image_dir, f'{image_id}')
         
-        image = Image.open(image_path).convert('RGB')
+        image = self.read_dicom(image_path)
         original_size = image.size  # (width, height)
         
         # Apply transforms

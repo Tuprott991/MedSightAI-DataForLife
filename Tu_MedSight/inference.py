@@ -76,31 +76,38 @@ class MedicalConceptInference:
         if isinstance(image_path, Image.Image):
             image = image_path.convert('RGB')
         elif isinstance(image_path, str):
-            # Check if DICOM
-            if image_path.lower().endswith('.dcm') or image_path.lower().endswith('.dicom'):
+            # Try loading as DICOM first (most common for medical images)
+            try:
+                dcm = pydicom.dcmread(image_path)
+                pixel_array = dcm.pixel_array
+                
+                # Handle Photometric Interpretation (invert if MONOCHROME1)
+                if hasattr(dcm, 'PhotometricInterpretation'):
+                    if dcm.PhotometricInterpretation == 'MONOCHROME1':
+                        pixel_array = np.amax(pixel_array) - pixel_array
+                
+                # Normalize to 0-255
+                pixel_array = pixel_array - np.min(pixel_array)
+                pixel_array = pixel_array / (np.max(pixel_array) + 1e-8) * 255
+                pixel_array = pixel_array.astype(np.uint8)
+                
+                # Convert to RGB
+                if len(pixel_array.shape) == 2:
+                    pixel_array = np.stack([pixel_array] * 3, axis=-1)
+                
+                image = Image.fromarray(pixel_array)
+            except Exception as e:
+                # Fallback to regular image loading (PNG, JPG)
                 try:
-                    dcm = pydicom.dcmread(image_path)
-                    pixel_array = dcm.pixel_array
-                    
-                    # Normalize to 0-255
-                    pixel_array = pixel_array - np.min(pixel_array)
-                    pixel_array = pixel_array / np.max(pixel_array) * 255
-                    pixel_array = pixel_array.astype(np.uint8)
-                    
-                    # Convert to RGB
-                    if len(pixel_array.shape) == 2:
-                        pixel_array = cv2.cvtColor(pixel_array, cv2.COLOR_GRAY2RGB)
-                    
-                    image = Image.fromarray(pixel_array)
-                except Exception as e:
-                    print(f"[Warning] Failed to load DICOM: {e}, trying as regular image")
                     image = Image.open(image_path).convert('RGB')
-            else:
-                image = Image.open(image_path).convert('RGB')
+                except Exception as e2:
+                    print(f"[Error] Failed to load image: {e}, {e2}")
+                    # Return black image
+                    image = Image.fromarray(np.zeros((512, 512, 3), dtype=np.uint8))
         else:
             # Assume numpy array
             if len(image_path.shape) == 2:
-                image_path = cv2.cvtColor(image_path, cv2.COLOR_GRAY2RGB)
+                image_path = np.stack([image_path] * 3, axis=-1)
             image = Image.fromarray(image_path.astype(np.uint8))
         
         return image
