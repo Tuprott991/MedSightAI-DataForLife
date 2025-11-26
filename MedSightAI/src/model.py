@@ -8,13 +8,14 @@ class MedicalConceptModel(nn.Module):
     def __init__(
         self,
         model_name="chiphuyen/med-siglip",  # Hoặc tên model bạn dùng trên HF
-        num_concepts=1,  # TBX11K tập trung vào TB -> 1 concept chính
+        num_concepts=12 ,  # VinDR CXR có 14 loại, để 13 vì bỏ loại "No Finding"
+        num_class= 0, # Không dùng classifier trong retrieval
         feature_dim=768,  # Hidden size của ViT Base
         projection_dim=128,
     ):  # Kích thước vector để retrieval
         super().__init__()
 
-        print(f"Initializing Backbone: {model_name}...")
+        print(f"Initializing Backbone: {model_name}...")x   
 
         # 1. Backbone (MedSigLIP Image Encoder)
         # Load model pre-trained từ HuggingFace
@@ -35,7 +36,6 @@ class MedicalConceptModel(nn.Module):
             nn.Conv2d(256, num_concepts, kernel_size=1),
             nn.Sigmoid(),  # Ép giá trị về [0, 1] để làm Mask
         )
-
         # 3. Projector (The Retrieval Block)
         # Chiếu vector đặc trưng sang không gian nhỏ hơn để so sánh cosine
         self.projector = nn.Sequential(
@@ -46,7 +46,7 @@ class MedicalConceptModel(nn.Module):
 
         # 4. Classifier (Optional but Recommended)
         # Dùng vector đặc trưng để đưa ra kết luận cuối cùng (Có bệnh/Không bệnh)
-        self.classifier = nn.Linear(feature_dim, 1)
+        self.classifier = nn.Linear(feature_dim, num_class)
 
     def forward(self, x):
         """
