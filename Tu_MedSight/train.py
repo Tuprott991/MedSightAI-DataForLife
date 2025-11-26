@@ -7,8 +7,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, DistributedSampler
 from torch.utils.tensorboard import SummaryWriter
+from torch.nn.parallel import DistributedDataParallel as DDP
+import torch.distributed as dist
 from tqdm import tqdm
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score,
@@ -27,26 +29,46 @@ from src.dataset import VinDrCXRDataset, get_default_transforms, collate_fn_with
 class ModelTrainer:
     def __init__(self, config):
         self.config = config
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        print(f"[Trainer] Using device: {self.device}")
         
-        # Create output directories
-        self.output_dir = os.path.join('outputs', config['exp_name'])
-        self.checkpoint_dir = os.path.join(self.output_dir, 'checkpoints')
-        self.log_dir = os.path.join(self.output_dir, 'logs')
-        os.makedirs(self.checkpoint_dir, exist_ok=True)
-        os.makedirs(self.log_dir, exist_ok=True)
+        # Initialize distributed training
+        self.is_distributed = config.get('distributed', False)
+        if self.is_distributed:
+            self.setup_distributed()
         
-        # Save config
-        with open(os.path.join(self.output_dir, 'config.json'), 'w') as f:
-            json.dump(config, f, indent=2)
+        self.device = torch.device(f'cuda:{self.local_rank}' if torch.cuda.is_available() else 'cpu')
         
-        # TensorBoard writer
-        self.writer = SummaryWriter(self.log_dir)
+        if self.is_main_process:
+            print(f"[Trainer] Using device: {self.device}")
+            if self.is_distributed:
+                print(f"[Trainer] Distributed training on {self.world_size} GPUs")
+        
+        # Create output directories (only on main process)
+        if self.is_main_process:
+            self.output_dir = os.path.join('outputs', config['exp_name'])
+            self.checkpoint_dir = os.path.join(self.output_dir, 'checkpoints')
+            self.log_dir = os.path.join(self.output_dir, 'logs')
+            os.makedirs(self.checkpoint_dir, exist_ok=True)
+            os.makedirs(self.log_dir, exist_ok=True)
+            
+            # Save config
+            with open(os.path.join(self.output_dir, 'config.json'), 'w') as f:
+                json.dump(config, f, indent=2)
+            
+            # TensorBoard writer
+            self.writer = SummaryWriter(self.log_dir)
         
         # Initialize model
         self.model = self._build_model()
         self.model.to(self.device)
+        
+        # Wrap with DDP if distributed
+        if self.is_distributed:
+            self.model = DDP(
+                self.model,
+                device_ids=[self.local_rank],
+                output_device=self.local_rank,
+                find_unused_parameters=False
+            )
         
         # Initialize datasets
         self.train_loader, self.val_loader = self._build_dataloaders()
@@ -63,8 +85,38 @@ class ModelTrainer:
         self.best_val_auc = 0.0
         self.best_epoch = 0
         
-        print(f"[Trainer] Initialized successfully")
-        print(f"[Trainer] Output directory: {self.output_dir}")
+        if self.is_main_process:
+            print(f"[Trainer] Initialized successfully")
+            print(f"[Trainer] Output directory: {self.output_dir}")
+    
+    def setup_distributed(self):
+        """Setup distributed training environment."""
+        # Get rank and world size from environment variables set by torchrun
+        self.local_rank = int(os.environ.get('LOCAL_RANK', 0))
+        self.global_rank = int(os.environ.get('RANK', 0))
+        self.world_size = int(os.environ.get('WORLD_SIZE', 1))
+        
+        # Initialize process group
+        dist.init_process_group(
+            backend='nccl',  # Use NCCL for GPU
+            init_method='env://',
+        )
+        
+        # Set device
+        torch.cuda.set_device(self.local_rank)
+        
+        self.is_main_process = (self.global_rank == 0)
+    
+    @property
+    def is_main_process(self):
+        """Check if current process is main process."""
+        if not self.is_distributed:
+            return True
+        return self._is_main_process
+    
+    @is_main_process.setter
+    def is_main_process(self, value):
+        self._is_main_process = value
     
     def _build_model(self):
         """Build the medical concept model."""
@@ -82,8 +134,10 @@ class ModelTrainer:
         
         num_params = sum(p.numel() for p in model.parameters())
         num_trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
-        print(f"[Model] Total parameters: {num_params:,}")
-        print(f"[Model] Trainable parameters: {num_trainable:,}")
+        
+        if self.is_main_process:
+            print(f"[Model] Total parameters: {num_params:,}")
+            print(f"[Model] Trainable parameters: {num_trainable:,}")
         
         return model
     
@@ -124,10 +178,31 @@ class ModelTrainer:
         self.num_concepts = train_dataset.num_concepts
         self.num_diseases = train_dataset.num_diseases
         
+        # Create samplers for distributed training
+        if self.is_distributed:
+            train_sampler = DistributedSampler(
+                train_dataset,
+                num_replicas=self.world_size,
+                rank=self.global_rank,
+                shuffle=True,
+                drop_last=True
+            )
+            val_sampler = DistributedSampler(
+                val_dataset,
+                num_replicas=self.world_size,
+                rank=self.global_rank,
+                shuffle=False,
+                drop_last=False
+            )
+        else:
+            train_sampler = None
+            val_sampler = None
+        
         train_loader = DataLoader(
             train_dataset,
             batch_size=self.config['batch_size'],
-            shuffle=True,
+            shuffle=(train_sampler is None),
+            sampler=train_sampler,
             num_workers=self.config['num_workers'],
             pin_memory=True,
             collate_fn=collate_fn_with_boxes,
@@ -137,13 +212,15 @@ class ModelTrainer:
             val_dataset,
             batch_size=self.config['batch_size'],
             shuffle=False,
+            sampler=val_sampler,
             num_workers=self.config['num_workers'],
             pin_memory=True,
             collate_fn=collate_fn_with_boxes,
         )
         
-        print(f"[Data] Train samples: {len(train_dataset)}")
-        print(f"[Data] Val samples: {len(val_dataset)}")
+        if self.is_main_process:
+            print(f"[Data] Train samples: {len(train_dataset)}")
+            print(f"[Data] Val samples: {len(val_dataset)}")
         
         return train_loader, val_loader
     
@@ -153,7 +230,10 @@ class ModelTrainer:
         backbone_params = []
         other_params = []
         
-        for name, param in self.model.named_parameters():
+        # Get model without DDP wrapper
+        model = self.model.module if self.is_distributed else self.model
+        
+        for name, param in model.named_parameters():
             if not param.requires_grad:
                 continue
             if 'backbone' in name:
@@ -223,7 +303,9 @@ class ModelTrainer:
         if concept_mask.sum() > 0:
             # Only compute contrastive loss for positive concepts
             # Extract positive concept vectors
-            contrastive_loss = self.model.contrastive_loss(v_local)
+            # Get model without DDP wrapper for contrastive_loss
+            model = self.model.module if self.is_distributed else self.model
+            contrastive_loss = model.contrastive_loss(v_local)
         else:
             contrastive_loss = torch.tensor(0.0, device=self.device)
         
@@ -300,6 +382,10 @@ class ModelTrainer:
         """Train for one epoch."""
         self.model.train()
         
+        # Set epoch for distributed sampler
+        if self.is_distributed:
+            self.train_loader.sampler.set_epoch(epoch)
+        
         total_loss = 0.0
         total_class_loss = 0.0
         total_contrastive_loss = 0.0
@@ -308,7 +394,11 @@ class ModelTrainer:
         all_labels = []
         all_probs = []
         
-        pbar = tqdm(self.train_loader, desc=f'Epoch {epoch}/{self.config["epochs"]}')
+        # Only show progress bar on main process
+        if self.is_main_process:
+            pbar = tqdm(self.train_loader, desc=f'Epoch {epoch}/{self.config["epochs"]}')
+        else:
+            pbar = self.train_loader
         
         for batch_idx, batch in enumerate(pbar):
             images = batch['images'].to(self.device)
@@ -356,12 +446,13 @@ class ModelTrainer:
                 all_labels.append(target.cpu().numpy())
                 all_probs.append(probs.cpu().numpy())
             
-            # Update progress bar
-            pbar.set_postfix({
-                'loss': f'{loss.item():.4f}',
-                'cls': f'{losses["class_loss"].item():.4f}',
-                'con': f'{losses["contrastive_loss"].item():.4f}',
-            })
+            # Update progress bar (only on main process)
+            if self.is_main_process:
+                pbar.set_postfix({
+                    'loss': f'{loss.item():.4f}',
+                    'cls': f'{losses["class_loss"].item():.4f}',
+                    'con': f'{losses["contrastive_loss"].item():.4f}',
+                })
         
         # Compute epoch metrics
         avg_loss = total_loss / len(self.train_loader)
@@ -392,7 +483,11 @@ class ModelTrainer:
         all_labels = []
         all_probs = []
         
-        pbar = tqdm(self.val_loader, desc='Validation')
+        # Only show progress bar on main process
+        if self.is_main_process:
+            pbar = tqdm(self.val_loader, desc='Validation')
+        else:
+            pbar = self.val_loader
         
         for batch in pbar:
             images = batch['images'].to(self.device)
@@ -440,10 +535,16 @@ class ModelTrainer:
         return metrics
     
     def save_checkpoint(self, epoch, metrics, is_best=False):
-        """Save model checkpoint."""
+        """Save model checkpoint (only on main process)."""
+        if not self.is_main_process:
+            return
+        
+        # Get model state dict without DDP wrapper
+        model_state_dict = self.model.module.state_dict() if self.is_distributed else self.model.state_dict()
+        
         checkpoint = {
             'epoch': epoch,
-            'model_state_dict': self.model.state_dict(),
+            'model_state_dict': model_state_dict,
             'optimizer_state_dict': self.optimizer.state_dict(),
             'scheduler_state_dict': self.scheduler.state_dict(),
             'metrics': metrics,
@@ -469,9 +570,10 @@ class ModelTrainer:
     
     def train(self):
         """Main training loop."""
-        print("\n" + "=" * 80)
-        print("Starting Training")
-        print("=" * 80)
+        if self.is_main_process:
+            print("\n" + "=" * 80)
+            print("Starting Training")
+            print("=" * 80)
         
         for epoch in range(1, self.config['epochs'] + 1):
             # Train
@@ -483,40 +585,46 @@ class ModelTrainer:
             # Update scheduler
             self.scheduler.step()
             
-            # Log metrics
-            all_metrics = {**train_metrics, **val_metrics}
-            for key, value in all_metrics.items():
-                if isinstance(value, (int, float)):
-                    self.writer.add_scalar(key, value, epoch)
-            
-            # Log learning rate
-            current_lr = self.optimizer.param_groups[0]['lr']
-            self.writer.add_scalar('lr', current_lr, epoch)
-            
-            # Print summary
-            print(f"\nEpoch {epoch}/{self.config['epochs']}:")
-            print(f"  Train - Loss: {train_metrics['train_loss']:.4f}, "
-                  f"AUC: {train_metrics.get('train_auc_macro', 0):.4f}, "
-                  f"F1: {train_metrics.get('train_f1_macro', 0):.4f}")
-            print(f"  Val   - Loss: {val_metrics['val_loss']:.4f}, "
-                  f"AUC: {val_metrics.get('val_auc_macro', 0):.4f}, "
-                  f"F1: {val_metrics.get('val_f1_macro', 0):.4f}")
-            print(f"  LR: {current_lr:.6f}")
-            
-            # Save checkpoint
-            is_best = val_metrics.get('val_auc_macro', 0) > self.best_val_auc
-            if is_best:
-                self.best_val_auc = val_metrics.get('val_auc_macro', 0)
-                self.best_epoch = epoch
-            
-            self.save_checkpoint(epoch, all_metrics, is_best=is_best)
+            # Log metrics (only on main process)
+            if self.is_main_process:
+                all_metrics = {**train_metrics, **val_metrics}
+                for key, value in all_metrics.items():
+                    if isinstance(value, (int, float)):
+                        self.writer.add_scalar(key, value, epoch)
+                
+                # Log learning rate
+                current_lr = self.optimizer.param_groups[0]['lr']
+                self.writer.add_scalar('lr', current_lr, epoch)
+                
+                # Print summary
+                print(f"\nEpoch {epoch}/{self.config['epochs']}:")
+                print(f"  Train - Loss: {train_metrics['train_loss']:.4f}, "
+                      f"AUC: {train_metrics.get('train_auc_macro', 0):.4f}, "
+                      f"F1: {train_metrics.get('train_f1_macro', 0):.4f}")
+                print(f"  Val   - Loss: {val_metrics['val_loss']:.4f}, "
+                      f"AUC: {val_metrics.get('val_auc_macro', 0):.4f}, "
+                      f"F1: {val_metrics.get('val_f1_macro', 0):.4f}")
+                print(f"  LR: {current_lr:.6f}")
+                
+                # Save checkpoint
+                is_best = val_metrics.get('val_auc_macro', 0) > self.best_val_auc
+                if is_best:
+                    self.best_val_auc = val_metrics.get('val_auc_macro', 0)
+                    self.best_epoch = epoch
+                
+                self.save_checkpoint(epoch, all_metrics, is_best=is_best)
         
-        print("\n" + "=" * 80)
-        print("Training Completed!")
-        print(f"Best Val AUC: {self.best_val_auc:.4f} at epoch {self.best_epoch}")
-        print("=" * 80)
+        if self.is_main_process:
+            print("\n" + "=" * 80)
+            print("Training Completed!")
+            print(f"Best Val AUC: {self.best_val_auc:.4f} at epoch {self.best_epoch}")
+            print("=" * 80)
+            
+            self.writer.close()
         
-        self.writer.close()
+        # Cleanup distributed
+        if self.is_distributed:
+            dist.destroy_process_group()
 
 
 def main():
@@ -585,7 +693,14 @@ def main():
     parser.add_argument('--save_freq', type=int, default=10,
                         help='Save checkpoint every N epochs')
     
+    # Distributed training (automatically set by torchrun)
+    parser.add_argument('--local_rank', type=int, default=-1,
+                        help='Local rank for distributed training (set by torchrun)')
+    
     args = parser.parse_args()
+    
+    # Check if running with torchrun (distributed)
+    args.distributed = (int(os.environ.get('WORLD_SIZE', 1)) > 1)
     
     # Generate experiment name if not provided
     if args.exp_name is None:
@@ -595,13 +710,14 @@ def main():
     # Convert args to config dict
     config = vars(args)
     
-    # Print config
-    print("\n" + "=" * 80)
-    print("Configuration:")
-    print("=" * 80)
-    for key, value in config.items():
-        print(f"  {key}: {value}")
-    print("=" * 80 + "\n")
+    # Print config (only on main process)
+    if not config['distributed'] or int(os.environ.get('RANK', 0)) == 0:
+        print("\n" + "=" * 80)
+        print("Configuration:")
+        print("=" * 80)
+        for key, value in config.items():
+            print(f"  {key}: {value}")
+        print("=" * 80 + "\n")
     
     # Create trainer and start training
     trainer = ModelTrainer(config)
