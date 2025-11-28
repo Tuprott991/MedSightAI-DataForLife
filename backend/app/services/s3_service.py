@@ -4,12 +4,13 @@ Handles file upload, download, and deletion from AWS S3
 """
 import os
 import io
-from typing import Optional, BinaryIO
+from typing import Optional, BinaryIO, List
 from datetime import datetime
-from uuid import uuid4
+from uuid import uuid4, UUID
 from fastapi import UploadFile, HTTPException
 from app.config.s3 import get_s3_client
 from app.config.settings import settings
+from app.utils.s3_paths import S3PathBuilder
 
 
 class S3Service:
@@ -200,6 +201,184 @@ class S3Service:
             return response['ContentLength']
         except Exception as e:
             raise HTTPException(status_code=404, detail=f"File not found: {str(e)}")
+    
+    def list_files(self, prefix: str) -> List[dict]:
+        """
+        List all files under a prefix
+        
+        Args:
+            prefix: S3 prefix to list
+        
+        Returns:
+            List of file objects with key, size, last_modified
+        """
+        try:
+            response = self.client.list_objects_v2(
+                Bucket=self.bucket_name,
+                Prefix=prefix
+            )
+            
+            files = []
+            for obj in response.get('Contents', []):
+                files.append({
+                    'key': obj['Key'],
+                    'size': obj['Size'],
+                    'last_modified': obj['LastModified'].isoformat(),
+                    'url': self.get_presigned_url(obj['Key'])
+                })
+            
+            return files
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to list files: {str(e)}")
+    
+    def copy_file(self, source_key: str, destination_key: str) -> bool:
+        """
+        Copy a file within S3
+        
+        Args:
+            source_key: Source S3 key
+            destination_key: Destination S3 key
+        
+        Returns:
+            True if successful
+        """
+        try:
+            copy_source = {'Bucket': self.bucket_name, 'Key': source_key}
+            self.client.copy_object(
+                CopySource=copy_source,
+                Bucket=self.bucket_name,
+                Key=destination_key
+            )
+            return True
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to copy file: {str(e)}")
+    
+    def move_file(self, source_key: str, destination_key: str) -> bool:
+        """
+        Move a file within S3 (copy then delete)
+        
+        Args:
+            source_key: Source S3 key
+            destination_key: Destination S3 key
+        
+        Returns:
+            True if successful
+        """
+        try:
+            self.copy_file(source_key, destination_key)
+            self.delete_file(source_key)
+            return True
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to move file: {str(e)}")
+    
+    # ==================== High-Level Case Operations ====================
+    
+    def upload_case_original_image(
+        self,
+        case_id: UUID,
+        file: UploadFile,
+        custom_name: Optional[str] = None
+    ) -> str:
+        """Upload original medical image for a case"""
+        filename = custom_name or f"{uuid4()}{os.path.splitext(file.filename)[1]}"
+        s3_key = S3PathBuilder.case_original_image(case_id, filename)
+        
+        self.client.upload_fileobj(
+            file.file,
+            self.bucket_name,
+            s3_key,
+            ExtraArgs={'ContentType': file.content_type or 'image/jpeg'}
+        )
+        return s3_key
+    
+    def upload_case_processed_image(
+        self,
+        case_id: UUID,
+        image_bytes: bytes,
+        filename: str,
+        content_type: str = "image/jpeg"
+    ) -> str:
+        """Upload processed/normalized image"""
+        s3_key = S3PathBuilder.case_processed_image(case_id, filename)
+        return self.upload_bytes(image_bytes, "", prefix=s3_key, content_type=content_type)
+    
+    def upload_case_annotated_image(
+        self,
+        case_id: UUID,
+        image_bytes: bytes,
+        filename: str,
+        content_type: str = "image/jpeg"
+    ) -> str:
+        """Upload annotated image (Grad-CAM, bounding boxes)"""
+        s3_key = S3PathBuilder.case_annotated_image(case_id, filename)
+        return self.upload_bytes(image_bytes, "", prefix=s3_key, content_type=content_type)
+    
+    def upload_case_report(
+        self,
+        case_id: UUID,
+        report_bytes: bytes,
+        filename: str
+    ) -> str:
+        """Upload case report PDF"""
+        s3_key = S3PathBuilder.case_report(case_id, filename)
+        return self.upload_bytes(report_bytes, "", prefix=s3_key, content_type="application/pdf")
+    
+    def get_case_images(self, case_id: UUID, image_type: str = "original") -> List[dict]:
+        """Get all images of a specific type for a case"""
+        prefix = S3PathBuilder.list_case_images(case_id, image_type)
+        return self.list_files(prefix)
+    
+    def delete_case_folder(self, case_id: UUID) -> bool:
+        """Delete all files for a case"""
+        try:
+            prefix = S3PathBuilder.case_folder(case_id)
+            files = self.list_files(prefix)
+            
+            for file in files:
+                self.delete_file(file['key'])
+            
+            return True
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to delete case folder: {str(e)}")
+    
+    # ==================== Education Mode Operations ====================
+    
+    def upload_student_image(
+        self,
+        session_id: UUID,
+        file: UploadFile
+    ) -> str:
+        """Upload student practice image"""
+        filename = f"{uuid4()}{os.path.splitext(file.filename)[1]}"
+        s3_key = S3PathBuilder.education_student_upload(session_id, filename)
+        
+        self.client.upload_fileobj(
+            file.file,
+            self.bucket_name,
+            s3_key,
+            ExtraArgs={'ContentType': file.content_type or 'image/jpeg'}
+        )
+        return s3_key
+    
+    def upload_student_annotation(
+        self,
+        session_id: UUID,
+        image_bytes: bytes,
+        filename: str
+    ) -> str:
+        """Upload student's annotation"""
+        s3_key = S3PathBuilder.education_student_annotation(session_id, filename)
+        return self.upload_bytes(image_bytes, "", prefix=s3_key, content_type="image/jpeg")
+    
+    def upload_feedback_image(
+        self,
+        session_id: UUID,
+        image_bytes: bytes,
+        filename: str
+    ) -> str:
+        """Upload AI feedback image"""
+        s3_key = S3PathBuilder.education_feedback(session_id, filename)
+        return self.upload_bytes(image_bytes, "", prefix=s3_key, content_type="image/jpeg")
 
 
 # Create singleton instance

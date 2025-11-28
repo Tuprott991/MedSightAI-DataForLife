@@ -28,9 +28,32 @@ class Settings(BaseSettings):
     AWS_SECRET_ACCESS_KEY: str
     AWS_REGION: str
     S3_BUCKET_NAME: str
+    
+    # S3 Folder Structure
+    # Patient folders
+    S3_PATIENTS_PREFIX: str = "patients/"
+    
+    # Case folders
+    S3_CASES_PREFIX: str = "cases/"
     S3_ORIGINAL_IMAGES_PREFIX: str = "original/"
     S3_PROCESSED_IMAGES_PREFIX: str = "processed/"
     S3_ANNOTATED_IMAGES_PREFIX: str = "annotated/"
+    S3_SEGMENTATION_PREFIX: str = "segmentation/"
+    S3_REPORTS_PREFIX: str = "reports/"
+    
+    # Education mode folders
+    S3_EDUCATION_PREFIX: str = "education/"
+    S3_STUDENT_UPLOADS_PREFIX: str = "student_uploads/"
+    S3_STUDENT_ANNOTATIONS_PREFIX: str = "student_annotations/"
+    S3_FEEDBACK_PREFIX: str = "feedback/"
+    
+    # Similar cases
+    S3_SIMILAR_CASES_PREFIX: str = "similar_cases/"
+    S3_THUMBNAILS_PREFIX: str = "thumbnails/"
+    
+    # Temporary and exports
+    S3_TEMP_PREFIX: str = "temp/uploads/"
+    S3_EXPORTS_PREFIX: str = "exports/"
     
     # Zilliz Cloud Vector Database
     ZILLIZ_CLOUD_URI: str
