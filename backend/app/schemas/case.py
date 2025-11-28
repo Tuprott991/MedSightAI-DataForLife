@@ -14,7 +14,21 @@ class CaseBase(BaseModel):
 
 class CaseCreate(CaseBase):
     """Schema for creating a case"""
-    pass
+    image_path: str = Field(..., description="Path to original image in S3")
+    processed_img_path: Optional[str] = Field(None, description="Path to processed image in S3")
+    similar_cases: Optional[List[str]] = Field(None, description="List of similar case IDs")
+    similarity_scores: Optional[List[float]] = Field(None, description="Similarity scores for similar cases")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "patient_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                "image_path": "cases/patient-id/original/xray_001.jpg",
+                "processed_img_path": "cases/patient-id/processed/xray_001.jpg",
+                "similar_cases": ["case-id-1", "case-id-2"],
+                "similarity_scores": [0.95, 0.87]
+            }
+        }
 
 
 class CaseUpdate(BaseModel):

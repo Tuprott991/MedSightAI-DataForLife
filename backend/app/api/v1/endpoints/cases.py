@@ -20,12 +20,36 @@ router = APIRouter()
 
 @router.post("/", response_model=CaseResponse, status_code=201)
 async def create_case(
-    patient_id: UUID = Query(...),
-    file: UploadFile = File(...),
+    case_in: CaseCreate,
     db: Session = Depends(get_db)
 ):
     """
-    Create a new case with X-ray image upload
+    Create a new case with all case data
+    
+    Stores case information including image paths and similarity data.
+    Images should already be uploaded to S3 before creating the case.
+    """
+    # Verify patient exists
+    patient = crud_patient.get(db, case_in.patient_id)
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    
+    # Create case with all provided data
+    case = crud_case.create(db, obj_in=case_in.model_dump())
+    
+    return case
+
+
+@router.post("/upload", response_model=CaseResponse, status_code=201)
+async def create_case_with_file_upload(
+    patient_id: UUID = Query(..., description="Patient ID"),
+    file: UploadFile = File(..., description="X-ray image file"),
+    db: Session = Depends(get_db)
+):
+    """
+    Create a new case with file upload (multipart/form-data)
+    
+    Alternative endpoint for direct file upload instead of JSON with base64
     """
     # Verify patient exists
     patient = crud_patient.get(db, patient_id)
@@ -36,10 +60,10 @@ async def create_case(
     if file.content_type not in ["image/jpeg", "image/png", "image/jpg"]:
         raise HTTPException(status_code=400, detail="Invalid image format. Only JPEG and PNG allowed")
     
-    # Upload to S3
+    # Upload to S3 using new path structure
     image_path = s3_service.upload_file(
         file=file,
-        prefix=settings.S3_ORIGINAL_IMAGES_PREFIX
+        prefix=f"{settings.S3_CASES_PREFIX}{patient_id}/{settings.S3_ORIGINAL_IMAGES_PREFIX}"
     )
     
     # Create case
