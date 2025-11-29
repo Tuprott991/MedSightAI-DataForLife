@@ -1,4 +1,4 @@
-import { Square, Circle, Pencil, Sun, Contrast, RotateCcw, Eraser } from 'lucide-react';
+import { Square, Circle, Pencil, Sun, Contrast, RotateCcw, Eraser, Ruler, RotateCw } from 'lucide-react';
 
 export const ImageToolsSidebar = ({
     activeTool,
@@ -8,6 +8,8 @@ export const ImageToolsSidebar = ({
     activeAdjustment,
     onBrightnessClick,
     onContrastClick,
+    onRotateLeft,
+    onRotateRight,
     onReset
 }) => {
     return (
@@ -60,9 +62,26 @@ export const ImageToolsSidebar = ({
                     </div>
                 </div>
 
-                {/* Image Adjustment Tools Group */}
+                {/* Measurement Tools Group */}
                 <div>
-                    <h4 className="text-[11px] font-semibold text-gray-400 mb-1.5 text-center">Điều Chỉnh</h4>
+                    <h4 className="text-[11px] font-semibold text-gray-400 mb-1.5 text-center">Thước Đo</h4>
+                    <div className="grid grid-cols-2 gap-1">
+                        <button
+                            onClick={() => onToolChange('ruler')}
+                            className={`aspect-square flex items-center justify-center rounded transition-colors ${activeTool === 'ruler'
+                                ? 'bg-purple-500 text-white'
+                                : 'text-gray-300 hover:text-white hover:bg-white/5'
+                                }`}
+                            title="Đo Khoảng Cách"
+                        >
+                            <Ruler className="w-4 h-4" />
+                        </button>
+                    </div>
+                </div>
+
+                {/* Light Adjustment Tools Group */}
+                <div>
+                    <h4 className="text-[11px] font-semibold text-gray-400 mb-1.5 text-center">Ánh Sáng</h4>
                     <div className="grid grid-cols-2 gap-1">
                         <button
                             onClick={onBrightnessClick}
@@ -83,6 +102,27 @@ export const ImageToolsSidebar = ({
                             title="Độ Tương Phản"
                         >
                             <Contrast className="w-4 h-4" />
+                        </button>
+                    </div>
+                </div>
+
+                {/* Other Utilities Group */}
+                <div>
+                    <h4 className="text-[11px] font-semibold text-gray-400 mb-1.5 text-center">Tiện Ích Khác</h4>
+                    <div className="grid grid-cols-2 gap-1">
+                        <button
+                            onClick={onRotateLeft}
+                            className="aspect-square flex items-center justify-center rounded transition-colors text-gray-300 hover:text-white hover:bg-white/5"
+                            title="Xoay Trái"
+                        >
+                            <RotateCcw className="w-4 h-4" />
+                        </button>
+                        <button
+                            onClick={onRotateRight}
+                            className="aspect-square flex items-center justify-center rounded transition-colors text-gray-300 hover:text-white hover:bg-white/5"
+                            title="Xoay Phải"
+                        >
+                            <RotateCw className="w-4 h-4" />
                         </button>
                     </div>
                 </div>

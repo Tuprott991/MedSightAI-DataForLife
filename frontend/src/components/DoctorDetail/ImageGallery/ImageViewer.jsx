@@ -1,19 +1,22 @@
 import { useState, useRef, useEffect } from 'react';
-import { Undo, Redo, PanelLeft, PanelLeftClose } from 'lucide-react';
+import { Undo, Redo, PanelLeft, PanelLeftClose, Move } from 'lucide-react';
 import { useSidebar } from '../../layout';
 import { SimilarCasesButton } from '../SimilarCases/SimilarCasesButton';
 import { SimilarCasesModal } from '../SimilarCases/SimilarCasesModal';
 import { ZoomControls } from '../../custom/ZoomControls';
+import { ConfirmModal } from '../../custom/ConfirmModal';
 import { ImageToolsSidebar } from './ImageToolsSidebar';
 
 export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [zoom, setZoom] = useState(100);
     const [position, setPosition] = useState({ x: 0, y: 0 });
+    const [rotation, setRotation] = useState(0);
     const [brightness, setBrightness] = useState(100);
     const [contrast, setContrast] = useState(100);
     const [activeAdjustment, setActiveAdjustment] = useState(null); // 'brightness' or 'contrast'
     const [activeTool, setActiveTool] = useState(null); // 'square', 'circle', 'freehand', 'eraser'
+    const [isPanMode, setIsPanMode] = useState(false);
     const { isLeftCollapsed, setIsLeftCollapsed } = useSidebar();
 
     // Drawing states - separate for single and multiple image modes
@@ -24,6 +27,10 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
     const [currentShape, setCurrentShape] = useState(null);
     const [selectedAnnotation, setSelectedAnnotation] = useState(null);
     const [editingLabel, setEditingLabel] = useState('');
+    const [confirmDelete, setConfirmDelete] = useState(false);
+    const [annotationToDelete, setAnnotationToDelete] = useState(null);
+    const [isPanning, setIsPanning] = useState(false);
+    const [panStart, setPanStart] = useState({ x: 0, y: 0 });
     const imageContainerRef = useRef(null);
     const imageRef = useRef(null);
 
@@ -41,13 +48,13 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
         setEditingLabel('');
     }, [isMultipleImages]);
 
-    // For multiple images, limit zoom to prevent overflow beyond divider
-    const maxZoomForMultiple = isMultipleImages ? 200 : 500;
-    const handleZoomIn = () => setZoom(prev => Math.min(prev + 25, maxZoomForMultiple));
+    // Zoom limits: 50% to 500% for all modes
+    const handleZoomIn = () => setZoom(prev => Math.min(prev + 25, 500));
     const handleZoomOut = () => setZoom(prev => Math.max(prev - 25, 50));
     const handleReset = () => {
         setZoom(100);
         setPosition({ x: 0, y: 0 });
+        setRotation(0);
         setBrightness(100);
         setContrast(100);
         setActiveAdjustment(null);
@@ -64,16 +71,40 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
 
     const handleToolClick = (tool) => {
         if (tool === 'eraser') {
-            // Eraser clears all annotations
-            setAnnotations([]);
-            setActiveTool(null);
+            // Eraser becomes an active selection tool
+            setActiveTool(activeTool === 'eraser' ? null : 'eraser');
         } else {
             setActiveTool(activeTool === tool ? null : tool);
         }
     };
 
+    const handleRotateLeft = () => {
+        setRotation(prev => prev - 90);
+    };
+
+    const handleRotateRight = () => {
+        setRotation(prev => prev + 90);
+    };
+
+    // Wheel zoom handler
+    const handleWheel = (e) => {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? -25 : 25; // Scroll down = zoom out, scroll up = zoom in
+        setZoom(prev => {
+            const newZoom = prev + delta;
+            return Math.max(50, Math.min(500, newZoom));
+        });
+    };
+
     // Drawing functions
     const handleMouseDown = (e) => {
+        // Handle pan mode
+        if (isPanMode) {
+            setIsPanning(true);
+            setPanStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+            return;
+        }
+
         // Only draw if a tool is active and it's not eraser
         if (!activeTool || activeTool === 'eraser') return;
 
@@ -109,6 +140,15 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
     };
 
     const handleMouseMove = (e) => {
+        // Handle panning
+        if (isPanning) {
+            setPosition({
+                x: e.clientX - panStart.x,
+                y: e.clientY - panStart.y
+            });
+            return;
+        }
+
         if (!isDrawing || !startPoint || !imageRef.current) return;
 
         // Get the bounding rect of the actual image element
@@ -138,6 +178,11 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
     };
 
     const handleMouseUp = () => {
+        if (isPanning) {
+            setIsPanning(false);
+            return;
+        }
+
         if (isDrawing && currentShape) {
             const newShape = { ...currentShape, label: 'Phát hiện' };
             if (activeTool === 'freehand' && currentShape.points?.length > 2) {
@@ -154,6 +199,15 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
 
     const handleAnnotationClick = (index, e) => {
         e.stopPropagation();
+
+        // If eraser is active, prompt for deletion confirmation
+        if (activeTool === 'eraser') {
+            setAnnotationToDelete(index);
+            setConfirmDelete(true);
+            return;
+        }
+
+        // Otherwise, select for editing
         setSelectedAnnotation(index);
         setEditingLabel(annotations[index].label || '');
     };
@@ -177,6 +231,21 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
         const newAnnotations = annotations.filter((_, i) => i !== index);
         setAnnotations(newAnnotations);
         setSelectedAnnotation(null);
+    };
+
+    const handleConfirmDelete = () => {
+        if (annotationToDelete !== null) {
+            const newAnnotations = annotations.filter((_, i) => i !== annotationToDelete);
+            setAnnotations(newAnnotations);
+            setSelectedAnnotation(null);
+        }
+        setConfirmDelete(false);
+        setAnnotationToDelete(null);
+    };
+
+    const handleCancelDelete = () => {
+        setConfirmDelete(false);
+        setAnnotationToDelete(null);
     };
 
     // Render annotation shape with label
@@ -257,6 +326,9 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
                             height={20}
                             fill={strokeColor}
                             rx={3}
+                            className={!isSelected ? 'cursor-pointer' : ''}
+                            style={{ pointerEvents: 'auto' }}
+                            onClick={(e) => !isSelected && handleAnnotationClick(index, e)}
                         />
                         {isSelected ? (
                             <foreignObject
@@ -288,6 +360,9 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
                                 fill="white"
                                 fontSize="12"
                                 fontWeight="500"
+                                className="cursor-pointer"
+                                style={{ pointerEvents: 'auto' }}
+                                onClick={(e) => handleAnnotationClick(index, e)}
                             >
                                 {shape.label}
                             </text>
@@ -362,11 +437,15 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
                         />
 
                         <div className="w-px h-4 bg-white/10 mx-1"></div>
-                        <button className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors">
-                            <Undo className="w-4 h-4" />
-                        </button>
-                        <button className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors">
-                            <Redo className="w-4 h-4" />
+                        <button
+                            onClick={() => setIsPanMode(!isPanMode)}
+                            className={`p-1.5 rounded transition-colors ${isPanMode
+                                ? 'bg-blue-500 text-white'
+                                : 'text-gray-400 hover:text-white hover:bg-white/10'
+                                }`}
+                            title="Di Chuyển Ảnh"
+                        >
+                            <Move className="w-4 h-4" />
                         </button>
                     </div>
 
@@ -377,9 +456,9 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
                     <button
                         onClick={onRestoreOriginal}
                         disabled={!isMultipleImages}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded transition-colors ${isMultipleImages
-                            ? 'bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white cursor-pointer'
-                            : 'bg-white/5 text-gray-600 cursor-not-allowed opacity-50'
+                        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded transition-all font-medium ${isMultipleImages
+                            ? 'bg-white/5 hover:bg-white/10 border border-white/10 hover:border-teal-500/50 text-gray-300 hover:text-white cursor-pointer'
+                            : 'bg-white/5 border border-white/10 text-gray-600 cursor-not-allowed opacity-50'
                             }`}
                         title={isMultipleImages ? "Quay lại hình ảnh gốc" : "Chỉ khả dụng khi xem 2 ảnh"}
                     >
@@ -387,7 +466,7 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
-                        <span>Hình ảnh gốc</span>
+                        <span>Hình Ảnh Gốc</span>
                     </button>
                 </div>
             </div>
@@ -403,6 +482,8 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
                     activeAdjustment={activeAdjustment}
                     onBrightnessClick={handleBrightnessClick}
                     onContrastClick={handleContrastClick}
+                    onRotateLeft={handleRotateLeft}
+                    onRotateRight={handleRotateRight}
                     onReset={handleReset}
                 />
 
@@ -413,51 +494,69 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
                             {images.map((img, index) => (
                                 <div
                                     key={img.id || index}
-                                    className="flex-1 flex items-center justify-center h-full relative overflow-hidden"
-                                    ref={index === 0 ? imageContainerRef : null}
-                                    onMouseDown={index === 0 ? handleMouseDown : undefined}
-                                    onMouseMove={index === 0 ? handleMouseMove : undefined}
-                                    onMouseUp={index === 0 ? handleMouseUp : undefined}
-                                    onMouseLeave={index === 0 ? handleMouseUp : undefined}
-                                    style={{ cursor: index === 0 && activeTool && activeTool !== 'eraser' ? 'crosshair' : 'default' }}
+                                    className="flex-1 flex flex-col h-full relative overflow-hidden"
                                 >
-                                    <div
-                                        className="relative"
-                                        style={{
-                                            transform: index === 0
-                                                ? `translate(${position.x}px, ${position.y}px) scale(${zoom / 100})`
-                                                : 'none',
-                                            transition: 'transform 300ms'
-                                        }}
-                                    >
-                                        <img
-                                            ref={index === 0 ? imageRef : null}
-                                            src={img.url}
-                                            alt={img.type}
-                                            className="max-w-full max-h-full object-contain select-none"
-                                            style={{ filter: index === 0 ? `brightness(${brightness}%) contrast(${contrast}%)` : 'none' }}
-                                            draggable={false}
-                                        />
-
-                                        {/* SVG overlay for annotations (only on left image) */}
-                                        {index === 0 && (
-                                            <svg
-                                                className="absolute top-0 left-0 w-full h-full"
-                                                style={{ overflow: 'visible' }}
-                                            >
-                                                {/* Render saved annotations */}
-                                                {annotations.map((shape, idx) => (
-                                                    <g key={idx}>{renderShape(shape, idx, false)}</g>
-                                                ))}
-                                                {/* Render current drawing shape */}
-                                                {currentShape && renderShape(currentShape, -1, true)}
-                                            </svg>
-                                        )}
+                                    {/* Label */}
+                                    <div className="flex items-center justify-center py-2 border-b border-white/10">
+                                        <span className={`text-sm font-semibold ${index === 0
+                                            ? 'text-teal-400'
+                                            : 'text-amber-400'
+                                            }`}>
+                                            {index === 0 ? 'xAI' : 'Prototype'}
+                                        </span>
                                     </div>
 
-                                    {index === 0 && (
-                                        <div className="absolute right-0 top-0 bottom-0 w-px bg-white/20" />
-                                    )}
+                                    {/* Image Area */}
+                                    <div
+                                        className="flex-1 flex items-center justify-center relative"
+                                        ref={index === 0 ? imageContainerRef : null}
+                                        onMouseDown={index === 0 ? handleMouseDown : undefined}
+                                        onMouseMove={index === 0 ? handleMouseMove : undefined}
+                                        onMouseUp={index === 0 ? handleMouseUp : undefined}
+                                        onMouseLeave={index === 0 ? handleMouseUp : undefined}
+                                        onWheel={index === 0 ? handleWheel : undefined}
+                                        style={{
+                                            cursor: index === 0
+                                                ? (isPanMode ? (isPanning ? 'grabbing' : 'grab') : (activeTool && activeTool !== 'eraser' ? 'crosshair' : 'default'))
+                                                : 'default'
+                                        }}
+                                    >
+                                        <div
+                                            className="relative"
+                                            style={{
+                                                transform: `translate(${position.x}px, ${position.y}px) rotate(${rotation}deg) scale(${zoom / 100})`,
+                                                transition: isPanning ? 'none' : 'transform 300ms'
+                                            }}
+                                        >
+                                            <img
+                                                ref={index === 0 ? imageRef : null}
+                                                src={img.url}
+                                                alt={img.type}
+                                                className="max-w-full max-h-full object-contain select-none"
+                                                style={{ filter: index === 0 ? `brightness(${brightness}%) contrast(${contrast}%)` : 'none' }}
+                                                draggable={false}
+                                            />
+
+                                            {/* SVG overlay for annotations (only on left image) */}
+                                            {index === 0 && (
+                                                <svg
+                                                    className="absolute top-0 left-0 w-full h-full"
+                                                    style={{ overflow: 'visible' }}
+                                                >
+                                                    {/* Render saved annotations */}
+                                                    {annotations.map((shape, idx) => (
+                                                        <g key={idx}>{renderShape(shape, idx, false)}</g>
+                                                    ))}
+                                                    {/* Render current drawing shape */}
+                                                    {currentShape && renderShape(currentShape, -1, true)}
+                                                </svg>
+                                            )}
+                                        </div>
+
+                                        {index === 0 && (
+                                            <div className="absolute right-0 top-0 bottom-0 w-px bg-white/20" />
+                                        )}
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -469,13 +568,14 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
                             onMouseMove={handleMouseMove}
                             onMouseUp={handleMouseUp}
                             onMouseLeave={handleMouseUp}
-                            style={{ cursor: activeTool && activeTool !== 'eraser' ? 'crosshair' : 'default' }}
+                            onWheel={handleWheel}
+                            style={{ cursor: isPanMode ? (isPanning ? 'grabbing' : 'grab') : (activeTool && activeTool !== 'eraser' ? 'crosshair' : 'default') }}
                         >
                             <div
                                 className="relative"
                                 style={{
-                                    transform: `translate(${position.x}px, ${position.y}px) scale(${zoom / 100})`,
-                                    transition: 'transform 300ms'
+                                    transform: `translate(${position.x}px, ${position.y}px) rotate(${rotation}deg) scale(${zoom / 100})`,
+                                    transition: isPanning ? 'none' : 'transform 300ms'
                                 }}
                             >
                                 <img
@@ -567,6 +667,18 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
                 onClose={() => setIsModalOpen(false)}
                 currentImage={images[0] || image}
                 patientInfo={patientInfo}
+            />
+
+            {/* Delete Confirmation Modal */}
+            <ConfirmModal
+                isOpen={confirmDelete}
+                onClose={handleCancelDelete}
+                onConfirm={handleConfirmDelete}
+                title="Xóa vùng khoanh"
+                message="Bạn có chắc chắn muốn xóa vùng khoanh này không?"
+                confirmText="Xóa"
+                cancelText="Hủy"
+                confirmColor="red"
             />
         </div>
     );

@@ -62,7 +62,7 @@ export const DoctorDetail = () => {
             <div className="container mx-auto px-6 pt-6 pb-4">
                 {/* Three Column Layout: 1.8:4.2:2 ratio (responsive based on collapse) */}
                 <div className={`grid grid-cols-1 gap-4 ${isLeftCollapsed
-                    ? 'lg:grid-cols-6'
+                    ? 'lg:grid-cols-8'
                     : 'lg:grid-cols-8'
                     }`}>
 
@@ -78,10 +78,10 @@ export const DoctorDetail = () => {
                         </div>
                     )}
 
-                    {/* Middle Column - Selected Image (4/8 or expanded to 4/6) */}
+                    {/* Middle Column - Selected Image (4/8 or expanded to 6/8) */}
                     <div className={
                         isLeftCollapsed
-                            ? 'lg:col-span-4'
+                            ? 'lg:col-span-6'
                             : 'lg:col-span-4'
                     }>
                         <ImageViewer
