@@ -47,17 +47,6 @@ export const PacsVnaSettings = () => {
                     {activeTab === 'pacs' && <PacsSettings />}
                     {activeTab === 'vna' && <VnaSettings />}
                 </div>
-
-                {/* Info Section */}
-                <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                    <h3 className="text-sm font-semibold text-blue-400 mb-2">ℹ️ Thông tin</h3>
-                    <ul className="text-sm text-gray-400 space-y-1">
-                        <li>• <strong>PACS (Picture Archiving and Communication System):</strong> Hệ thống lưu trữ và truyền thông hình ảnh y tế sử dụng giao thức DICOM.</li>
-                        <li>• <strong>VNA (Vendor Neutral Archive):</strong> Kho lưu trữ trung lập sử dụng chuẩn DICOMweb (QIDO-RS, WADO-RS, STOW-RS).</li>
-                        <li>• Tất cả cấu hình được lưu trữ cục bộ trên trình duyệt của bạn.</li>
-                        <li>• Sử dụng chức năng "Test Connection" để kiểm tra kết nối trước khi lưu.</li>
-                    </ul>
-                </div>
             </div>
         </div>
     );
