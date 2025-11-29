@@ -175,9 +175,18 @@ class ZillizService:
                 )
             
             # Extract results
-            data = result.get("data", [[]])[0]
-            primary_keys = [item.get("primary_key") for item in data]
-            scores = [item.get("distance", 0) for item in data]
+            data = result.get("data", [])
+            if isinstance(data, list) and len(data) > 0:
+                search_results = data[0] if isinstance(data[0], list) else data
+            else:
+                search_results = []
+            
+            primary_keys = []
+            scores = []
+            for item in search_results:
+                if isinstance(item, dict):
+                    primary_keys.append(item.get("id") or item.get("primary_key"))
+                    scores.append(item.get("distance", 0))
             
             return primary_keys, scores
         
@@ -224,9 +233,18 @@ class ZillizService:
                 )
             
             # Extract results
-            data = result.get("data", [[]])[0]
-            primary_keys = [item.get("primary_key") for item in data]
-            scores = [item.get("distance", 0) for item in data]
+            data = result.get("data", [])
+            if isinstance(data, list) and len(data) > 0:
+                search_results = data[0] if isinstance(data[0], list) else data
+            else:
+                search_results = []
+            
+            primary_keys = []
+            scores = []
+            for item in search_results:
+                if isinstance(item, dict):
+                    primary_keys.append(item.get("id") or item.get("primary_key"))
+                    scores.append(item.get("distance", 0))
             
             return primary_keys, scores
         
@@ -302,9 +320,20 @@ class ZillizService:
                 )
             
             # Extract results
-            data = result.get("data", [[]])[0]
-            primary_keys = [item.get("primary_key") for item in data]
-            scores = [item.get("distance", 0) for item in data]
+            data = result.get("data", [])
+            if isinstance(data, list) and len(data) > 0:
+                # data is a list of lists, get first element
+                search_results = data[0] if isinstance(data[0], list) else data
+            else:
+                search_results = []
+            
+            primary_keys = []
+            scores = []
+            
+            for item in search_results:
+                if isinstance(item, dict):
+                    primary_keys.append(item.get("id") or item.get("primary_key"))
+                    scores.append(item.get("distance", 0))
             
             return primary_keys, scores
         
