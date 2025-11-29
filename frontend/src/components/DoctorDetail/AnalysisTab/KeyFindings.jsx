@@ -1,5 +1,6 @@
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Thermometer } from 'lucide-react';
+import { useState } from 'react';
 
 const getSeverityColor = (severity) => {
     switch (severity) {
@@ -38,8 +39,36 @@ const getConfidenceBgColor = (confidence) => {
     return 'bg-emerald-500/40';
 };
 
-export const KeyFindings = ({ findings, onFindingClick }) => {
+export const KeyFindings = ({ findings, onFindingClick, onFindingSelectionChange }) => {
+    const [selectedFindings, setSelectedFindings] = useState(() =>
+        findings.reduce((acc, f) => ({ ...acc, [f.id]: false }), {})
+    );
+
     const sortedFindings = [...findings].sort((a, b) => b.confidence - a.confidence);
+
+    const handleCheckboxChange = (findingId) => {
+        setSelectedFindings(prev => ({
+            ...prev,
+            [findingId]: !prev[findingId]
+        }));
+    };
+
+    const handleUpdate = async () => {
+        setIsUpdating(true);
+
+        // Mô phỏng API call
+        const selectedIds = Object.entries(selectedFindings)
+            .filter(([_, isSelected]) => isSelected)
+            .map(([id, _]) => parseInt(id));
+
+        // Mock: Simulate API call với delay
+        setTimeout(() => {
+            if (onUpdateDiagnosis) {
+                onUpdateDiagnosis(selectedIds);
+            }
+            setIsUpdating(false);
+        }, 1500);
+    };
 
     const handleFindingClick = async (finding) => {
         if (onFindingClick) {
@@ -76,18 +105,44 @@ export const KeyFindings = ({ findings, onFindingClick }) => {
                 <Thermometer className="w-4 h-4 text-teal-500" />
                 Các triệu chứng
             </h3>
+            <style>{`
+                .checkbox-custom {
+                    appearance: none;
+                    -webkit-appearance: none;
+                    background-color: #374151;
+                    border: 1px solid #4b5563;
+                }
+                .checkbox-custom:checked {
+                    background-color: #14b8a6;
+                    border-color: #14b8a6;
+                    background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e");
+                }
+            `}</style>
             <div className="space-y-2">
                 {sortedFindings.map((finding) => (
                     <div
                         key={finding.id}
-                        onClick={() => handleFindingClick(finding)}
-                        className={`p-2.5 rounded-lg border border-white ${getConfidenceBgColor(finding.confidence)} cursor-pointer hover:opacity-80 transition-opacity`}
+                        className={`p-2.5 rounded-lg border border-white ${getConfidenceBgColor(finding.confidence)} transition-opacity`}
                     >
-                        <div className="flex items-start justify-between gap-3">
-                            <p className="text-xs text-gray-300 flex-1">{finding.text}</p>
-                            <span className={`text-xs font-bold ${getConfidenceColor(finding.confidence)} shrink-0`}>
-                                {finding.confidence}%
-                            </span>
+                        <div className="flex items-start gap-3">
+                            <input
+                                type="checkbox"
+                                checked={selectedFindings[finding.id] || false}
+                                onChange={() => handleCheckboxChange(finding.id)}
+                                className="mt-0.5 w-4 h-4 rounded border-gray-600 cursor-pointer checkbox-custom"
+                                onClick={(e) => e.stopPropagation()}
+                            />
+                            <div
+                                className="flex-1 cursor-pointer hover:opacity-80"
+                                onClick={() => handleFindingClick(finding)}
+                            >
+                                <div className="flex items-start justify-between gap-3">
+                                    <p className="text-xs text-gray-300 flex-1">{finding.text}</p>
+                                    <span className={`text-xs font-bold ${getConfidenceColor(finding.confidence)} shrink-0`}>
+                                        {finding.confidence}%
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 ))}

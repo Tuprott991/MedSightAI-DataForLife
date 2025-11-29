@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, RefreshCw } from 'lucide-react';
 import { patientsData } from '../constants/patients';
 import { medicalImagesGroups, generateAnalysisData } from '../constants/medicalData';
 import {
@@ -20,12 +20,59 @@ export const DoctorDetail = () => {
     const [selectedImage, setSelectedImage] = useState(firstImage);
     const [originalImage, setOriginalImage] = useState(firstImage);
     const [analysisData, setAnalysisData] = useState(null);
+    const [isUpdating, setIsUpdating] = useState(false);
+    const [selectedFindingIds, setSelectedFindingIds] = useState([]);
 
     const handleAIAnalyze = () => {
         // TODO: Replace with actual API call
         // For now, generate mock analysis data
         const data = patient ? generateAnalysisData(patient.diagnosis) : null;
         setAnalysisData(data);
+    };
+
+    const handleFindingSelectionChange = (selectedIds) => {
+        setSelectedFindingIds(selectedIds);
+    };
+
+    const handleUpdateClick = async () => {
+        if (!analysisData) return;
+
+        setIsUpdating(true);
+
+        // Mock API delay
+        setTimeout(() => {
+            // 3 kịch bản ngẫu nhiên
+            const scenarios = [
+                // Kịch bản 1: Tình trạng nghiêm trọng
+                [
+                    { name: 'Viêm phổi nặng', confidence: 88 },
+                    { name: 'Tràn dịch màng phổi', confidence: 75 },
+                    { name: 'Suy hô hấp cấp', confidence: 68 }
+                ],
+                // Kịch bản 2: Tình trạng trung bình
+                [
+                    { name: 'Viêm phế quản mãn tính', confidence: 72 },
+                    { name: 'Hen phế quản', confidence: 65 },
+                    { name: 'Viêm phổi nhẹ', confidence: 58 }
+                ],
+                // Kịch bản 3: Tình trạng nhẹ/khác
+                [
+                    { name: 'Viêm đường hô hấp trên', confidence: 82 },
+                    { name: 'Cảm cúm thông thường', confidence: 70 },
+                    { name: 'Dị ứng đường hô hấp', confidence: 55 }
+                ]
+            ];
+
+            // Chọn ngẫu nhiên 1 trong 3 kịch bản
+            const randomScenario = scenarios[Math.floor(Math.random() * scenarios.length)];
+
+            setAnalysisData({
+                ...analysisData,
+                suspectedDiseases: randomScenario
+            });
+
+            setIsUpdating(false);
+        }, 1500);
     };
 
     const handleFindingClick = (imageData) => {
@@ -97,14 +144,13 @@ export const DoctorDetail = () => {
                             {/* Header with AI Analyze Button */}
                             <div className="px-4 py-3 border-b border-white/10 bg-[#141414] flex items-center justify-between">
                                 <h3 className="text-base font-semibold text-white">Báo Cáo</h3>
-
-                                {/* AI Analyze Button - Always Teal */}
+                                {/* AI Analyze Button */}
                                 <button
                                     onClick={handleAIAnalyze}
                                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-all bg-amber-500 text-white shadow-lg shadow-amber-500/50 hover:bg-amber-600 active:scale-95 cursor-pointer"
                                 >
                                     <Sparkles className="w-3.5 h-3.5" />
-                                    <span className="font-medium">Phân Tích AI</span>
+                                    <span className="font-medium">Phân tích</span>
                                 </button>
                             </div>
 
@@ -116,6 +162,10 @@ export const DoctorDetail = () => {
                                             findings={analysisData.findings}
                                             suspectedDiseases={analysisData.suspectedDiseases}
                                             onFindingClick={handleFindingClick}
+                                            onFindingSelectionChange={handleFindingSelectionChange}
+                                            onUpdateClick={handleUpdateClick}
+                                            isUpdating={isUpdating}
+                                            selectedFindingIds={selectedFindingIds}
                                         />
                                         <div className="border-t border-white/10 pt-4">
                                             <RecommendationsTab
