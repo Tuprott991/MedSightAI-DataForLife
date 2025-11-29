@@ -29,6 +29,11 @@ export const LoginForm = ({ onLogin }) => {
         // Mock authentication with specific accounts
         setTimeout(() => {
             const validAccounts = {
+                'admin@example.com': {
+                    username: 'admin@example.com',
+                    role: 'admin',
+                    name: 'Quản trị viên'
+                },
                 'doctor@example.com': {
                     username: 'doctor@example.com',
                     role: 'doctor',

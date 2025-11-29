@@ -7,6 +7,7 @@ import { Doctor } from './Doctor';
 import { Student } from './Student';
 import { DoctorDetail } from './DoctorDetail';
 import { StudentDetail } from './StudentDetail';
+import { PacsVnaSettings } from './PacsVnaSettings';
 import { NotFound } from './NotFound';
 
 const router = createBrowserRouter([
@@ -37,7 +38,7 @@ const router = createBrowserRouter([
                     {
                         path: 'home',
                         element: (
-                            <RoleGuard allowedRoles={['doctor']}>
+                            <RoleGuard allowedRoles={['doctor', 'admin']}>
                                 <Home />
                             </RoleGuard>
                         )
@@ -45,7 +46,7 @@ const router = createBrowserRouter([
                     {
                         path: 'doctor',
                         element: (
-                            <RoleGuard allowedRoles={['doctor']}>
+                            <RoleGuard allowedRoles={['doctor', 'admin']}>
                                 <Doctor />
                             </RoleGuard>
                         )
@@ -53,7 +54,7 @@ const router = createBrowserRouter([
                     {
                         path: 'doctor/:id',
                         element: (
-                            <RoleGuard allowedRoles={['doctor']}>
+                            <RoleGuard allowedRoles={['doctor', 'admin']}>
                                 <DoctorDetail />
                             </RoleGuard>
                         )
@@ -65,6 +66,14 @@ const router = createBrowserRouter([
                     {
                         path: 'student/:id',
                         element: <StudentDetail />
+                    },
+                    {
+                        path: 'pacs-settings',
+                        element: (
+                            <RoleGuard allowedRoles={['admin']}>
+                                <PacsVnaSettings />
+                            </RoleGuard>
+                        )
                     },
                 ],
             },

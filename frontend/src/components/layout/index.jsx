@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation, useParams, useNavigate } from "react-router-dom";
 import { FloatingDirection } from "./FloatingDirection";
-import { Stethoscope, GraduationCap, Home as HomeIcon, ArrowLeft, Settings, HelpCircle, Bell, User, PanelLeft, PanelLeftClose, LogOut } from "lucide-react";
+import { Stethoscope, GraduationCap, Home as HomeIcon, ArrowLeft, Settings, HelpCircle, Bell, User, PanelLeft, PanelLeftClose, LogOut, Database } from "lucide-react";
 import { patientsData } from "../../constants/patients";
 import { createContext, useContext, useState } from "react";
 import { useAuth } from "../authentication";
@@ -27,6 +27,7 @@ export const Layout = () => {
 
     // Check if we're on a detail page
     const isDetailPage = location.pathname.startsWith('/doctor/') || location.pathname.startsWith('/student/');
+    const isPacsSettingsPage = location.pathname === '/pacs-settings';
     const isDoctorDetail = location.pathname.startsWith('/doctor/') && params.id;
     const isStudentDetail = location.pathname.startsWith('/student/') && params.id;
 
@@ -81,7 +82,7 @@ export const Layout = () => {
                             {/* Right Side - Navigation Links or Action Icons */}
                             {!isDetailPage ? (
                                 <div className="flex gap-2">
-                                    {user?.role === 'doctor' && (
+                                    {(user?.role === 'doctor' || user?.role === 'admin') && (
                                         <>
                                             <Link
                                                 to="/home"
@@ -115,6 +116,18 @@ export const Layout = () => {
                                         <GraduationCap className="w-4 h-4" />
                                         <span className="font-medium">Sinh Viên</span>
                                     </Link>
+                                    {user?.role === 'admin' && (
+                                        <Link
+                                            to="/pacs-settings"
+                                            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${isActive('/pacs-settings')
+                                                ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/50'
+                                                : 'text-gray-300 hover:bg-white/10 hover:text-white'
+                                                }`}
+                                        >
+                                            <Database className="w-4 h-4" />
+                                            <span className="font-medium">Cài đặt PACs/VNA</span>
+                                        </Link>
+                                    )}
                                     <button
                                         onClick={handleLogout}
                                         className="flex items-center gap-2 px-4 py-2 rounded-lg text-gray-300 hover:bg-red-500/10 hover:text-red-400 transition-all"
@@ -149,7 +162,9 @@ export const Layout = () => {
                                     <div className="flex items-center gap-2 ml-2">
                                         <div className="text-right mr-2">
                                             <p className="text-sm font-medium text-white">{user?.name}</p>
-                                            <p className="text-xs text-gray-400">{user?.role === 'doctor' ? 'Bác sĩ' : 'Sinh viên'}</p>
+                                            <p className="text-xs text-gray-400">
+                                                {user?.role === 'doctor' ? 'Bác sĩ' : user?.role === 'admin' ? 'Quản trị viên' : 'Sinh viên'}
+                                            </p>
                                         </div>
                                         <div className="w-8 h-8 bg-teal-500 rounded-full flex items-center justify-center">
                                             <User className="w-5 h-5 text-white" />
@@ -173,8 +188,8 @@ export const Layout = () => {
                     <Outlet />
                 </main>
 
-                {/* FloatingDirection - Hidden on detail pages */}
-                {!isDetailPage && <FloatingDirection />}
+                {/* FloatingDirection - Hidden on detail pages and settings page */}
+                {!isDetailPage && !isPacsSettingsPage && <FloatingDirection />}
             </div>
         </SidebarContext.Provider>
     )
