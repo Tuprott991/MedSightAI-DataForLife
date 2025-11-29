@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Undo, Redo, PanelLeft, PanelLeftClose, Move } from 'lucide-react';
+import { Undo, Redo, PanelLeft, PanelLeftClose, Move, PanelRight, PanelRightClose } from 'lucide-react';
 import { useSidebar } from '../../layout';
 import { SimilarCasesButton } from '../SimilarCases/SimilarCasesButton';
 import { SimilarCasesModal } from '../SimilarCases/SimilarCasesModal';
@@ -17,6 +17,7 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
     const [activeAdjustment, setActiveAdjustment] = useState(null); // 'brightness' or 'contrast'
     const [activeTool, setActiveTool] = useState(null); // 'square', 'circle', 'freehand', 'eraser'
     const [isPanMode, setIsPanMode] = useState(false);
+    const [isPrototypeCollapsed, setIsPrototypeCollapsed] = useState(false);
     const { isLeftCollapsed, setIsLeftCollapsed } = useSidebar();
 
     // Drawing states - separate for single and multiple image modes
@@ -59,14 +60,23 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
         setContrast(100);
         setActiveAdjustment(null);
         setActiveTool(null);
+        setIsPanMode(false);
+        setSingleImageAnnotations([]);
+        setMultipleImageAnnotations([]);
+        setSelectedAnnotation(null);
+        setEditingLabel('');
     };
 
     const handleBrightnessClick = () => {
         setActiveAdjustment(activeAdjustment === 'brightness' ? null : 'brightness');
+        setActiveTool(null);
+        setIsPanMode(false);
     };
 
     const handleContrastClick = () => {
         setActiveAdjustment(activeAdjustment === 'contrast' ? null : 'contrast');
+        setActiveTool(null);
+        setIsPanMode(false);
     };
 
     const handleToolClick = (tool) => {
@@ -76,6 +86,8 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
         } else {
             setActiveTool(activeTool === tool ? null : tool);
         }
+        setActiveAdjustment(null);
+        setIsPanMode(false);
     };
 
     const handleRotateLeft = () => {
@@ -86,14 +98,33 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
         setRotation(prev => prev + 90);
     };
 
-    // Wheel zoom handler
+    // Wheel zoom handler - zoom centered on mouse position
     const handleWheel = (e) => {
         e.preventDefault();
+
+        if (!imageContainerRef.current) return;
+
         const delta = e.deltaY > 0 ? -25 : 25; // Scroll down = zoom out, scroll up = zoom in
-        setZoom(prev => {
-            const newZoom = prev + delta;
-            return Math.max(50, Math.min(500, newZoom));
-        });
+        const newZoom = Math.max(50, Math.min(500, zoom + delta));
+
+        if (newZoom === zoom) return; // No change in zoom
+
+        // Get container bounds
+        const containerRect = imageContainerRef.current.getBoundingClientRect();
+
+        // Mouse position relative to container center
+        const mouseX = e.clientX - containerRect.left - containerRect.width / 2;
+        const mouseY = e.clientY - containerRect.top - containerRect.height / 2;
+
+        // Calculate scale factor
+        const scaleFactor = newZoom / zoom - 1;
+
+        // Adjust position to zoom toward mouse position
+        const newX = position.x - mouseX * scaleFactor;
+        const newY = position.y - mouseY * scaleFactor;
+
+        setZoom(newZoom);
+        setPosition({ x: newX, y: newY });
     };
 
     // Drawing functions
@@ -116,9 +147,21 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
         // Get the bounding rect of the actual image element
         const imgRect = imageRef.current.getBoundingClientRect();
 
-        // Calculate position relative to the image itself (already accounts for transform)
-        const x = e.clientX - imgRect.left;
-        const y = e.clientY - imgRect.top;
+        // Get the original image dimensions
+        const imgWidth = imageRef.current.naturalWidth || imageRef.current.width;
+        const imgHeight = imageRef.current.naturalHeight || imageRef.current.height;
+
+        // Get rendered dimensions
+        const renderedWidth = imgRect.width;
+        const renderedHeight = imgRect.height;
+
+        // Calculate scale factors
+        const scaleX = imgWidth / renderedWidth;
+        const scaleY = imgHeight / renderedHeight;
+
+        // Calculate position relative to the image itself and convert to original image coordinates
+        const x = (e.clientX - imgRect.left) * scaleX;
+        const y = (e.clientY - imgRect.top) * scaleY;
 
         setIsDrawing(true);
         setStartPoint({ x, y });
@@ -154,9 +197,21 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
         // Get the bounding rect of the actual image element
         const imgRect = imageRef.current.getBoundingClientRect();
 
-        // Calculate position relative to the image itself
-        const currentX = e.clientX - imgRect.left;
-        const currentY = e.clientY - imgRect.top;
+        // Get the original image dimensions
+        const imgWidth = imageRef.current.naturalWidth || imageRef.current.width;
+        const imgHeight = imageRef.current.naturalHeight || imageRef.current.height;
+
+        // Get rendered dimensions
+        const renderedWidth = imgRect.width;
+        const renderedHeight = imgRect.height;
+
+        // Calculate scale factors
+        const scaleX = imgWidth / renderedWidth;
+        const scaleY = imgHeight / renderedHeight;
+
+        // Calculate position relative to the image itself and convert to original image coordinates
+        const currentX = (e.clientX - imgRect.left) * scaleX;
+        const currentY = (e.clientY - imgRect.top) * scaleY;
 
         if (activeTool === 'freehand') {
             setCurrentShape(prev => ({
@@ -438,7 +493,11 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
 
                         <div className="w-px h-4 bg-white/10 mx-1"></div>
                         <button
-                            onClick={() => setIsPanMode(!isPanMode)}
+                            onClick={() => {
+                                setIsPanMode(!isPanMode);
+                                setActiveTool(null);
+                                setActiveAdjustment(null);
+                            }}
                             className={`p-1.5 rounded transition-colors ${isPanMode
                                 ? 'bg-blue-500 text-white'
                                 : 'text-gray-400 hover:text-white hover:bg-white/10'
@@ -488,76 +547,101 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
                 />
 
                 {/* Image Container */}
-                <div className="flex-1 flex items-center justify-center bg-black/30 p-4 overflow-hidden">
+                <div className="flex-1 flex items-center justify-center bg-black/30 p-4 overflow-hidden relative">
                     {isMultipleImages ? (
-                        <div className="flex items-center justify-center w-full h-full gap-0">
+                        <div className="flex items-center justify-center w-full h-full gap-0 relative">
                             {images.map((img, index) => (
-                                <div
-                                    key={img.id || index}
-                                    className="flex-1 flex flex-col h-full relative overflow-hidden"
-                                >
-                                    {/* Label */}
-                                    <div className="flex items-center justify-center py-2 border-b border-white/10">
-                                        <span className={`text-sm font-semibold ${index === 0
-                                            ? 'text-teal-400'
-                                            : 'text-amber-400'
-                                            }`}>
-                                            {index === 0 ? 'xAI' : 'Prototype'}
-                                        </span>
-                                    </div>
-
-                                    {/* Image Area */}
+                                // Hide prototype (index 1) if collapsed
+                                (!isPrototypeCollapsed || index === 0) && (
                                     <div
-                                        className="flex-1 flex items-center justify-center relative"
-                                        ref={index === 0 ? imageContainerRef : null}
-                                        onMouseDown={index === 0 ? handleMouseDown : undefined}
-                                        onMouseMove={index === 0 ? handleMouseMove : undefined}
-                                        onMouseUp={index === 0 ? handleMouseUp : undefined}
-                                        onMouseLeave={index === 0 ? handleMouseUp : undefined}
-                                        onWheel={index === 0 ? handleWheel : undefined}
-                                        style={{
-                                            cursor: index === 0
-                                                ? (isPanMode ? (isPanning ? 'grabbing' : 'grab') : (activeTool && activeTool !== 'eraser' ? 'crosshair' : 'default'))
-                                                : 'default'
-                                        }}
+                                        key={img.id || index}
+                                        className="flex-1 flex flex-col h-full relative overflow-hidden"
                                     >
-                                        <div
-                                            className="relative"
-                                            style={{
-                                                transform: `translate(${position.x}px, ${position.y}px) rotate(${rotation}deg) scale(${zoom / 100})`,
-                                                transition: isPanning ? 'none' : 'transform 300ms'
-                                            }}
-                                        >
-                                            <img
-                                                ref={index === 0 ? imageRef : null}
-                                                src={img.url}
-                                                alt={img.type}
-                                                className="max-w-full max-h-full object-contain select-none"
-                                                style={{ filter: index === 0 ? `brightness(${brightness}%) contrast(${contrast}%)` : 'none' }}
-                                                draggable={false}
-                                            />
+                                        {/* Label */}
+                                        <div className="flex items-center justify-center py-2 border-b border-white/10 relative">
+                                            <span className={`text-sm font-semibold ${index === 0
+                                                ? 'text-teal-400'
+                                                : 'text-amber-400'
+                                                }`}>
+                                                {index === 0 ? 'xAI' : 'Prototype'}
+                                            </span>
 
-                                            {/* SVG overlay for annotations (only on left image) */}
-                                            {index === 0 && (
-                                                <svg
-                                                    className="absolute top-0 left-0 w-full h-full"
-                                                    style={{ overflow: 'visible' }}
+                                            {/* Collapse/Expand Button */}
+                                            {index === 1 && (
+                                                <button
+                                                    onClick={() => setIsPrototypeCollapsed(!isPrototypeCollapsed)}
+                                                    className="absolute right-2 p-1 hover:bg-white/10 rounded text-gray-400 hover:text-white transition-colors"
+                                                    title="Ẩn Prototype"
                                                 >
-                                                    {/* Render saved annotations */}
-                                                    {annotations.map((shape, idx) => (
-                                                        <g key={idx}>{renderShape(shape, idx, false)}</g>
-                                                    ))}
-                                                    {/* Render current drawing shape */}
-                                                    {currentShape && renderShape(currentShape, -1, true)}
-                                                </svg>
+                                                    <PanelRightClose className="w-4 h-4" />
+                                                </button>
+                                            )}
+                                            {index === 0 && isPrototypeCollapsed && (
+                                                <button
+                                                    onClick={() => setIsPrototypeCollapsed(false)}
+                                                    className="absolute right-2 p-1 hover:bg-white/10 rounded text-gray-400 hover:text-white transition-colors"
+                                                    title="Hiện Prototype"
+                                                >
+                                                    <PanelRight className="w-4 h-4" />
+                                                </button>
                                             )}
                                         </div>
 
-                                        {index === 0 && (
-                                            <div className="absolute right-0 top-0 bottom-0 w-px bg-white/20" />
-                                        )}
+                                        {/* Image Area */}
+                                        <div
+                                            className="flex-1 flex items-center justify-center relative overflow-hidden"
+                                            ref={index === 0 ? imageContainerRef : null}
+                                            onMouseDown={index === 0 ? handleMouseDown : undefined}
+                                            onMouseMove={index === 0 ? handleMouseMove : undefined}
+                                            onMouseUp={index === 0 ? handleMouseUp : undefined}
+                                            onMouseLeave={index === 0 ? handleMouseUp : undefined}
+                                            onWheel={index === 0 ? handleWheel : undefined}
+                                            style={{
+                                                cursor: index === 0
+                                                    ? (isPanMode ? (isPanning ? 'grabbing' : 'grab') : (activeTool && activeTool !== 'eraser' ? 'crosshair' : 'default'))
+                                                    : 'default'
+                                            }}
+                                        >
+                                            <div
+                                                className="relative"
+                                                style={{
+                                                    transform: `translate(${position.x}px, ${position.y}px) rotate(${rotation}deg) scale(${zoom / 100})`,
+                                                    transition: isPanning ? 'none' : 'transform 300ms'
+                                                }}
+                                            >
+                                                <img
+                                                    ref={index === 0 ? imageRef : null}
+                                                    src={img.url}
+                                                    alt={img.type}
+                                                    className="max-w-full max-h-full object-contain select-none"
+                                                    style={{ filter: index === 0 ? `brightness(${brightness}%) contrast(${contrast}%)` : 'none' }}
+                                                    draggable={false}
+                                                />
+
+                                                {/* SVG overlay for annotations (only on left image) */}
+                                                {index === 0 && imageRef.current && (
+                                                    <svg
+                                                        className="absolute top-0 left-0 w-full h-full"
+                                                        viewBox={`0 0 ${imageRef.current.naturalWidth || imageRef.current.width} ${imageRef.current.naturalHeight || imageRef.current.height}`}
+                                                        preserveAspectRatio="none"
+                                                        style={{ overflow: 'visible' }}
+                                                    >
+                                                        {/* Render saved annotations */}
+                                                        {annotations.map((shape, idx) => (
+                                                            <g key={idx}>{renderShape(shape, idx, false)}</g>
+                                                        ))}
+                                                        {/* Render current drawing shape */}
+                                                        {currentShape && renderShape(currentShape, -1, true)}
+                                                    </svg>
+                                                )}
+                                            </div>
+
+                                            {index === 0 && !isPrototypeCollapsed && (
+                                                <div className="absolute right-0 top-0 bottom-0 w-px bg-white/20" />
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
+                                )
                             ))}
                         </div>
                     ) : images.length === 1 ? (
@@ -588,17 +672,21 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
                                 />
 
                                 {/* SVG overlay for annotations */}
-                                <svg
-                                    className="absolute top-0 left-0 w-full h-full"
-                                    style={{ overflow: 'visible' }}
-                                >
-                                    {/* Render saved annotations */}
-                                    {annotations.map((shape, idx) => (
-                                        <g key={idx}>{renderShape(shape, idx, false)}</g>
-                                    ))}
-                                    {/* Render current drawing shape */}
-                                    {currentShape && renderShape(currentShape, -1, true)}
-                                </svg>
+                                {imageRef.current && (
+                                    <svg
+                                        className="absolute top-0 left-0 w-full h-full"
+                                        viewBox={`0 0 ${imageRef.current.naturalWidth || imageRef.current.width} ${imageRef.current.naturalHeight || imageRef.current.height}`}
+                                        preserveAspectRatio="none"
+                                        style={{ overflow: 'visible' }}
+                                    >
+                                        {/* Render saved annotations */}
+                                        {annotations.map((shape, idx) => (
+                                            <g key={idx}>{renderShape(shape, idx, false)}</g>
+                                        ))}
+                                        {/* Render current drawing shape */}
+                                        {currentShape && renderShape(currentShape, -1, true)}
+                                    </svg>
+                                )}
                             </div>
                         </div>
                     ) : null}

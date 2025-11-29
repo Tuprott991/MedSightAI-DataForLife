@@ -128,13 +128,13 @@ export const ImageToolsSidebar = ({
                 </div>
 
                 {/* Reset Button */}
-                <div className="pt-1.5 border-t border-white/10">
+                <div className="pt-1.5 border-t border-white/10 text-[11px] font-semibold">
                     <button
                         onClick={onReset}
-                        className="w-full aspect-square flex items-center justify-center rounded bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white transition-colors"
-                        title="Đặt Lại"
+                        className="w-full py-1 flex items-center justify-center rounded bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white transition-colors cursor-pointer"
+                        title="Đặt Lại Tất Cả"
                     >
-                        <RotateCcw className="w-4 h-4" />
+                        Đặt Lại
                     </button>
                 </div>
             </div>
