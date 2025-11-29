@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Undo, Redo, PanelLeft, PanelLeftClose } from 'lucide-react';
 import { useSidebar } from '../../layout';
 import { SimilarCasesButton } from '../SimilarCases/SimilarCasesButton';
@@ -6,19 +6,40 @@ import { SimilarCasesModal } from '../SimilarCases/SimilarCasesModal';
 import { ZoomControls } from '../../custom/ZoomControls';
 import { ImageToolsSidebar } from './ImageToolsSidebar';
 
-export const ImageViewer = ({ image, patientInfo }) => {
+export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [zoom, setZoom] = useState(100);
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [brightness, setBrightness] = useState(100);
     const [contrast, setContrast] = useState(100);
     const [activeAdjustment, setActiveAdjustment] = useState(null); // 'brightness' or 'contrast'
-    const [activeTool, setActiveTool] = useState(null); // 'square', 'circle', 'freehand'
+    const [activeTool, setActiveTool] = useState(null); // 'square', 'circle', 'freehand', 'eraser'
     const { isLeftCollapsed, setIsLeftCollapsed } = useSidebar();
+
+    // Drawing states - separate for single and multiple image modes
+    const [singleImageAnnotations, setSingleImageAnnotations] = useState([]);
+    const [multipleImageAnnotations, setMultipleImageAnnotations] = useState([]);
+    const [isDrawing, setIsDrawing] = useState(false);
+    const [startPoint, setStartPoint] = useState(null);
+    const [currentShape, setCurrentShape] = useState(null);
+    const [selectedAnnotation, setSelectedAnnotation] = useState(null);
+    const [editingLabel, setEditingLabel] = useState('');
+    const imageContainerRef = useRef(null);
+    const imageRef = useRef(null);
 
     // Check if image is an array (multiple images from finding click) or single image
     const images = Array.isArray(image) ? image : (image ? [image] : []);
     const isMultipleImages = images.length > 1;
+
+    // Use the appropriate annotations based on current mode
+    const annotations = isMultipleImages ? multipleImageAnnotations : singleImageAnnotations;
+    const setAnnotations = isMultipleImages ? setMultipleImageAnnotations : setSingleImageAnnotations;
+
+    // Reset selected annotation when switching modes
+    useEffect(() => {
+        setSelectedAnnotation(null);
+        setEditingLabel('');
+    }, [isMultipleImages]);
 
     // For multiple images, limit zoom to prevent overflow beyond divider
     const maxZoomForMultiple = isMultipleImages ? 200 : 500;
@@ -42,7 +63,263 @@ export const ImageViewer = ({ image, patientInfo }) => {
     };
 
     const handleToolClick = (tool) => {
-        setActiveTool(activeTool === tool ? null : tool);
+        if (tool === 'eraser') {
+            // Eraser clears all annotations
+            setAnnotations([]);
+            setActiveTool(null);
+        } else {
+            setActiveTool(activeTool === tool ? null : tool);
+        }
+    };
+
+    // Drawing functions
+    const handleMouseDown = (e) => {
+        // Only draw if a tool is active and it's not eraser
+        if (!activeTool || activeTool === 'eraser') return;
+
+        // Only allow drawing on left image when multiple images
+        if (isMultipleImages && e.currentTarget !== imageContainerRef.current) return;
+
+        if (!imageRef.current) return;
+
+        // Get the bounding rect of the actual image element
+        const imgRect = imageRef.current.getBoundingClientRect();
+
+        // Calculate position relative to the image itself (already accounts for transform)
+        const x = e.clientX - imgRect.left;
+        const y = e.clientY - imgRect.top;
+
+        setIsDrawing(true);
+        setStartPoint({ x, y });
+
+        if (activeTool === 'freehand') {
+            setCurrentShape({
+                type: 'freehand',
+                points: [{ x, y }]
+            });
+        } else {
+            setCurrentShape({
+                type: activeTool,
+                x,
+                y,
+                width: 0,
+                height: 0
+            });
+        }
+    };
+
+    const handleMouseMove = (e) => {
+        if (!isDrawing || !startPoint || !imageRef.current) return;
+
+        // Get the bounding rect of the actual image element
+        const imgRect = imageRef.current.getBoundingClientRect();
+
+        // Calculate position relative to the image itself
+        const currentX = e.clientX - imgRect.left;
+        const currentY = e.clientY - imgRect.top;
+
+        if (activeTool === 'freehand') {
+            setCurrentShape(prev => ({
+                ...prev,
+                points: [...prev.points, { x: currentX, y: currentY }]
+            }));
+        } else if (activeTool === 'square' || activeTool === 'circle') {
+            const width = currentX - startPoint.x;
+            const height = currentY - startPoint.y;
+
+            setCurrentShape({
+                type: activeTool,
+                x: width < 0 ? currentX : startPoint.x,
+                y: height < 0 ? currentY : startPoint.y,
+                width: Math.abs(width),
+                height: Math.abs(height)
+            });
+        }
+    };
+
+    const handleMouseUp = () => {
+        if (isDrawing && currentShape) {
+            const newShape = { ...currentShape, label: 'Phát hiện' };
+            if (activeTool === 'freehand' && currentShape.points?.length > 2) {
+                setAnnotations(prev => [...prev, newShape]);
+            } else if ((activeTool === 'square' || activeTool === 'circle') &&
+                currentShape.width > 5 && currentShape.height > 5) {
+                setAnnotations(prev => [...prev, newShape]);
+            }
+        }
+        setIsDrawing(false);
+        setStartPoint(null);
+        setCurrentShape(null);
+    };
+
+    const handleAnnotationClick = (index, e) => {
+        e.stopPropagation();
+        setSelectedAnnotation(index);
+        setEditingLabel(annotations[index].label || '');
+    };
+
+    const handleLabelChange = (e) => {
+        setEditingLabel(e.target.value);
+    };
+
+    const handleLabelSubmit = (index) => {
+        if (editingLabel.trim()) {
+            const newAnnotations = [...annotations];
+            newAnnotations[index] = { ...newAnnotations[index], label: editingLabel.trim() };
+            setAnnotations(newAnnotations);
+        }
+        setSelectedAnnotation(null);
+        setEditingLabel('');
+    };
+
+    const handleDeleteAnnotation = (index, e) => {
+        e.stopPropagation();
+        const newAnnotations = annotations.filter((_, i) => i !== index);
+        setAnnotations(newAnnotations);
+        setSelectedAnnotation(null);
+    };
+
+    // Render annotation shape with label
+    const renderShape = (shape, index, isTemp = false) => {
+        const isSelected = index === selectedAnnotation;
+        const strokeColor = isTemp ? '#fbbf24' : (isSelected ? '#fbbf24' : '#14b8a6');
+        const strokeWidth = 2;
+
+        // Calculate label position based on shape type
+        let labelX = 0;
+        let labelY = 0;
+
+        if (shape.type === 'square') {
+            labelX = shape.x;
+            labelY = shape.y - 5;
+        } else if (shape.type === 'circle') {
+            labelX = shape.x;
+            labelY = shape.y - 5;
+        } else if (shape.type === 'freehand' && shape.points?.length > 0) {
+            labelX = shape.points[0].x;
+            labelY = shape.points[0].y - 5;
+        }
+
+        return (
+            <g>
+                {/* Shape */}
+                {shape.type === 'square' && (
+                    <rect
+                        x={shape.x}
+                        y={shape.y}
+                        width={shape.width}
+                        height={shape.height}
+                        fill={isSelected ? 'rgba(251, 191, 36, 0.1)' : 'none'}
+                        stroke={strokeColor}
+                        strokeWidth={strokeWidth}
+                        className={!isTemp ? 'cursor-pointer' : ''}
+                        style={{ pointerEvents: isTemp ? 'none' : 'auto' }}
+                        onClick={(e) => !isTemp && handleAnnotationClick(index, e)}
+                    />
+                )}
+                {shape.type === 'circle' && (
+                    <ellipse
+                        cx={shape.x + shape.width / 2}
+                        cy={shape.y + shape.height / 2}
+                        rx={Math.abs(shape.width / 2)}
+                        ry={Math.abs(shape.height / 2)}
+                        fill={isSelected ? 'rgba(251, 191, 36, 0.1)' : 'none'}
+                        stroke={strokeColor}
+                        strokeWidth={strokeWidth}
+                        className={!isTemp ? 'cursor-pointer' : ''}
+                        style={{ pointerEvents: isTemp ? 'none' : 'auto' }}
+                        onClick={(e) => !isTemp && handleAnnotationClick(index, e)}
+                    />
+                )}
+                {shape.type === 'freehand' && shape.points?.length > 1 && (
+                    <path
+                        d={shape.points.map((point, i) =>
+                            `${i === 0 ? 'M' : 'L'} ${point.x} ${point.y}`
+                        ).join(' ')}
+                        fill="none"
+                        stroke={strokeColor}
+                        strokeWidth={strokeWidth}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className={!isTemp ? 'cursor-pointer' : ''}
+                        style={{ pointerEvents: isTemp ? 'none' : 'auto' }}
+                        onClick={(e) => !isTemp && handleAnnotationClick(index, e)}
+                    />
+                )}
+
+                {/* Label */}
+                {!isTemp && shape.label && (
+                    <g>
+                        <rect
+                            x={labelX}
+                            y={labelY - 18}
+                            width={isSelected ? 120 : (shape.label.length * 7 + 10)}
+                            height={20}
+                            fill={strokeColor}
+                            rx={3}
+                        />
+                        {isSelected ? (
+                            <foreignObject
+                                x={labelX + 2}
+                                y={labelY - 16}
+                                width={116}
+                                height={18}
+                            >
+                                <input
+                                    type="text"
+                                    value={editingLabel}
+                                    onChange={handleLabelChange}
+                                    onBlur={() => handleLabelSubmit(index)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleLabelSubmit(index);
+                                        if (e.key === 'Escape') setSelectedAnnotation(null);
+                                        e.stopPropagation();
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="w-full h-full bg-transparent text-white text-xs px-1 outline-none"
+                                    style={{ pointerEvents: 'auto' }}
+                                    autoFocus
+                                />
+                            </foreignObject>
+                        ) : (
+                            <text
+                                x={labelX + 5}
+                                y={labelY - 5}
+                                fill="white"
+                                fontSize="12"
+                                fontWeight="500"
+                            >
+                                {shape.label}
+                            </text>
+                        )}
+                        {isSelected && (
+                            <g
+                                onClick={(e) => handleDeleteAnnotation(index, e)}
+                                className="cursor-pointer"
+                                style={{ pointerEvents: 'auto' }}
+                            >
+                                <circle
+                                    cx={labelX + 110}
+                                    cy={labelY - 8}
+                                    r="8"
+                                    fill="rgba(239, 68, 68, 0.9)"
+                                />
+                                <text
+                                    x={labelX + 110}
+                                    y={labelY - 4}
+                                    fill="white"
+                                    fontSize="12"
+                                    fontWeight="bold"
+                                    textAnchor="middle"
+                                >
+                                    ×
+                                </text>
+                            </g>
+                        )}
+                    </g>
+                )}
+            </g>
+        );
     };
 
     if (!image || (Array.isArray(image) && image.length === 0)) {
@@ -93,8 +370,25 @@ export const ImageViewer = ({ image, patientInfo }) => {
                         </button>
                     </div>
 
-                    {/* Group 2: Similar Cases Button */}
+                    {/* Group 2: Similar Cases Button (Center) */}
                     <SimilarCasesButton onClick={() => setIsModalOpen(true)} />
+
+                    {/* Group 3: Original Image Button */}
+                    <button
+                        onClick={onRestoreOriginal}
+                        disabled={!isMultipleImages}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded transition-colors ${isMultipleImages
+                            ? 'bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white cursor-pointer'
+                            : 'bg-white/5 text-gray-600 cursor-not-allowed opacity-50'
+                            }`}
+                        title={isMultipleImages ? "Quay lại hình ảnh gốc" : "Chỉ khả dụng khi xem 2 ảnh"}
+                    >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span>Hình ảnh gốc</span>
+                    </button>
                 </div>
             </div>
 
@@ -117,22 +411,50 @@ export const ImageViewer = ({ image, patientInfo }) => {
                     {isMultipleImages ? (
                         <div className="flex items-center justify-center w-full h-full gap-0">
                             {images.map((img, index) => (
-                                <div key={img.id || index} className="flex-1 flex items-center justify-center h-full relative overflow-hidden">
+                                <div
+                                    key={img.id || index}
+                                    className="flex-1 flex items-center justify-center h-full relative overflow-hidden"
+                                    ref={index === 0 ? imageContainerRef : null}
+                                    onMouseDown={index === 0 ? handleMouseDown : undefined}
+                                    onMouseMove={index === 0 ? handleMouseMove : undefined}
+                                    onMouseUp={index === 0 ? handleMouseUp : undefined}
+                                    onMouseLeave={index === 0 ? handleMouseUp : undefined}
+                                    style={{ cursor: index === 0 && activeTool && activeTool !== 'eraser' ? 'crosshair' : 'default' }}
+                                >
                                     <div
+                                        className="relative"
                                         style={{
                                             transform: index === 0
                                                 ? `translate(${position.x}px, ${position.y}px) scale(${zoom / 100})`
                                                 : 'none',
-                                            transition: 'transform 300ms',
-                                            filter: index === 0 ? `brightness(${brightness}%) contrast(${contrast}%)` : 'none'
+                                            transition: 'transform 300ms'
                                         }}
                                     >
                                         <img
+                                            ref={index === 0 ? imageRef : null}
                                             src={img.url}
                                             alt={img.type}
-                                            className="max-w-full max-h-full object-contain"
+                                            className="max-w-full max-h-full object-contain select-none"
+                                            style={{ filter: index === 0 ? `brightness(${brightness}%) contrast(${contrast}%)` : 'none' }}
+                                            draggable={false}
                                         />
+
+                                        {/* SVG overlay for annotations (only on left image) */}
+                                        {index === 0 && (
+                                            <svg
+                                                className="absolute top-0 left-0 w-full h-full"
+                                                style={{ overflow: 'visible' }}
+                                            >
+                                                {/* Render saved annotations */}
+                                                {annotations.map((shape, idx) => (
+                                                    <g key={idx}>{renderShape(shape, idx, false)}</g>
+                                                ))}
+                                                {/* Render current drawing shape */}
+                                                {currentShape && renderShape(currentShape, -1, true)}
+                                            </svg>
+                                        )}
                                     </div>
+
                                     {index === 0 && (
                                         <div className="absolute right-0 top-0 bottom-0 w-px bg-white/20" />
                                     )}
@@ -141,17 +463,43 @@ export const ImageViewer = ({ image, patientInfo }) => {
                         </div>
                     ) : images.length === 1 ? (
                         <div
-                            style={{
-                                transform: `translate(${position.x}px, ${position.y}px) scale(${zoom / 100})`,
-                                transition: 'transform 300ms',
-                                filter: `brightness(${brightness}%) contrast(${contrast}%)`
-                            }}
+                            className="relative w-full h-full flex items-center justify-center"
+                            ref={imageContainerRef}
+                            onMouseDown={handleMouseDown}
+                            onMouseMove={handleMouseMove}
+                            onMouseUp={handleMouseUp}
+                            onMouseLeave={handleMouseUp}
+                            style={{ cursor: activeTool && activeTool !== 'eraser' ? 'crosshair' : 'default' }}
                         >
-                            <img
-                                src={images[0].url}
-                                alt={images[0].type}
-                                className="max-w-full max-h-full object-contain"
-                            />
+                            <div
+                                className="relative"
+                                style={{
+                                    transform: `translate(${position.x}px, ${position.y}px) scale(${zoom / 100})`,
+                                    transition: 'transform 300ms'
+                                }}
+                            >
+                                <img
+                                    ref={imageRef}
+                                    src={images[0].url}
+                                    alt={images[0].type}
+                                    className="max-w-full max-h-full object-contain select-none"
+                                    style={{ filter: `brightness(${brightness}%) contrast(${contrast}%)` }}
+                                    draggable={false}
+                                />
+
+                                {/* SVG overlay for annotations */}
+                                <svg
+                                    className="absolute top-0 left-0 w-full h-full"
+                                    style={{ overflow: 'visible' }}
+                                >
+                                    {/* Render saved annotations */}
+                                    {annotations.map((shape, idx) => (
+                                        <g key={idx}>{renderShape(shape, idx, false)}</g>
+                                    ))}
+                                    {/* Render current drawing shape */}
+                                    {currentShape && renderShape(currentShape, -1, true)}
+                                </svg>
+                            </div>
                         </div>
                     ) : null}
                 </div>

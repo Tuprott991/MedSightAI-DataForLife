@@ -18,6 +18,7 @@ export const DoctorDetail = () => {
     // Set first image from first group as default
     const firstImage = medicalImagesGroups[0]?.images[0];
     const [selectedImage, setSelectedImage] = useState(firstImage);
+    const [originalImage, setOriginalImage] = useState(firstImage);
     const [analysisData, setAnalysisData] = useState(null);
 
     const handleAIAnalyze = () => {
@@ -30,6 +31,17 @@ export const DoctorDetail = () => {
     const handleFindingClick = (imageData) => {
         // Update the selected image when a finding is clicked
         setSelectedImage(imageData);
+    };
+
+    const handleRestoreOriginal = () => {
+        // Restore to original single image
+        setSelectedImage(originalImage);
+    };
+
+    const handleImageSelect = (image) => {
+        // When manually selecting from list, update both selected and original
+        setSelectedImage(image);
+        setOriginalImage(image);
     };
 
     if (!patient) {
@@ -60,7 +72,7 @@ export const DoctorDetail = () => {
                             <ImageListGrouped
                                 imageGroups={medicalImagesGroups}
                                 selectedImage={selectedImage}
-                                onImageSelect={setSelectedImage}
+                                onImageSelect={handleImageSelect}
                                 patient={patient}
                             />
                         </div>
@@ -75,6 +87,7 @@ export const DoctorDetail = () => {
                         <ImageViewer
                             image={selectedImage}
                             patientInfo={patient}
+                            onRestoreOriginal={handleRestoreOriginal}
                         />
                     </div>
 
