@@ -30,11 +30,11 @@ export const Layout = () => {
     if (isDoctorDetail) {
         patient = patientsData.find(p => p.id === parseInt(params.id));
         backPath = '/doctor';
-        backLabel = 'Back to Patient Records';
+        backLabel = 'Quay Lại Danh Sách Bệnh Nhân';
     } else if (isStudentDetail) {
         patient = patientsData.find(p => p.id === parseInt(params.id));
         backPath = '/student';
-        backLabel = 'Back to Student Records';
+        backLabel = 'Quay Lại Danh Sách Bệnh Nhân';
     }
 
     return (
@@ -81,7 +81,7 @@ export const Layout = () => {
                                             }`}
                                     >
                                         <HomeIcon className="w-4 h-4" />
-                                        <span className="font-medium">Home</span>
+                                        <span className="font-medium">Trang Chủ</span>
                                     </Link>
                                     <Link
                                         to="/doctor"
@@ -91,7 +91,7 @@ export const Layout = () => {
                                             }`}
                                     >
                                         <Stethoscope className="w-4 h-4" />
-                                        <span className="font-medium">Doctor</span>
+                                        <span className="font-medium">Bác Sĩ</span>
                                     </Link>
                                     <Link
                                         to="/student"
@@ -101,7 +101,7 @@ export const Layout = () => {
                                             }`}
                                     >
                                         <GraduationCap className="w-4 h-4" />
-                                        <span className="font-medium">Student</span>
+                                        <span className="font-medium">Sinh Viên</span>
                                     </Link>
                                 </div>
                             ) : (

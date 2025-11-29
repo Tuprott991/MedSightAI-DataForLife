@@ -18,6 +18,19 @@ export const PatientCard = ({ patient }) => {
         }
     };
 
+    const getStatusText = (status) => {
+        switch (status) {
+            case 'Critical':
+                return 'Nguy Kịch';
+            case 'Under Treatment':
+                return 'Đang Điều Trị';
+            case 'Stable':
+                return 'Ổn Định';
+            default:
+                return status;
+        }
+    };
+
     return (
         <div className="group bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden transition-all duration-300">
             {/* Patient Image */}
@@ -29,7 +42,7 @@ export const PatientCard = ({ patient }) => {
                 />
                 <div className="absolute top-3 right-3">
                     <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(patient.status)}`}>
-                        {patient.status}
+                        {getStatusText(patient.status)}
                     </span>
                 </div>
             </div>
@@ -42,22 +55,22 @@ export const PatientCard = ({ patient }) => {
                 <div className="space-y-2">
                     <div className="flex items-center gap-2 text-sm text-gray-400">
                         <User className="w-4 h-4" />
-                        <span>{patient.age} years • {patient.gender}</span>
+                        <span>{patient.age} tuổi • {patient.gender === 'Male' ? 'Nam' : 'Nữ'}</span>
                     </div>
 
                     <div className="flex items-center gap-2 text-sm text-gray-400">
                         <Droplet className="w-4 h-4" />
-                        <span>Blood Type: {patient.bloodType}</span>
+                        <span>Nhóm máu: {patient.bloodType}</span>
                     </div>
 
                     <div className="flex items-center gap-2 text-sm text-gray-400">
                         <Calendar className="w-4 h-4" />
-                        <span>Admitted: {new Date(patient.admissionDate).toLocaleDateString()}</span>
+                        <span>Nhập viện: {new Date(patient.admissionDate).toLocaleDateString('vi-VN')}</span>
                     </div>
 
                     <div className="flex items-center gap-2 text-sm text-gray-400">
                         <Activity className="w-4 h-4" />
-                        <span>Last Visit: {new Date(patient.lastVisit).toLocaleDateString()}</span>
+                        <span>Khám gần nhất: {new Date(patient.lastVisit).toLocaleDateString('vi-VN')}</span>
                     </div>
                 </div>
 
@@ -65,7 +78,7 @@ export const PatientCard = ({ patient }) => {
                     to={isStudentPage ? `/student/${patient.id}` : `/doctor/${patient.id}`}
                     className="mt-4 w-full bg-teal-500/20 hover:bg-teal-500 text-teal-400 hover:text-white border border-teal-500/30 hover:border-teal-500 px-4 py-2 rounded-lg transition-all font-medium block text-center"
                 >
-                    View Details
+                    Xem Chi Tiết
                 </Link>
             </div>
         </div>

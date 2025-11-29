@@ -5,33 +5,33 @@ import { FeatureCard } from './FeatureCard';
 const features = [
     {
         icon: Brain,
-        title: 'AI-Powered Diagnosis',
-        description: 'Leverage advanced machine learning algorithms for accurate medical diagnoses and treatment recommendations.'
+        title: 'Chẩn Đoán Bằng AI',
+        description: 'Tận dụng thuật toán học máy tiên tiến để chẩn đoán y khoa chính xác và đề xuất phương pháp điều trị.'
     },
     {
         icon: Heart,
-        title: 'Patient Care Management',
-        description: 'Comprehensive patient records, treatment history, and appointment scheduling in one unified platform.'
+        title: 'Quản Lý Chăm Sóc Bệnh Nhân',
+        description: 'Hồ sơ bệnh nhân toàn diện, lịch sử điều trị và đặt lịch hẹn trong một nền tảng thống nhất.'
     },
     {
         icon: Shield,
-        title: 'Secure & Compliant',
-        description: 'Enterprise-grade security with full compliance to healthcare data protection standards and regulations.'
+        title: 'Bảo Mật & Tuân Thủ',
+        description: 'Bảo mật cấp doanh nghiệp với sự tuân thủ đầy đủ các tiêu chuẩn bảo vệ dữ liệu y tế và quy định.'
     },
     {
         icon: GraduationCap,
-        title: 'Medical Education',
-        description: 'Interactive learning modules, virtual simulations, and comprehensive medical resources for students.'
+        title: 'Giáo Dục Y Khoa',
+        description: 'Mô-đun học tập tương tác, mô phỏng ảo và tài nguyên y khoa đầy đủ cho sinh viên.'
     },
     {
         icon: Activity,
-        title: 'Real-time Analytics',
-        description: 'Monitor patient vitals, track treatment progress, and analyze health trends with real-time data visualization.'
+        title: 'Phân Tích Thời Gian Thực',
+        description: 'Giám sát dấu hiệu sinh tồn bệnh nhân, theo dõi tiến trình điều trị và phân tích xu hướng sức khỏe với trực quan hóa dữ liệu thời gian thực.'
     },
     {
         icon: Stethoscope,
-        title: 'Expert Collaboration',
-        description: 'Connect with medical professionals worldwide, share insights, and collaborate on complex cases.'
+        title: 'Hợp Tác Chuyên Gia',
+        description: 'Kết nối với các chuyên gia y tế trên toàn thế giới, chia sẻ kiến thức và hợp tác về các ca bệnh phức tạp.'
     }
 ];
 
@@ -77,8 +77,8 @@ export const FeaturesSection = () => {
     return (
         <div ref={sectionRef} className="container mx-auto px-6 py-20">
             <div className="text-center mb-16">
-                <h2 className="text-3xl md:text-4xl font-bold mb-4">Why Choose MedSightAI?</h2>
-                <p className="text-gray-400 text-lg">Advanced features designed for modern healthcare</p>
+                <h2 className="text-3xl md:text-4xl font-bold mb-4">Tại Sao Chọn MedSightAI?</h2>
+                <p className="text-gray-400 text-lg">Các tính năng tiên tiến được thiết kế cho chăm sóc sức khỏe hiện đại</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

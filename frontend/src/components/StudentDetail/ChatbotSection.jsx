@@ -6,7 +6,7 @@ export const ChatbotSection = () => {
         {
             id: 1,
             type: 'bot',
-            text: "Hello! I'm your AI medical assistant. I can help you understand this case better. Feel free to ask me anything!",
+            text: "Xin chào! Tôi là trợ lý AI y khoa của bạn. Tôi có thể giúp bạn hiểu rõ hơn về ca bệnh này. Hãy hỏi tôi bất cứ điều gì!",
             timestamp: new Date()
         }
     ]);
@@ -52,11 +52,11 @@ export const ChatbotSection = () => {
 
     const generateMockResponse = (question) => {
         const responses = [
-            "Based on the imaging patterns, I can see signs consistent with the diagnosis. The key indicators include...",
-            "That's a great question! In cases like this, we typically look for specific markers in the scan...",
-            "The pathology shown here is characterized by several distinctive features. Let me explain...",
-            "Good observation! This finding is significant because it suggests...",
-            "To answer your question, we need to consider multiple factors including patient history and imaging results..."
+            "Dựa trên các mẫu hình hình ảnh, tôi có thể thấy các dấu hiệu phù hợp với chẩn đoán. Các chỉ số chính bao gồm...",
+            "Đó là một câu hỏi hay! Trong những trường hợp như thế này, chúng ta thường tìm kiếm các dấu hiệu cụ thể trong kết quả chụp...",
+            "Bệnh lý thể hiện ở đây được đặc trưng bởi một số đặc điểm nổi bật. Hãy để tôi giải thích...",
+            "Quan sát tốt! Phát hiện này có ý nghĩa quan trọng vì nó gợi ý...",
+            "Để trả lời câu hỏi của bạn, chúng ta cần xem xét nhiều yếu tố bao gồm tiền sử bệnh nhân và kết quả hình ảnh..."
         ];
         return responses[Math.floor(Math.random() * responses.length)];
     };
@@ -77,8 +77,8 @@ export const ChatbotSection = () => {
                         <Bot className="w-5 h-5 text-teal-500" />
                     </div>
                     <div>
-                        <h3 className="text-sm font-semibold text-white">AI Assistant</h3>
-                        <p className="text-xs text-gray-400">Ask me anything about this case</p>
+                        <h3 className="text-sm font-semibold text-white">Trợ Lý AI</h3>
+                        <p className="text-xs text-gray-400">Hỏi tôi bất cứ điều gì về ca bệnh này</p>
                     </div>
                 </div>
             </div>
@@ -137,7 +137,7 @@ export const ChatbotSection = () => {
                         value={inputMessage}
                         onChange={(e) => setInputMessage(e.target.value)}
                         onKeyPress={handleKeyPress}
-                        placeholder="Ask about this case..."
+                        placeholder="Hỏi về ca bệnh này..."
                         className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-teal-500 transition-colors"
                     />
                     <button

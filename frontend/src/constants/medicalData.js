@@ -1,22 +1,22 @@
-// Mock medical images data grouped by examination
+// Dữ liệu hình ảnh y tế được nhóm theo lần khám
 export const medicalImagesGroups = [
   {
     id: 1,
     examDate: "2025-11-10",
-    examType: "Chest Examination",
+    examType: "Khám Ngực",
     images: [
       {
         id: "IMG-001",
-        type: "X-Ray Chest PA",
+        type: "X-Quang Ngực PA",
         url: "https://images.unsplash.com/photo-1530026405186-ed1f139313f8?w=400",
-        modality: "X-Ray",
+        modality: "X-Quang",
         imageCode: "XR-CH-001",
       },
       {
         id: "IMG-002",
-        type: "X-Ray Chest Lateral",
+        type: "X-Quang Ngực Nghiêng",
         url: "https://images.unsplash.com/photo-1530026405186-ed1f139313f8?w=400",
-        modality: "X-Ray",
+        modality: "X-Quang",
         imageCode: "XR-CH-002",
       },
     ],
@@ -24,25 +24,25 @@ export const medicalImagesGroups = [
   {
     id: 2,
     examDate: "2025-11-08",
-    examType: "Brain MRI Study",
+    examType: "Chụp MRI Não",
     images: [
       {
         id: "IMG-003",
-        type: "MRI Brain T1",
+        type: "MRI Não T1",
         url: "https://images.unsplash.com/photo-1559757175-0eb30cd8c063?w=400",
         modality: "MRI",
         imageCode: "MR-BR-001",
       },
       {
         id: "IMG-004",
-        type: "MRI Brain T2",
+        type: "MRI Não T2",
         url: "https://images.unsplash.com/photo-1559757175-0eb30cd8c063?w=400",
         modality: "MRI",
         imageCode: "MR-BR-002",
       },
       {
         id: "IMG-005",
-        type: "MRI Brain FLAIR",
+        type: "MRI Não FLAIR",
         url: "https://images.unsplash.com/photo-1559757175-0eb30cd8c063?w=400",
         modality: "MRI",
         imageCode: "MR-BR-003",
@@ -52,18 +52,18 @@ export const medicalImagesGroups = [
   {
     id: 3,
     examDate: "2025-11-05",
-    examType: "Abdominal CT Scan",
+    examType: "Chụp CT Bụng",
     images: [
       {
         id: "IMG-006",
-        type: "CT Abdomen Pre-contrast",
+        type: "CT Bụng Trước Cản Quang",
         url: "https://images.unsplash.com/photo-1581594693702-fbdc51b2763b?w=400",
         modality: "CT",
         imageCode: "CT-AB-001",
       },
       {
         id: "IMG-007",
-        type: "CT Abdomen Post-contrast",
+        type: "CT Bụng Sau Cản Quang",
         url: "https://images.unsplash.com/photo-1581594693702-fbdc51b2763b?w=400",
         modality: "CT",
         imageCode: "CT-AB-002",
@@ -73,20 +73,20 @@ export const medicalImagesGroups = [
   {
     id: 4,
     examDate: "2025-11-03",
-    examType: "Ultrasound Examination",
+    examType: "Siêu Âm",
     images: [
       {
         id: "IMG-008",
-        type: "Ultrasound Liver",
+        type: "Siêu Âm Gan",
         url: "https://images.unsplash.com/photo-1579154204601-01588f351e67?w=400",
-        modality: "Ultrasound",
+        modality: "Siêu Âm",
         imageCode: "US-LV-001",
       },
       {
         id: "IMG-009",
-        type: "Ultrasound Kidney",
+        type: "Siêu Âm Thận",
         url: "https://images.unsplash.com/photo-1579154204601-01588f351e67?w=400",
-        modality: "Ultrasound",
+        modality: "Siêu Âm",
         imageCode: "US-KD-001",
       },
     ],
@@ -94,62 +94,76 @@ export const medicalImagesGroups = [
   {
     id: 5,
     examDate: "2025-11-02",
-    examType: "Spine X-Ray",
+    examType: "X-Quang Cột Sống",
     images: [
       {
         id: "IMG-010",
-        type: "X-Ray Spine AP",
+        type: "X-Quang Cột Sống AP",
         url: "https://images.unsplash.com/photo-1530026405186-ed1f139313f8?w=400",
-        modality: "X-Ray",
+        modality: "X-Quang",
         imageCode: "XR-SP-001",
       },
       {
         id: "IMG-011",
-        type: "X-Ray Spine Lateral",
+        type: "X-Quang Cột Sống Nghiêng",
         url: "https://images.unsplash.com/photo-1530026405186-ed1f139313f8?w=400",
-        modality: "X-Ray",
+        modality: "X-Quang",
         imageCode: "XR-SP-002",
       },
     ],
   },
 ];
 
-// Mock AI analysis data generator
+// Tạo dữ liệu phân tích AI
 export const generateAnalysisData = (patientDiagnosis) => ({
   aiConfidence: 94.5,
-  diagnosis: patientDiagnosis || "Pending Analysis",
+  diagnosis: patientDiagnosis || "Đang Phân Tích",
+  suspectedDiseases: [
+    {
+      name: "Bệnh Động Mạch Vành",
+      confidence: 92,
+    },
+    {
+      name: "Nhồi Máu Cơ Tim Cấp",
+      confidence: 85,
+    },
+    {
+      name: "Bệnh Cơ Tim",
+      confidence: 78,
+    },
+  ],
   findings: [
     {
       id: 1,
-      text: "Abnormal density detected in upper right quadrant",
+      text: "Phát hiện mật độ bất thường ở góc phần tư trên bên phải",
       severity: "high",
       confidence: 92,
     },
     {
       id: 2,
-      text: "Minor calcification observed",
+      text: "Quan sát thấy vôi hóa nhẹ",
       severity: "medium",
       confidence: 87,
     },
     {
       id: 3,
-      text: "Normal bone structure and alignment",
+      text: "Cấu trúc và sắp xếp xương bình thường",
       severity: "low",
       confidence: 96,
     },
   ],
   metrics: [
-    { label: "Lesion Size", value: "2.3 cm", status: "warning" },
-    { label: "Density", value: "145 HU", status: "normal" },
-    { label: "Volume", value: "12.5 cm³", status: "warning" },
-    { label: "Growth Rate", value: "+5% (30d)", status: "critical" },
-    { label: "Contrast Enhancement", value: "42 HU", status: "normal" },
-    { label: "Attenuation", value: "38 HU", status: "normal" },
+    { label: "Kích Thước Tổn Thương", value: "2.3 cm", status: "warning" },
+    { label: "Mật Độ", value: "145 HU", status: "normal" },
+    { label: "Thể Tích", value: "12.5 cm³", status: "warning" },
+    { label: "Tốc Độ Tăng Trưởng", value: "+5% (30 ngày)", status: "critical" },
+    { label: "Tăng Cường Cản Quang", value: "42 HU", status: "normal" },
+    { label: "Suy Giảm", value: "38 HU", status: "normal" },
   ],
   recommendations: [
-    "Follow-up imaging in 3 months",
-    "Consult with oncology department",
-    "Consider biopsy for detailed analysis",
-    "Monitor patient symptoms closely",
+    "Chụp hình ảnh theo dõi sau 3 tháng",
+    "Tư vấn với khoa ung bướu",
+    "Cân nhắc sinh thiết để phân tích chi tiết",
+    "Theo dõi chặt chẽ các triệu chứng của bệnh nhân",
   ],
 });

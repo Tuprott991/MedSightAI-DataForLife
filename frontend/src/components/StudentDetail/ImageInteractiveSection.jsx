@@ -18,7 +18,7 @@ export const ImageInteractiveSection = ({ caseData, onAnnotationsChange }) => {
     const containerRef = useRef(null);
     const imageRef = useRef(null);
 
-    const handleZoomIn = () => setZoom(prev => Math.min(prev + 25, 200));
+    const handleZoomIn = () => setZoom(prev => Math.min(prev + 25, 500));
     const handleZoomOut = () => setZoom(prev => Math.max(prev - 25, 50));
     const handleReset = () => {
         setZoom(100);
@@ -83,8 +83,11 @@ export const ImageInteractiveSection = ({ caseData, onAnnotationsChange }) => {
         if (!imageRef.current) return;
 
         const rect = imageRef.current.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        const scale = zoom / 100;
+
+        // Convert screen coordinates to image coordinates (accounting for zoom)
+        const x = (e.clientX - rect.left) / scale;
+        const y = (e.clientY - rect.top) / scale;
 
         if (panMode) {
             setIsPanning(true);
@@ -106,8 +109,11 @@ export const ImageInteractiveSection = ({ caseData, onAnnotationsChange }) => {
             });
         } else if (isDrawing && startPoint) {
             const rect = imageRef.current.getBoundingClientRect();
-            const currentX = e.clientX - rect.left;
-            const currentY = e.clientY - rect.top;
+            const scale = zoom / 100;
+
+            // Convert screen coordinates to image coordinates (accounting for zoom)
+            const currentX = (e.clientX - rect.left) / scale;
+            const currentY = (e.clientY - rect.top) / scale;
 
             const width = currentX - startPoint.x;
             const height = currentY - startPoint.y;
@@ -127,7 +133,7 @@ export const ImageInteractiveSection = ({ caseData, onAnnotationsChange }) => {
             setStartPoint(null);
         } else if (isDrawing && currentBox) {
             if (currentBox.width > 5 && currentBox.height > 5) {
-                const newBox = { ...currentBox, label: 'Finding' };
+                const newBox = { ...currentBox, label: 'Phát hiện' };
                 const newBoxes = [...boxes, newBox];
                 setBoxes(newBoxes);
                 addToHistory(newBoxes);
@@ -173,7 +179,7 @@ export const ImageInteractiveSection = ({ caseData, onAnnotationsChange }) => {
     if (!caseData?.imageUrl) {
         return (
             <div className="flex-1 min-h-0 bg-[#1a1a1a] border border-white/10 rounded-xl flex items-center justify-center">
-                <p className="text-gray-500">No image available</p>
+                <p className="text-gray-500">Không có hình ảnh</p>
             </div>
         );
     }
@@ -188,7 +194,7 @@ export const ImageInteractiveSection = ({ caseData, onAnnotationsChange }) => {
                             onClick={handleReset}
                             className="px-2.5 py-1.5 text-xs text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors cursor-pointer"
                         >
-                            Reset
+                            Đặt Lại
                         </button>
 
                         <div className="w-px h-4 bg-white/10 mx-2"></div>
@@ -241,7 +247,7 @@ export const ImageInteractiveSection = ({ caseData, onAnnotationsChange }) => {
                             title="Pan/Move Image"
                         >
                             <Hand className="w-3.5 h-3.5" />
-                            <span>Pan</span>
+                            <span>Di Chuyển</span>
                         </button>
 
                         <button
@@ -253,7 +259,7 @@ export const ImageInteractiveSection = ({ caseData, onAnnotationsChange }) => {
                             title="Draw Bounding Box"
                         >
                             <Pencil className="w-3.5 h-3.5" />
-                            <span>Draw</span>
+                            <span>Vẽ</span>
                         </button>
 
                         {boxes.length > 0 && (
@@ -263,7 +269,7 @@ export const ImageInteractiveSection = ({ caseData, onAnnotationsChange }) => {
                                 title="Delete All Annotations"
                             >
                                 <Trash2 className="w-3.5 h-3.5" />
-                                <span>Remove all</span>
+                                <span>Xóa tất cả</span>
                             </button>
                         )}
                     </div>
@@ -384,7 +390,7 @@ export const ImageInteractiveSection = ({ caseData, onAnnotationsChange }) => {
                     </div>
                     <div className="flex items-center gap-3">
                         {boxes.length > 0 && (
-                            <span className="text-teal-400">{boxes.length} box{boxes.length > 1 ? 'es' : ''}</span>
+                            <span className="text-teal-400">{boxes.length} hộp</span>
                         )}
                         {caseData.diagnosis && (
                             <div className="text-teal-400">{caseData.diagnosis}</div>

@@ -6,7 +6,7 @@ export const AIConfidence = ({ confidence }) => {
             <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold text-white flex items-center gap-2">
                     <Brain className="w-4 h-4 text-teal-500" />
-                    AI Confidence
+                    Độ Tin Cậy AI
                 </h3>
                 <span className="text-xl font-bold text-teal-500">{confidence}%</span>
             </div>
@@ -16,7 +16,7 @@ export const AIConfidence = ({ confidence }) => {
                     style={{ width: `${confidence}%` }}
                 ></div>
             </div>
-            <p className="text-xs text-gray-500">Diagnostic Accuracy</p>
+            <p className="text-xs text-gray-500">Độ Chính Xác Chẩn Đoán</p>
         </div>
     );
 };

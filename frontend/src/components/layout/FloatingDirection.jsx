@@ -38,7 +38,7 @@ export const FloatingDirection = () => {
                 }`}
         >
             <ArrowUp className="w-5 h-5" />
-            <span className="text-sm font-medium whitespace-nowrap">Go to top</span>
+            <span className="text-sm font-medium whitespace-nowrap">Lên đầu trang</span>
         </button>
     );
 };

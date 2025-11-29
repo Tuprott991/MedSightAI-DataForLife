@@ -6,7 +6,7 @@ export const SubmitSection = ({ onSubmit, annotations = [], showToast }) => {
 
     const handleSubmit = () => {
         if (!diagnosis.trim()) {
-            showToast?.('error', 'Please enter a diagnosis');
+            showToast?.('error', 'Vui lòng nhập chẩn đoán');
             return;
         }
 
@@ -19,13 +19,13 @@ export const SubmitSection = ({ onSubmit, annotations = [], showToast }) => {
         try {
             const result = onSubmit?.(submissionData);
             if (result?.success !== false) {
-                showToast?.('success', 'Diagnosis submitted successfully!');
+                showToast?.('success', 'Đã gửi chẩn đoán thành công!');
                 setDiagnosis('');
             } else {
-                showToast?.('error', 'Failed to submit diagnosis. Please try again.');
+                showToast?.('error', 'Không thể gửi chẩn đoán. Vui lòng thử lại.');
             }
         } catch (error) {
-            showToast?.('error', 'Failed to submit diagnosis. Please try again.');
+            showToast?.('error', 'Không thể gửi chẩn đoán. Vui lòng thử lại.');
         }
     };
 
@@ -37,13 +37,13 @@ export const SubmitSection = ({ onSubmit, annotations = [], showToast }) => {
                     {/* Diagnosis Input */}
                     <div className="flex-1">
                         <label className="text-xs text-gray-400 mb-1 block">
-                            Diagnosis <span className="text-red-400">*</span>
+                            Chẩn Đoán <span className="text-red-400">*</span>
                         </label>
                         <input
                             type="text"
                             value={diagnosis}
                             onChange={(e) => setDiagnosis(e.target.value)}
-                            placeholder="e.g., Coronary Artery Disease"
+                            placeholder="Ví dụ: Bệnh Động Mạch Vành"
                             className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-teal-500 transition-colors"
                         />
                     </div>
@@ -54,7 +54,7 @@ export const SubmitSection = ({ onSubmit, annotations = [], showToast }) => {
                         className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all shrink-0 bg-teal-500 hover:bg-teal-600 text-white"
                     >
                         <Send className="w-4 h-4" />
-                        <span>Submit</span>
+                        <span>Gửi</span>
                     </button>
                 </div>
             </div>

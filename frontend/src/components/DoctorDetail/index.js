@@ -1,10 +1,11 @@
-export { ImageList } from "./ImageList";
-export { ImageListGrouped } from "./ImageListGrouped";
-export { ImageViewer } from "./ImageViewer";
-export { AIConfidence } from "./AIConfidence";
-export { KeyFindings } from "./KeyFindings";
-export { Measurements } from "./Measurements";
-export { Recommendations } from "./Recommendations";
-export { SimilarCasesButton } from "./SimilarCasesButton";
-export { SimilarCasesModal } from "./SimilarCasesModal";
-export { SimilarCaseCard } from "./SimilarCaseCard";
+// Image Gallery Components
+export * from "./ImageGallery";
+
+// Patient Data Components
+export * from "./PatientData";
+
+// Similar Cases Components
+export * from "./SimilarCases";
+
+// Analysis Tab Components
+export * from "./AnalysisTab";

@@ -62,8 +62,8 @@ export const StudentDetail = () => {
         return (
             <div className="h-screen bg-[#0a0a0a] text-white flex items-center justify-center">
                 <div className="text-center">
-                    <h1 className="text-2xl font-bold mb-2">Case Not Found</h1>
-                    <p className="text-gray-400">The case you're looking for doesn't exist.</p>
+                    <h1 className="text-2xl font-bold mb-2">Không Tìm Thấy Ca Bệnh</h1>
+                    <p className="text-gray-400">Ca bệnh bạn tìm kiếm không tồn tại.</p>
                 </div>
             </div>
         );
@@ -74,7 +74,7 @@ export const StudentDetail = () => {
             <div className="h-screen bg-[#0a0a0a] text-white flex items-center justify-center">
                 <div className="text-center">
                     <div className="w-12 h-12 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-gray-400">Loading case...</p>
+                    <p className="text-gray-400">Đang tải ca bệnh...</p>
                 </div>
             </div>
         );

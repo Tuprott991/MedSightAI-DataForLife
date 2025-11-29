@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { ZoomIn, ZoomOut, Undo, Redo, PenTool, PanelLeft, PanelLeftClose } from 'lucide-react';
-import { useSidebar } from '../layout';
-import { SimilarCasesButton } from './SimilarCasesButton';
-import { SimilarCasesModal } from './SimilarCasesModal';
+import { useSidebar } from '../../layout';
+import { SimilarCasesButton } from '../SimilarCases/SimilarCasesButton';
+import { SimilarCasesModal } from '../SimilarCases/SimilarCasesModal';
 
 export const ImageViewer = ({ image, patientInfo }) => {
     const [sliceValue, setSliceValue] = useState(75);
@@ -12,7 +12,7 @@ export const ImageViewer = ({ image, patientInfo }) => {
     if (!image) {
         return (
             <div className="bg-[#1a1a1a] border border-white/10 rounded-xl flex items-center justify-center h-[calc(100vh-110px)]">
-                <p className="text-gray-500">No image selected</p>
+                <p className="text-gray-500">Không có hình ảnh được chọn</p>
             </div>
         );
     }
@@ -60,7 +60,7 @@ export const ImageViewer = ({ image, patientInfo }) => {
                     <div className="flex items-center gap-1">
                         <button className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors">
                             <PenTool className="w-3.5 h-3.5" />
-                            <span>Annotate</span>
+                            <span>Chú Thích</span>
                         </button>
                     </div>
                 </div>
@@ -80,7 +80,7 @@ export const ImageViewer = ({ image, patientInfo }) => {
                 <div className="flex items-center gap-4">
                     {/* Slice Label */}
                     <span className="text-xs text-gray-400 font-medium min-w-[70px]">
-                        Slice #{sliceValue}
+                        Lớp #{sliceValue}
                     </span>
 
                     {/* Slider */}

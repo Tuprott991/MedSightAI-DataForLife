@@ -1,4 +1,4 @@
-import { Recommendations } from '../Recommendations';
+import { Recommendations } from './Recommendations';
 
 export const RecommendationsTab = ({ recommendations }) => {
     return (

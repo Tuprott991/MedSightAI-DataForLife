@@ -43,10 +43,10 @@ export const Student = () => {
                         <div className="w-10 h-10 bg-teal-500/20 rounded-lg flex items-center justify-center">
                             <Users className="w-6 h-6 text-teal-500" />
                         </div>
-                        <h1 className="text-3xl md:text-4xl font-bold">Patient Records</h1>
+                        <h1 className="text-3xl md:text-4xl font-bold">Hồ Sơ Bệnh Nhân</h1>
                     </div>
                     <p className="text-gray-400 ml-13">
-                        Manage and track patient medical records
+                        Quản lý và theo dõi hồ sơ bệnh án
                     </p>
                 </div>
 
@@ -57,7 +57,7 @@ export const Student = () => {
                         <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                         <input
                             type="text"
-                            placeholder="Search by patient name..."
+                            placeholder="Tìm kiếm theo tên bệnh nhân..."
                             value={searchQuery}
                             onChange={handleSearch}
                             className="w-full bg-white/5 border border-white/10 rounded-lg pl-12 pr-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-teal-500 focus:bg-white/10 transition-all"
@@ -67,21 +67,21 @@ export const Student = () => {
                     {/* Filter Button */}
                     <button className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-teal-500/50 px-6 py-3 rounded-lg transition-all cursor-pointer">
                         <Filter className="w-5 h-5" />
-                        <span className="font-medium">Filter</span>
+                        <span className="font-medium">Lọc</span>
                     </button>
                 </div>
 
                 {/* Results Info */}
                 <div className="mb-6 flex items-center justify-between">
                     <p className="text-gray-400">
-                        Showing <span className="text-white font-semibold">{startIndex + 1}-{Math.min(endIndex, filteredPatients.length)}</span> of <span className="text-white font-semibold">{filteredPatients.length}</span> patients
+                        Hiển thị <span className="text-white font-semibold">{startIndex + 1}-{Math.min(endIndex, filteredPatients.length)}</span> trong tổng số <span className="text-white font-semibold">{filteredPatients.length}</span> bệnh nhân
                     </p>
                     {searchQuery && (
                         <button
                             onClick={() => setSearchQuery('')}
                             className="text-sm text-teal-400 hover:text-teal-300 transition-colors"
                         >
-                            Clear search
+                            Xóa tìm kiếm
                         </button>
                     )}
                 </div>
@@ -109,9 +109,9 @@ export const Student = () => {
                         <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
                             <Search className="w-8 h-8 text-gray-400" />
                         </div>
-                        <h3 className="text-xl font-semibold mb-2">No patients found</h3>
+                        <h3 className="text-xl font-semibold mb-2">Không tìm thấy bệnh nhân</h3>
                         <p className="text-gray-400">
-                            Try adjusting your search query
+                            Thử điều chỉnh từ khóa tìm kiếm
                         </p>
                     </div>
                 )}

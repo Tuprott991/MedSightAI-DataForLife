@@ -17,7 +17,7 @@ export const ImageListGrouped = ({ imageGroups, selectedImage, onImageSelect, pa
     const isExpanded = (groupId) => expandedGroups.includes(groupId);
 
     const getTitle = () => {
-        return viewMode === 'images' ? 'Medical Images' : 'Patient Information';
+        return viewMode === 'images' ? 'Hình Ảnh Y Khoa' : 'Thông Tin Bệnh Nhân';
     };
 
     const getIcon = () => {
@@ -45,7 +45,7 @@ export const ImageListGrouped = ({ imageGroups, selectedImage, onImageSelect, pa
                     </button>
 
                     {dropdownOpen && (
-                        <div className="absolute right-0 mt-2 w-48 bg-[#1a1a1a] border border-white/10 rounded-lg shadow-lg z-10">
+                        <div className="absolute right-0 mt-2 w-52 bg-[#1a1a1a] border border-white/10 rounded-lg shadow-lg z-10">
                             <button
                                 onClick={() => {
                                     setViewMode('images');
@@ -57,7 +57,7 @@ export const ImageListGrouped = ({ imageGroups, selectedImage, onImageSelect, pa
                                     }`}
                             >
                                 <Folder className="w-4 h-4" />
-                                Medical Images
+                                Hình Ảnh Y Khoa
                             </button>
                             <button
                                 onClick={() => {
@@ -70,7 +70,7 @@ export const ImageListGrouped = ({ imageGroups, selectedImage, onImageSelect, pa
                                     }`}
                             >
                                 <User className="w-4 h-4" />
-                                Patient Information
+                                Thông Tin Bệnh Nhân
                             </button>
                         </div>
                     )}
@@ -149,51 +149,53 @@ export const ImageListGrouped = ({ imageGroups, selectedImage, onImageSelect, pa
                     /* Patient Information View */
                     <div className="space-y-3">
                         <div className="bg-[#0f0f0f] border border-white/5 rounded-lg p-3">
-                            <h4 className="text-xs font-semibold text-teal-400 mb-2">Personal Details</h4>
+                            <h4 className="text-xs font-semibold text-teal-400 mb-2">Thông Tin Cá Nhân</h4>
 
                             <div className="space-y-3">
                                 <div className="flex justify-between">
-                                    <p className="text-xs text-gray-500">Full Name</p>
+                                    <p className="text-xs text-gray-500">Họ Tên</p>
                                     <p className="text-sm text-white">{patient?.name || 'N/A'}</p>
                                 </div>
                                 <div className="flex justify-between">
-                                    <p className="text-xs text-gray-500">Age</p>
-                                    <p className="text-sm text-white">{patient?.age || 'N/A'} years</p>
+                                    <p className="text-xs text-gray-500">Tuổi</p>
+                                    <p className="text-sm text-white">{patient?.age || 'N/A'} tuổi</p>
                                 </div>
                                 <div className="flex justify-between">
-                                    <p className="text-xs text-gray-500">Gender</p>
-                                    <p className="text-sm text-white">{patient?.gender || 'N/A'}</p>
+                                    <p className="text-xs text-gray-500">Giới Tính</p>
+                                    <p className="text-sm text-white">{patient?.gender === 'Male' ? 'Nam' : patient?.gender === 'Female' ? 'Nữ' : 'N/A'}</p>
                                 </div>
                                 <div className="flex justify-between">
-                                    <p className="text-xs text-gray-500">Blood Type</p>
+                                    <p className="text-xs text-gray-500">Nhóm Máu</p>
                                     <p className="text-sm text-white">{patient?.bloodType || 'N/A'}</p>
                                 </div>
                             </div>
                         </div>
 
                         <div className="bg-[#0f0f0f] border border-white/5 rounded-lg p-3">
-                            <h4 className="text-xs font-semibold text-teal-400 mb-2">Medical Information</h4>
+                            <h4 className="text-xs font-semibold text-teal-400 mb-2">Thông Tin Y Tế</h4>
                             <div className="space-y-3">
                                 <div className="flex justify-between">
-                                    <p className="text-xs text-gray-500">Diagnosis</p>
+                                    <p className="text-xs text-gray-500">Chẩn Đoán</p>
                                     <p className="text-sm text-white">{patient?.diagnosis || 'N/A'}</p>
                                 </div>
                                 <div className="flex justify-between">
-                                    <p className="text-xs text-gray-500">Status</p>
+                                    <p className="text-xs text-gray-500">Tình Trạng</p>
                                     <span className={`inline-block text-xs px-2 py-0.5 rounded ${patient?.status === 'Critical' ? 'bg-red-500/20 text-red-400' :
                                         patient?.status === 'Under Treatment' ? 'bg-yellow-500/20 text-yellow-400' :
                                             'bg-teal-500/20 text-teal-400'
                                         }`}>
-                                        {patient?.status || 'N/A'}
+                                        {patient?.status === 'Critical' ? 'Nguy Kịch' :
+                                            patient?.status === 'Under Treatment' ? 'Đang Điều Trị' :
+                                                patient?.status === 'Stable' ? 'Ổn Định' : 'N/A'}
                                     </span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <p className="text-xs text-gray-500">Admission Date</p>
-                                    <p className="text-sm text-white">{patient?.admissionDate || 'N/A'}</p>
+                                    <p className="text-xs text-gray-500">Ngày Nhập Viện</p>
+                                    <p className="text-sm text-white">{patient?.admissionDate ? new Date(patient.admissionDate).toLocaleDateString('vi-VN') : 'N/A'}</p>
                                 </div>
                                 <div className="flex justify-between">
-                                    <p className="text-xs text-gray-500">Last Visit</p>
-                                    <p className="text-sm text-white">{patient?.lastVisit || 'N/A'}</p>
+                                    <p className="text-xs text-gray-500">Khám Gần Nhất</p>
+                                    <p className="text-sm text-white">{patient?.lastVisit ? new Date(patient.lastVisit).toLocaleDateString('vi-VN') : 'N/A'}</p>
                                 </div>
                             </div>
                         </div>
