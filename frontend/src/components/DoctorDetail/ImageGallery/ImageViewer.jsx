@@ -16,7 +16,13 @@ export const ImageViewer = ({ image, patientInfo }) => {
     const [activeTool, setActiveTool] = useState(null); // 'square', 'circle', 'freehand'
     const { isLeftCollapsed, setIsLeftCollapsed } = useSidebar();
 
-    const handleZoomIn = () => setZoom(prev => Math.min(prev + 25, 500));
+    // Check if image is an array (multiple images from finding click) or single image
+    const images = Array.isArray(image) ? image : (image ? [image] : []);
+    const isMultipleImages = images.length > 1;
+
+    // For multiple images, limit zoom to prevent overflow beyond divider
+    const maxZoomForMultiple = isMultipleImages ? 200 : 500;
+    const handleZoomIn = () => setZoom(prev => Math.min(prev + 25, maxZoomForMultiple));
     const handleZoomOut = () => setZoom(prev => Math.max(prev - 25, 50));
     const handleReset = () => {
         setZoom(100);
@@ -39,7 +45,7 @@ export const ImageViewer = ({ image, patientInfo }) => {
         setActiveTool(activeTool === tool ? null : tool);
     };
 
-    if (!image) {
+    if (!image || (Array.isArray(image) && image.length === 0)) {
         return (
             <div className="bg-[#1a1a1a] border border-white/10 rounded-xl flex items-center justify-center h-[calc(100vh-110px)]">
                 <p className="text-gray-500">Không có hình ảnh được chọn</p>
@@ -108,19 +114,46 @@ export const ImageViewer = ({ image, patientInfo }) => {
 
                 {/* Image Container */}
                 <div className="flex-1 flex items-center justify-center bg-black/30 p-4 overflow-hidden">
-                    <div
-                        style={{
-                            transform: `translate(${position.x}px, ${position.y}px) scale(${zoom / 100})`,
-                            transition: 'transform 300ms',
-                            filter: `brightness(${brightness}%) contrast(${contrast}%)`
-                        }}
-                    >
-                        <img
-                            src={image.url}
-                            alt={image.type}
-                            className="max-w-full max-h-full object-contain"
-                        />
-                    </div>
+                    {isMultipleImages ? (
+                        <div className="flex items-center justify-center w-full h-full gap-0">
+                            {images.map((img, index) => (
+                                <div key={img.id || index} className="flex-1 flex items-center justify-center h-full relative overflow-hidden">
+                                    <div
+                                        style={{
+                                            transform: index === 0
+                                                ? `translate(${position.x}px, ${position.y}px) scale(${zoom / 100})`
+                                                : 'none',
+                                            transition: 'transform 300ms',
+                                            filter: index === 0 ? `brightness(${brightness}%) contrast(${contrast}%)` : 'none'
+                                        }}
+                                    >
+                                        <img
+                                            src={img.url}
+                                            alt={img.type}
+                                            className="max-w-full max-h-full object-contain"
+                                        />
+                                    </div>
+                                    {index === 0 && (
+                                        <div className="absolute right-0 top-0 bottom-0 w-px bg-white/20" />
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    ) : images.length === 1 ? (
+                        <div
+                            style={{
+                                transform: `translate(${position.x}px, ${position.y}px) scale(${zoom / 100})`,
+                                transition: 'transform 300ms',
+                                filter: `brightness(${brightness}%) contrast(${contrast}%)`
+                            }}
+                        >
+                            <img
+                                src={images[0].url}
+                                alt={images[0].type}
+                                className="max-w-full max-h-full object-contain"
+                            />
+                        </div>
+                    ) : null}
                 </div>
             </div>
 
@@ -184,7 +217,7 @@ export const ImageViewer = ({ image, patientInfo }) => {
             <SimilarCasesModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                currentImage={image}
+                currentImage={images[0] || image}
                 patientInfo={patientInfo}
             />
         </div>

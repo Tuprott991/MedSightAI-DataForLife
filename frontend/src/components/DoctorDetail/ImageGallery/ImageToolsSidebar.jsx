@@ -1,4 +1,4 @@
-import { Square, Circle, Pencil, Sun, Contrast, RotateCcw } from 'lucide-react';
+import { Square, Circle, Pencil, Sun, Contrast, RotateCcw, Eraser } from 'lucide-react';
 
 export const ImageToolsSidebar = ({
     activeTool,
@@ -46,6 +46,16 @@ export const ImageToolsSidebar = ({
                             title="Tự Do"
                         >
                             <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                            onClick={() => onToolChange('eraser')}
+                            className={`aspect-square flex items-center justify-center rounded transition-colors ${activeTool === 'eraser'
+                                ? 'bg-red-500 text-white'
+                                : 'text-gray-300 hover:text-white hover:bg-white/5'
+                                }`}
+                            title="Xóa"
+                        >
+                            <Eraser className="w-4 h-4" />
                         </button>
                     </div>
                 </div>
