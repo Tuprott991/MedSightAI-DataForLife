@@ -31,7 +31,7 @@ export const StudentDetail = () => {
                 age: patient?.age || 0,
                 gender: patient?.gender || 'Unknown',
                 diagnosis: patient?.diagnosis || 'Unknown Condition',
-                imageUrl: patient?.image || 'https://images.unsplash.com/photo-1559757175-0eb30cd8c063?w=800',
+                imageUrl: patient?.image || '',
                 description: 'Medical imaging case for educational purposes',
                 difficulty: 'Intermediate'
             };

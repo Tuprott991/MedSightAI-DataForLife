@@ -41,7 +41,7 @@ const getConfidenceBgColor = (confidence) => {
 
 export const KeyFindings = ({ findings, onFindingClick, onFindingSelectionChange }) => {
     const [selectedFindings, setSelectedFindings] = useState(() =>
-        findings.reduce((acc, f) => ({ ...acc, [f.id]: false }), {})
+        findings.reduce((acc, f) => ({ ...acc, [f.id]: true }), {})
     );
 
     const sortedFindings = [...findings].sort((a, b) => b.confidence - a.confidence);

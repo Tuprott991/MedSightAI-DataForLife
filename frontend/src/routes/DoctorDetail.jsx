@@ -15,10 +15,17 @@ export const DoctorDetail = () => {
     const patient = patientsData.find(p => p.id === parseInt(id));
     const { isLeftCollapsed } = useSidebar();
 
-    // Set first image from first group as default
-    const firstImage = medicalImagesGroups[0]?.images[0];
-    const [selectedImage, setSelectedImage] = useState(firstImage);
-    const [originalImage, setOriginalImage] = useState(firstImage);
+    // Use patient's image as default
+    const patientImageData = patient ? {
+        id: 0,
+        url: patient.image,
+        type: "Ảnh X-quang chính",
+        imageCode: `IMG-${patient.id}-MAIN`,
+        modality: "X-Ray"
+    } : medicalImagesGroups[0]?.images[0];
+
+    const [selectedImage, setSelectedImage] = useState(patientImageData);
+    const [originalImage, setOriginalImage] = useState(patientImageData);
     const [analysisData, setAnalysisData] = useState(null);
     const [isUpdating, setIsUpdating] = useState(false);
     const [selectedFindingIds, setSelectedFindingIds] = useState([]);

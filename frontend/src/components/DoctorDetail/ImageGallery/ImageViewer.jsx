@@ -19,6 +19,7 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
     const [isPanMode, setIsPanMode] = useState(false);
     const [isPrototypeCollapsed, setIsPrototypeCollapsed] = useState(false);
     const { isLeftCollapsed, setIsLeftCollapsed } = useSidebar();
+    const [comparisonImages, setComparisonImages] = useState(null);
 
     // Drawing states - separate for single and multiple image modes
     const [singleImageAnnotations, setSingleImageAnnotations] = useState([]);
@@ -36,7 +37,7 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
     const imageRef = useRef(null);
 
     // Check if image is an array (multiple images from finding click) or single image
-    const images = Array.isArray(image) ? image : (image ? [image] : []);
+    const images = comparisonImages || (Array.isArray(image) ? image : (image ? [image] : []));
     const isMultipleImages = images.length > 1;
 
     // Use the appropriate annotations based on current mode
@@ -65,7 +66,14 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
         setMultipleImageAnnotations([]);
         setSelectedAnnotation(null);
         setEditingLabel('');
+        setComparisonImages(null);
     };
+
+    const handleCompareImages = (images) => {
+        setComparisonImages(images);
+    };
+
+
 
     const handleBrightnessClick = () => {
         setActiveAdjustment(activeAdjustment === 'brightness' ? null : 'brightness');
@@ -513,7 +521,13 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
 
                     {/* Group 3: Original Image Button */}
                     <button
-                        onClick={onRestoreOriginal}
+                        onClick={() => {
+                            if (comparisonImages) {
+                                setComparisonImages(null);
+                            } else {
+                                onRestoreOriginal();
+                            }
+                        }}
                         disabled={!isMultipleImages}
                         className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded transition-all font-medium ${isMultipleImages
                             ? 'bg-white/5 hover:bg-white/10 border border-white/10 hover:border-teal-500/50 text-gray-300 hover:text-white cursor-pointer'
@@ -563,7 +577,7 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
                                                 ? 'text-teal-400'
                                                 : 'text-amber-400'
                                                 }`}>
-                                                {index === 0 ? 'xAI' : 'Prototype'}
+                                                {comparisonImages ? (index === 0 ? 'Ảnh của bệnh nhân' : 'Ca bệnh tương tự') : (index === 0 ? 'xAI' : 'Prototype')}
                                             </span>
 
                                             {/* Collapse/Expand Button */}
@@ -755,6 +769,7 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
                 onClose={() => setIsModalOpen(false)}
                 currentImage={images[0] || image}
                 patientInfo={patientInfo}
+                onCompareImages={handleCompareImages}
             />
 
             {/* Delete Confirmation Modal */}

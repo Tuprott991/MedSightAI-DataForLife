@@ -2,7 +2,7 @@ import { X, Loader2, AlertCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { SimilarCaseCard } from './SimilarCaseCard';
 
-export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo }) => {
+export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo, onCompareImages }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [similarCases, setSimilarCases] = useState([]);
@@ -39,73 +39,87 @@ export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo }
                 // Mock API call - simulate network delay
                 await new Promise(resolve => setTimeout(resolve, 1500));
 
-                // Mock data - Replace this with actual API response
+                // Determine disease category based on current patient diagnosis
+                const currentDiagnosis = patientInfo?.diagnosis || "";
+                let diseaseCategory = "";
+
+                if (currentDiagnosis.includes("Viêm phổi")) {
+                    diseaseCategory = "Viêm phổi";
+                } else if (currentDiagnosis.includes("Lao phổi")) {
+                    diseaseCategory = "Lao phổi";
+                } else if (currentDiagnosis.includes("COVID-19")) {
+                    diseaseCategory = "COVID-19";
+                } else {
+                    diseaseCategory = currentDiagnosis; // fallback
+                }
+
+                // Mock data with Vietnamese names and related diagnoses
                 const mockData = [
                     {
                         id: 1,
-                        patientName: "John Anderson",
+                        patientName: "Nguyễn Văn An",
                         age: 52,
-                        gender: "M",
-                        diagnosis: "Coronary Artery Disease",
-                        imageUrl: "https://images.unsplash.com/photo-1559757175-0eb30cd8c063?w=400",
+                        gender: "Nam",
+                        diagnosis: diseaseCategory,
+                        imageUrl: "/src/mock_data/patient_data/01_Tuberculosis/origin.png",
                         similarity: 94,
                         date: "2025-10-15",
-                        status: "Resolved"
+                        status: "Đã khỏi"
                     },
                     {
                         id: 2,
-                        patientName: "Sarah Williams",
+                        patientName: "Trần Thị Bình",
                         age: 48,
-                        gender: "F",
-                        diagnosis: "Hypertensive Heart Disease",
-                        imageUrl: "https://images.unsplash.com/photo-1530026405186-ed1f139313f8?w=400",
+                        gender: "Nữ",
+                        diagnosis: diseaseCategory,
+                        imageUrl: "/src/mock_data/patient_data/02_pneumonia/origin.png",
                         similarity: 89,
                         date: "2025-09-22",
-                        status: "Stable"
+                        status: "Ổn định"
                     },
                     {
                         id: 3,
-                        patientName: "Michael Chen",
+                        patientName: "Lê Văn Cường",
                         age: 55,
-                        gender: "M",
-                        diagnosis: "Coronary Artery Disease",
-                        imageUrl: "https://images.unsplash.com/photo-1516549655169-df83a0774514?w=400",
+                        gender: "Nam",
+                        diagnosis: diseaseCategory,
+                        imageUrl: "/src/mock_data/patient_data/03_Otherdisease/origin.png",
                         similarity: 87,
                         date: "2025-08-10",
-                        status: "Under Treatment"
+                        status: "Đang điều trị"
                     },
                     {
                         id: 4,
-                        patientName: "Emily Davis",
+                        patientName: "Phạm Thị Dung",
                         age: 46,
-                        gender: "F",
-                        diagnosis: "Acute Myocardial Infarction",
-                        imageUrl: "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400",
+                        gender: "Nữ",
+                        diagnosis: diseaseCategory,
+                        imageUrl: "/src/mock_data/patient_data/04_Turbeculosis/origin.png",
                         similarity: 85,
                         date: "2025-11-01",
-                        status: "Critical"
+                        status: "Nguy kịch"
                     },
                     {
                         id: 5,
-                        patientName: "Robert Martinez",
+                        patientName: "Hoàng Văn Em",
                         age: 60,
-                        gender: "M",
-                        diagnosis: "Coronary Artery Disease",
-                        imageUrl: "https://images.unsplash.com/photo-1504813184591-01572f98c85f?w=400",
+                        gender: "Nam",
+                        diagnosis: diseaseCategory,
+                        imageUrl: "/src/mock_data/patient_data/05_pneumonia/origin.png",
                         similarity: 83,
                         date: "2025-07-18",
-                        status: "Resolved"
+                        status: "Đã khỏi"
                     },
                     {
                         id: 6,
-                        patientName: "Jennifer Lopez",
+                        patientName: "Đỗ Thị Phương",
                         age: 51,
-                        gender: "F",
-                        diagnosis: "Cardiomyopathy",
-                        imageUrl: "https://images.unsplash.com/photo-1581594549595-35f6edc7b762?w=400",
+                        gender: "Nữ",
+                        diagnosis: diseaseCategory,
+                        imageUrl: "/src/mock_data/patient_data/06_pneumonia/origin.png",
                         similarity: 81,
                         date: "2025-06-25",
-                        status: "Stable"
+                        status: "Ổn định"
                     }
                 ];
 
@@ -289,7 +303,24 @@ export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo }
 
                                     {/* Action Buttons */}
                                     <div className="pt-4 border-t border-white/10">
-                                        <button className="w-full px-3 py-2 text-xs bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors font-medium">
+                                        <button
+                                            onClick={() => {
+                                                // Create comparison image data
+                                                const comparisonImages = [
+                                                    currentImage, // Original image on the left
+                                                    {
+                                                        id: selectedCase.id + 1000,
+                                                        url: selectedCase.imageUrl,
+                                                        type: `Ca tương tự: ${selectedCase.patientName}`,
+                                                        imageCode: `SIMILAR-${selectedCase.id}`,
+                                                        modality: "Comparison"
+                                                    }
+                                                ];
+                                                onCompareImages(comparisonImages);
+                                                onClose();
+                                            }}
+                                            className="w-full px-3 py-2 text-xs bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors font-medium"
+                                        >
                                             So Sánh Hình Ảnh
                                         </button>
                                     </div>
