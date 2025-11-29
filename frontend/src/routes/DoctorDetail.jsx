@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Sparkles, RefreshCw } from 'lucide-react';
 import { patientsData } from '../constants/patients';
-import { medicalImagesGroups, generateAnalysisData } from '../constants/medicalData';
+import { medicalImagesGroups, generateAnalysisData, getFindingImagePath } from '../constants/medicalData';
 import {
     ImageListGrouped,
     ImageViewer
@@ -33,7 +33,7 @@ export const DoctorDetail = () => {
     const handleAIAnalyze = () => {
         // TODO: Replace with actual API call
         // For now, generate mock analysis data
-        const data = patient ? generateAnalysisData(patient.diagnosis) : null;
+        const data = patient ? generateAnalysisData(patient.diagnosis, patient.image) : null;
         setAnalysisData(data);
     };
 
@@ -82,9 +82,32 @@ export const DoctorDetail = () => {
         }, 1500);
     };
 
-    const handleFindingClick = (imageData) => {
-        // Update the selected image when a finding is clicked
-        setSelectedImage(imageData);
+    const handleFindingClick = (finding) => {
+        // Get the image path for this finding
+        const findingImagePath = getFindingImagePath(finding.text, patient.image);
+
+        if (findingImagePath) {
+            // Create image data for xAI view (left side)
+            const xaiImage = {
+                id: `finding-${finding.id}`,
+                url: findingImagePath,
+                type: `xAI: ${finding.text}`,
+                imageCode: `XAI-${finding.id}`,
+                modality: "AI-Enhanced"
+            };
+
+            // Create prototype image (right side) - use original image
+            const prototypeImage = {
+                id: `prototype-${finding.id}`,
+                url: patient.image,
+                type: "Prototype: Ảnh gốc",
+                imageCode: `PROTO-${finding.id}`,
+                modality: "Original"
+            };
+
+            // Update to show both images
+            setSelectedImage([xaiImage, prototypeImage]);
+        }
     };
 
     const handleRestoreOriginal = () => {

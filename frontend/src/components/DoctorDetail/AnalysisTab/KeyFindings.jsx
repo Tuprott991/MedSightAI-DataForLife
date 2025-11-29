@@ -72,30 +72,8 @@ export const KeyFindings = ({ findings, onFindingClick, onFindingSelectionChange
 
     const handleFindingClick = async (finding) => {
         if (onFindingClick) {
-            // Mock API call - simulate fetching related images
-            // TODO: Replace with actual API endpoint
-            // const response = await fetch(`/api/findings/${finding.id}/images`);
-            // const data = await response.json();
-
-            // Mock: Return 2 images for demonstration
-            const mockImagesData = [
-                {
-                    id: 998,
-                    url: "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=800",
-                    type: `Hình ảnh 1: ${finding.text}`,
-                    imageCode: `REL-${finding.id}-1`,
-                    modality: "AI-Enhanced"
-                },
-                {
-                    id: 999,
-                    url: "https://images.unsplash.com/photo-1581594693702-fbdc51b2763b?w=800",
-                    type: `Hình ảnh 2: ${finding.text}`,
-                    imageCode: `REL-${finding.id}-2`,
-                    modality: "AI-Enhanced"
-                }
-            ];
-
-            onFindingClick(mockImagesData);
+            // Pass the finding object to parent
+            onFindingClick(finding);
         }
     };
 
