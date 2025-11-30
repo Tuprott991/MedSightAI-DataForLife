@@ -39,6 +39,7 @@ export const DoctorDetail = () => {
     const [reportData, setReportData] = useState(null);
     const [isSimilarCaseMode, setIsSimilarCaseMode] = useState(false);
     const [similarCaseData, setSimilarCaseData] = useState(null);
+    const [isLoadingSimilarAnalysis, setIsLoadingSimilarAnalysis] = useState(false);
 
     const handleAIAnalyze = () => {
         setIsAnalyzing(true);
@@ -136,29 +137,36 @@ export const DoctorDetail = () => {
                 modality: "AI-Enhanced"
             };
 
-            // Create right side image data with both original and prototype
-            const rightImage = {
-                id: `right-${finding.id}`,
-                original: {
-                    url: patient.image,
-                    type: `Original: Ảnh gốc`,
-                },
-                prototype: {
-                    url: prototypeImagePath,
-                    type: `Prototype: ${finding.text}`,
-                },
-                imageCode: `RIGHT-${finding.id}`,
-                modality: "Comparison"
-            };
-
-            // Update to show both images
-            setSelectedImage([xaiImage, rightImage]);
+            // If in similar case mode, keep the right image (similar case image)
+            if (isSimilarCaseMode && Array.isArray(selectedImage) && selectedImage.length >= 2) {
+                setSelectedImage([xaiImage, selectedImage[1]]);
+            } else {
+                // Normal mode: create right side image data with both original and prototype
+                const rightImage = {
+                    id: `right-${finding.id}`,
+                    original: {
+                        url: patient.image,
+                        type: `Original: Ảnh gốc`,
+                    },
+                    prototype: {
+                        url: prototypeImagePath,
+                        type: `Prototype: ${finding.text}`,
+                    },
+                    imageCode: `RIGHT-${finding.id}`,
+                    modality: "Comparison"
+                };
+                setSelectedImage([xaiImage, rightImage]);
+            }
         }
     };
 
     const handleRestoreOriginal = () => {
         // Restore to original single image
         setSelectedImage(originalImage);
+        // Exit similar case mode
+        setIsSimilarCaseMode(false);
+        setSimilarCaseData(null);
+        setIsLoadingSimilarAnalysis(false);
     };
 
     const handleImageSelect = (image) => {
@@ -211,7 +219,22 @@ export const DoctorDetail = () => {
                             image={selectedImage}
                             patientInfo={patient}
                             onRestoreOriginal={handleRestoreOriginal}
-                            onSimilarCaseModeChange={setIsSimilarCaseMode}
+                            onSimilarCaseModeChange={(mode, data) => {
+                                if (mode && data) {
+                                    // Start loading for 6-7 seconds
+                                    setIsLoadingSimilarAnalysis(true);
+                                    const loadingDelay = Math.floor(Math.random() * (7000 - 6000 + 1)) + 6000;
+                                    
+                                    setTimeout(() => {
+                                        setIsLoadingSimilarAnalysis(false);
+                                        setIsSimilarCaseMode(true);
+                                        setSimilarCaseData(data);
+                                    }, loadingDelay);
+                                } else {
+                                    setIsSimilarCaseMode(false);
+                                    setSimilarCaseData(null);
+                                }
+                            }}
                             onSimilarCaseDataChange={setSimilarCaseData}
                             onImageChange={setSelectedImage}
                         />
@@ -285,7 +308,7 @@ export const DoctorDetail = () => {
 
                             {/* Scrollable Content */}
                             <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
-                                {(showChatbot || isSimilarCaseMode) ? (
+                                {(showChatbot || isSimilarCaseMode || isLoadingSimilarAnalysis) ? (
                                     <div className="flex flex-col h-full">
                                         {/* Chatbot Messages */}
                                         <div className="flex-1 overflow-y-auto space-y-3 mb-4">
@@ -294,7 +317,12 @@ export const DoctorDetail = () => {
                                                     <Bot className="w-4 h-4 text-white" />
                                                 </div>
                                                 <div className="flex-1 bg-white/5 rounded-lg p-3">
-                                                    {isSimilarCaseMode && similarCaseData ? (
+                                                    {isLoadingSimilarAnalysis ? (
+                                                        <div className="flex items-center gap-2 text-sm text-gray-300">
+                                                            <div className="w-4 h-4 border-2 border-teal-500 border-t-transparent rounded-full animate-spin"></div>
+                                                            <span>Đang phân tích ca bệnh tương tự...</span>
+                                                        </div>
+                                                    ) : isSimilarCaseMode && similarCaseData ? (
                                                         <div className="text-sm text-gray-300 space-y-3">
                                                             <p className="font-semibold text-teal-400">Phân tích so sánh ca bệnh</p>
                                                             
@@ -319,31 +347,25 @@ export const DoctorDetail = () => {
                                                                                 {currentFindings.map((finding, idx) => (
                                                                                     <button
                                                                                         key={idx}
-                                                                                        onClick={() => {
-                                                                                            console.log('Clicked finding:', finding.text);
-                                                                                            console.log('Patient image:', patient.image);
-                                                                                            console.log('Current selectedImage:', selectedImage);
+                                                                                        onClick={(e) => {
+                                                                                            e.preventDefault();
+                                                                                            e.stopPropagation();
                                                                                             
                                                                                             const findingImagePath = getFindingImagePath(finding.text, patient.image);
-                                                                                            console.log('Finding image path:', findingImagePath);
                                                                                             
-                                                                                            if (findingImagePath && Array.isArray(selectedImage) && selectedImage.length >= 2) {
-                                                                                                const newLeftImage = {
-                                                                                                    id: `xai-current-${idx}`,
+                                                                                            if (findingImagePath) {
+                                                                                                const xaiImage = {
+                                                                                                    id: `xai-similar-${idx}`,
                                                                                                     url: findingImagePath,
                                                                                                     type: `xAI: ${finding.text}`,
-                                                                                                    imageCode: `XAI-CURRENT-${idx}`,
+                                                                                                    imageCode: `XAI-SIMILAR-${idx}`,
                                                                                                     modality: "AI-Enhanced"
                                                                                                 };
-                                                                                                console.log('Setting new left image:', newLeftImage);
-                                                                                                console.log('Keeping right image:', selectedImage[1]);
-                                                                                                setSelectedImage([newLeftImage, selectedImage[1]]);
-                                                                                            } else {
-                                                                                                console.log('Condition not met:', {
-                                                                                                    hasFindingPath: !!findingImagePath,
-                                                                                                    isArray: Array.isArray(selectedImage),
-                                                                                                    length: selectedImage?.length
-                                                                                                });
+                                                                                                
+                                                                                                // Keep right image (similar case)
+                                                                                                if (Array.isArray(selectedImage) && selectedImage.length >= 2) {
+                                                                                                    setSelectedImage([xaiImage, selectedImage[1]]);
+                                                                                                }
                                                                                             }
                                                                                         }}
                                                                                         className="px-2.5 py-1 bg-teal-500/20 hover:bg-teal-500/30 border border-teal-500/40 text-teal-300 rounded-md text-xs transition-colors cursor-pointer"

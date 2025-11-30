@@ -42,6 +42,13 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal, onSimilarCa
     const imageContainerRef = useRef(null);
     const imageRef = useRef(null);
 
+    // Sync image prop to comparisonImages when it changes
+    useEffect(() => {
+        if (Array.isArray(image) && image.length > 1) {
+            setComparisonImages(image);
+        }
+    }, [image]);
+
     // Check if image is an array (multiple images from finding click) or single image
     const images = comparisonImages || (Array.isArray(image) ? image : (image ? [image] : []));
     const isMultipleImages = images.length > 1;
@@ -91,10 +98,7 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal, onSimilarCa
     const handleCompareImages = (images, caseData) => {
         setComparisonImages(images);
         if (onSimilarCaseModeChange) {
-            onSimilarCaseModeChange(true);
-        }
-        if (onSimilarCaseDataChange) {
-            onSimilarCaseDataChange(caseData);
+            onSimilarCaseModeChange(true, caseData);
         }
     };
 
@@ -672,9 +676,9 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal, onSimilarCa
                         onClick={() => {
                             if (comparisonImages) {
                                 setComparisonImages(null);
-                            } else {
-                                onRestoreOriginal();
                             }
+                            // Always call onRestoreOriginal to reset similar case mode
+                            onRestoreOriginal();
                         }}
                         disabled={!isMultipleImages}
                         className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded transition-all font-medium ${isMultipleImages
