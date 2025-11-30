@@ -15,6 +15,8 @@ export const ImageInteractiveSection = ({ caseData, onAnnotationsChange }) => {
     const [panMode, setPanMode] = useState(false);
     const [selectedBoxIndex, setSelectedBoxIndex] = useState(null);
     const [editingLabel, setEditingLabel] = useState('');
+    const [comparisonImage, setComparisonImage] = useState(null);
+    const [showComparison, setShowComparison] = useState(false);
     const containerRef = useRef(null);
     const imageRef = useRef(null);
 
@@ -176,6 +178,27 @@ export const ImageInteractiveSection = ({ caseData, onAnnotationsChange }) => {
         setSelectedBoxIndex(null);
     };
 
+    // Handle drag and drop từ chatbot
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        const imageUrl = e.dataTransfer.getData('imageUrl');
+        const imageLabel = e.dataTransfer.getData('imageLabel');
+        
+        if (imageUrl) {
+            setComparisonImage({ url: imageUrl, label: imageLabel });
+            setShowComparison(true);
+        }
+    };
+
+    const toggleComparison = () => {
+        setShowComparison(!showComparison);
+    };
+
     if (!caseData?.imageUrl) {
         return (
             <div className="flex-1 min-h-0 bg-[#1a1a1a] border border-white/10 rounded-xl flex items-center justify-center">
@@ -280,103 +303,159 @@ export const ImageInteractiveSection = ({ caseData, onAnnotationsChange }) => {
             <div
                 ref={containerRef}
                 className="flex-1 bg-black/30 flex items-center justify-center overflow-hidden p-4"
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
             >
-                <div
-                    className="relative"
-                    style={{
-                        cursor: drawMode ? 'crosshair' : panMode ? 'grab' : 'default',
-                        transform: `translate(${position.x}px, ${position.y}px) scale(${zoom / 100})`,
-                        transition: isPanning ? 'none' : 'transform 300ms'
-                    }}
-                >
-                    <img
-                        ref={imageRef}
-                        src={caseData.imageUrl}
-                        alt={caseData.diagnosis || 'Medical Image'}
-                        className="max-w-full max-h-full object-contain select-none"
-                        onMouseDown={handleMouseDown}
-                        onMouseMove={handleMouseMove}
-                        onMouseUp={handleMouseUp}
-                        onMouseLeave={handleMouseUp}
-                        draggable={false}
-                    />
+                {!showComparison ? (
+                    // Single image view
+                    <div
+                        className="relative"
+                        style={{
+                            cursor: drawMode ? 'crosshair' : panMode ? 'grab' : 'default',
+                            transform: `translate(${position.x}px, ${position.y}px) scale(${zoom / 100})`,
+                            transition: isPanning ? 'none' : 'transform 300ms'
+                        }}
+                    >
+                        <img
+                            ref={imageRef}
+                            src={caseData.imageUrl}
+                            alt={caseData.diagnosis || 'Medical Image'}
+                            className="max-w-full max-h-full object-contain select-none"
+                            onMouseDown={handleMouseDown}
+                            onMouseMove={handleMouseMove}
+                            onMouseUp={handleMouseUp}
+                            onMouseLeave={handleMouseUp}
+                            draggable={false}
+                        />
 
-                    {/* Render saved boxes */}
-                    {boxes.map((box, index) => (
-                        <div
-                            key={index}
-                            onClick={(e) => handleBoxClick(index, e)}
-                            className={`absolute border-2 pointer-events-auto cursor-pointer transition-all ${selectedBoxIndex === index
-                                ? 'border-yellow-400 shadow-lg'
-                                : 'border-teal-500'
-                                }`}
-                            style={{
-                                left: box.x,
-                                top: box.y,
-                                width: box.width,
-                                height: box.height,
-                                backgroundColor: selectedBoxIndex === index
-                                    ? 'rgba(250, 204, 21, 0.15)'
-                                    : 'rgba(20, 184, 166, 0.1)'
-                            }}
-                        >
+                        {/* Render saved boxes */}
+                        {boxes.map((box, index) => (
                             <div
-                                className={`absolute left-0 flex items-center gap-1 px-1.5 py-0.5 rounded whitespace-nowrap ${selectedBoxIndex === index ? 'bg-yellow-400' : 'bg-teal-500'
-                                    } text-white`}
+                                key={index}
+                                onClick={(e) => handleBoxClick(index, e)}
+                                className={`absolute border-2 pointer-events-auto cursor-pointer transition-all ${selectedBoxIndex === index
+                                    ? 'border-yellow-400 shadow-lg'
+                                    : 'border-teal-500'
+                                    }`}
                                 style={{
-                                    top: -20 / (zoom / 100),
-                                    fontSize: `${12 / (zoom / 100)}px`
+                                    left: box.x,
+                                    top: box.y,
+                                    width: box.width,
+                                    height: box.height,
+                                    backgroundColor: selectedBoxIndex === index
+                                        ? 'rgba(250, 204, 21, 0.15)'
+                                        : 'rgba(20, 184, 166, 0.1)'
                                 }}
                             >
-                                {selectedBoxIndex === index ? (
-                                    <>
-                                        <input
-                                            type="text"
-                                            value={editingLabel}
-                                            onChange={handleLabelChange}
-                                            onBlur={() => handleLabelSubmit(index)}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter') handleLabelSubmit(index);
-                                                if (e.key === 'Escape') setSelectedBoxIndex(null);
-                                                e.stopPropagation();
-                                            }}
-                                            onClick={(e) => e.stopPropagation()}
-                                            className="bg-white/20 px-1 rounded outline-none"
+                                <div
+                                    className={`absolute left-0 flex items-center gap-1 px-1.5 py-0.5 rounded whitespace-nowrap ${selectedBoxIndex === index ? 'bg-yellow-400' : 'bg-teal-500'
+                                        } text-white`}
+                                    style={{
+                                        top: -20 / (zoom / 100),
+                                        fontSize: `${12 / (zoom / 100)}px`
+                                    }}
+                                >
+                                    {selectedBoxIndex === index ? (
+                                        <>
+                                            <input
+                                                type="text"
+                                                value={editingLabel}
+                                                onChange={handleLabelChange}
+                                                onBlur={() => handleLabelSubmit(index)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') handleLabelSubmit(index);
+                                                    if (e.key === 'Escape') setSelectedBoxIndex(null);
+                                                    e.stopPropagation();
+                                                }}
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="bg-white/20 px-1 rounded outline-none"
+                                                style={{
+                                                    width: '80px',
+                                                    fontSize: `${12 / (zoom / 100)}px`
+                                                }}
+                                                autoFocus
+                                            />
+                                            <button
+                                                onClick={(e) => handleDeleteBox(index, e)}
+                                                className="hover:bg-white/20 rounded px-0.5"
+                                                style={{ fontSize: `${12 / (zoom / 100)}px` }}
+                                            >
+                                                ×
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <span>#{index + 1}: {box.label || 'Finding'}</span>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+
+                        {/* Render current drawing box */}
+                        {currentBox && (
+                            <div
+                                className="absolute border-2 border-yellow-400 pointer-events-none"
+                                style={{
+                                    left: currentBox.x,
+                                    top: currentBox.y,
+                                    width: currentBox.width,
+                                    height: currentBox.height,
+                                    backgroundColor: 'rgba(250, 204, 21, 0.1)'
+                                }}
+                            />
+                        )}
+                    </div>
+                ) : (
+                    // Comparison view - 2 images side by side
+                    <div className="w-full h-full grid grid-cols-2 gap-4">
+                        {/* Original image */}
+                        <div className="relative flex flex-col border border-white/20 rounded-lg overflow-hidden">
+                            <div className="bg-white/10 px-3 py-2 text-sm font-semibold text-white">
+                                Ảnh gốc - Kết quả của bạn
+                            </div>
+                            <div className="flex-1 flex items-center justify-center bg-black/30 p-2">
+                                <div className="relative">
+                                    <img
+                                        src={caseData.imageUrl}
+                                        alt="Original"
+                                        className="max-w-full max-h-full object-contain"
+                                    />
+                                    {/* Render boxes on original */}
+                                    {boxes.map((box, index) => (
+                                        <div
+                                            key={index}
+                                            className="absolute border-2 border-teal-500"
                                             style={{
-                                                width: '80px',
-                                                fontSize: `${12 / (zoom / 100)}px`
+                                                left: box.x,
+                                                top: box.y,
+                                                width: box.width,
+                                                height: box.height,
+                                                backgroundColor: 'rgba(20, 184, 166, 0.1)'
                                             }}
-                                            autoFocus
-                                        />
-                                        <button
-                                            onClick={(e) => handleDeleteBox(index, e)}
-                                            className="hover:bg-white/20 rounded px-0.5"
-                                            style={{ fontSize: `${12 / (zoom / 100)}px` }}
                                         >
-                                            ×
-                                        </button>
-                                    </>
-                                ) : (
-                                    <span>#{index + 1}: {box.label || 'Finding'}</span>
-                                )}
+                                            <div className="absolute left-0 top-[-18px] px-1.5 py-0.5 bg-teal-500 text-white text-[10px] rounded whitespace-nowrap">
+                                                #{index + 1}: {box.label}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
-                    ))}
 
-                    {/* Render current drawing box */}
-                    {currentBox && (
-                        <div
-                            className="absolute border-2 border-yellow-400 pointer-events-none"
-                            style={{
-                                left: currentBox.x,
-                                top: currentBox.y,
-                                width: currentBox.width,
-                                height: currentBox.height,
-                                backgroundColor: 'rgba(250, 204, 21, 0.1)'
-                            }}
-                        />
-                    )}
-                </div>
+                        {/* AI Result image */}
+                        <div className="relative flex flex-col border border-white/20 rounded-lg overflow-hidden">
+                            <div className="bg-white/10 px-3 py-2 text-sm font-semibold text-white">
+                                {comparisonImage?.label || 'Kết quả AI'}
+                            </div>
+                            <div className="flex-1 flex items-center justify-center bg-black/30 p-2">
+                                <img
+                                    src={comparisonImage?.url}
+                                    alt="AI Result"
+                                    className="max-w-full max-h-full object-contain"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Case Info */}
@@ -390,7 +469,15 @@ export const ImageInteractiveSection = ({ caseData, onAnnotationsChange }) => {
                     </div>
                     <div className="flex items-center gap-3">
                         {boxes.length > 0 && (
-                            <span className="text-teal-400">{boxes.length} hộp</span>
+                            <span className="text-teal-400">{boxes.length} vùng</span>
+                        )}
+                        {comparisonImage && (
+                            <button
+                                onClick={toggleComparison}
+                                className="px-2 py-1 bg-teal-500/20 hover:bg-teal-500/30 text-teal-400 rounded text-xs transition-colors"
+                            >
+                                {showComparison ? 'Ẩn so sánh' : 'Hiện so sánh'}
+                            </button>
                         )}
                         {caseData.diagnosis && (
                             <div className="text-teal-400">{caseData.diagnosis}</div>

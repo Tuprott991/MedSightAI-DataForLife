@@ -14,6 +14,7 @@ export const StudentDetail = () => {
     const [caseData, setCaseData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [annotations, setAnnotations] = useState([]);
+    const [submissionData, setSubmissionData] = useState(null);
     const [toast, setToast] = useState(null);
 
     // Simulate API call to fetch case data
@@ -50,6 +51,10 @@ export const StudentDetail = () => {
     const handleSubmitDiagnosis = (submissionData) => {
         console.log('Student submitted diagnosis:', submissionData);
         console.log('Annotations:', submissionData.annotations);
+        
+        // Lưu submission data để trigger chatbot analysis
+        setSubmissionData(submissionData);
+        
         // TODO: Send to API
         return { success: true };
     };
@@ -114,7 +119,11 @@ export const StudentDetail = () => {
 
                         {/* Right Column - Chatbot (2/7) */}
                         <div className="lg:col-span-2 h-full min-h-0">
-                            <ChatbotSection />
+                            <ChatbotSection 
+                                annotations={annotations}
+                                caseData={caseData}
+                                submissionData={submissionData}
+                            />
                         </div>
                     </div>
                 </div>

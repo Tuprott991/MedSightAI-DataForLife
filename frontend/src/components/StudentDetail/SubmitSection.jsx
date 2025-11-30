@@ -3,12 +3,16 @@ import { Send } from 'lucide-react';
 
 export const SubmitSection = ({ onSubmit, annotations = [], showToast }) => {
     const [diagnosis, setDiagnosis] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleSubmit = () => {
         if (!diagnosis.trim()) {
             showToast?.('error', 'Vui lòng nhập chẩn đoán');
             return;
         }
+
+        if (isSubmitting) return;
+        setIsSubmitting(true);
 
         const submissionData = {
             diagnosis,
@@ -20,12 +24,15 @@ export const SubmitSection = ({ onSubmit, annotations = [], showToast }) => {
             const result = onSubmit?.(submissionData);
             if (result?.success !== false) {
                 showToast?.('success', 'Đã gửi chẩn đoán thành công!');
-                setDiagnosis('');
+                // Không clear diagnosis và annotations để user có thể xem lại
+                // setDiagnosis('');
             } else {
                 showToast?.('error', 'Không thể gửi chẩn đoán. Vui lòng thử lại.');
             }
         } catch (error) {
             showToast?.('error', 'Không thể gửi chẩn đoán. Vui lòng thử lại.');
+        } finally {
+            setTimeout(() => setIsSubmitting(false), 500);
         }
     };
 
@@ -51,10 +58,11 @@ export const SubmitSection = ({ onSubmit, annotations = [], showToast }) => {
                     {/* Submit Button */}
                     <button
                         onClick={handleSubmit}
-                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all shrink-0 bg-teal-500 hover:bg-teal-600 text-white"
+                        disabled={isSubmitting}
+                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all shrink-0 bg-teal-500 hover:bg-teal-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <Send className="w-4 h-4" />
-                        <span>Gửi</span>
+                        <span>{isSubmitting ? 'Đang gửi...' : 'Gửi'}</span>
                     </button>
                 </div>
             </div>
