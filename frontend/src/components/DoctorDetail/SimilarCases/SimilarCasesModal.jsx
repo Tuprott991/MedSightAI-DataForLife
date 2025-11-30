@@ -96,7 +96,7 @@ export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo, 
                         diagnosis: diseaseCategory,
                         imageUrl: "/src/mock_data/patient_data/04_Turbeculosis/origin.png",
                         similarity: 85,
-                        date: "2025-11-01",
+                        date: "2025-11-12",
                         status: "Nguy kịch"
                     },
                     {

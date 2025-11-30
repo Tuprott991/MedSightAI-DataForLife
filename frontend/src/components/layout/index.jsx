@@ -81,11 +81,13 @@ export const Layout = () => {
                                 </Link>
                             )}
 
-                            {/* Center - Patient Info (only on detail pages) */}
-                            {isDetailPage && patient && (
+                            {/* Center - Patient Info (only on doctor detail pages, hidden for students) */}
+                            {isDetailPage && patient && isDoctorDetail && !isStudentDetail && (
                                 <div className="absolute left-1/2 transform -translate-x-1/2 text-center">
                                     <h2 className="text-lg font-semibold text-white">{patient.name}</h2>
-                                    <p className="text-xs text-gray-400">{patient.diagnosis}</p>
+                                    {patient.status !== 'Admitted' && (
+                                        <p className="text-xs text-gray-400">{patient.diagnosis}</p>
+                                    )}
                                 </div>
                             )}
 

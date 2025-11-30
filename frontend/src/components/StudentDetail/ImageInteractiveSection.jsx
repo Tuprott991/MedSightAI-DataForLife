@@ -460,13 +460,7 @@ export const ImageInteractiveSection = ({ caseData, onAnnotationsChange }) => {
 
             {/* Case Info */}
             <div className="px-4 py-3 border-t border-white/10 bg-[#141414] shrink-0">
-                <div className="flex items-center justify-between text-xs">
-                    <div className="text-gray-400">
-                        <span className="font-semibold text-white">{caseData.patientName}</span>
-                        {caseData.age && caseData.gender && (
-                            <span className="ml-2">• {caseData.age}y, {caseData.gender}</span>
-                        )}
-                    </div>
+                <div className="flex items-center justify-end text-xs">
                     <div className="flex items-center gap-3">
                         {boxes.length > 0 && (
                             <span className="text-teal-400">{boxes.length} vùng</span>
@@ -478,9 +472,6 @@ export const ImageInteractiveSection = ({ caseData, onAnnotationsChange }) => {
                             >
                                 {showComparison ? 'Ẩn so sánh' : 'Hiện so sánh'}
                             </button>
-                        )}
-                        {caseData.diagnosis && (
-                            <div className="text-teal-400">{caseData.diagnosis}</div>
                         )}
                     </div>
                 </div>

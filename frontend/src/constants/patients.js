@@ -1,5 +1,18 @@
 export const patientsData = [
   {
+    id: 4,
+    name: "Phạm Thị Dung",
+    age: 28,
+    gender: "Nữ",
+    diagnosis: "Viêm phổi",
+    findings: "Tim to",
+    admissionDate: "2025-11-12",
+    status: "Admitted",
+    image: "/src/mock_data/patient_data/02_pneumonia/origin.png",
+    bloodType: "AB+",
+    lastVisit: "2025-11-12",
+  },
+  {
     id: 1,
     name: "Nguyễn Văn An",
     age: 45,
@@ -37,19 +50,6 @@ export const patientsData = [
     image: "/src/mock_data/patient_data/02_pneumonia/origin.png",
     bloodType: "B+",
     lastVisit: "2025-11-11",
-  },
-  {
-    id: 4,
-    name: "Phạm Thị Dung",
-    age: 28,
-    gender: "Nữ",
-    diagnosis: "Viêm phổi",
-    findings: "Tim to",
-    admissionDate: "2025-11-07",
-    status: "Admitted",
-    image: "/src/mock_data/patient_data/02_pneumonia/origin.png",
-    bloodType: "AB+",
-    lastVisit: "2025-11-08",
   },
   {
     id: 5,
