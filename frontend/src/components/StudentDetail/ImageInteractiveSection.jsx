@@ -441,15 +441,15 @@ export const ImageInteractiveSection = ({ caseData, onAnnotationsChange }) => {
                             </div>
                         </div>
 
-                        {/* AI Result image */}
+                        {/* Kết quả thực tế image */}
                         <div className="relative flex flex-col border border-white/20 rounded-lg overflow-hidden">
                             <div className="bg-white/10 px-3 py-2 text-sm font-semibold text-white">
-                                {comparisonImage?.label || 'Kết quả AI'}
+                                {comparisonImage?.label || 'Kết quả thực tế'}
                             </div>
                             <div className="flex-1 flex items-center justify-center bg-black/30 p-2">
                                 <img
                                     src={comparisonImage?.url}
-                                    alt="AI Result"
+                                    alt="Kết quả thực tế"
                                     className="max-w-full max-h-full object-contain"
                                 />
                             </div>

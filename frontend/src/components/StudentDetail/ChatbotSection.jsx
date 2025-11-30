@@ -49,7 +49,7 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
             { x: 250, y: 150, width: 180, height: 200, label: 'Đám mờ phổi', severity: 'high' },
             { x: 180, y: 320, width: 120, height: 140, label: 'Xơ hóa', severity: 'medium' }
         ],
-        // Chỉ dùng 1 ảnh kết quả AI
+        // Chỉ dùng 1 ảnh kết quả thực tế
         aiResultUrl: '/src/mock_data/patient_data/01_Tuberculosis/Consolidation/Untitled.jpeg'
     };
 
@@ -169,9 +169,9 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
             feedbackMessage = `Không phát hiện vùng đánh dấu tổn thương.\n\n`;
             feedbackMessage += `Chẩn đoán gửi lên: ${diagnosis}\n\n`;
             feedbackMessage += `Yêu cầu: Sử dụng công cụ vẽ để định vị chính xác các vùng bất thường trên phim chụp trước khi submit.\n\n`;
-            feedbackMessage += `Kết quả phân tích AI:`;
+            feedbackMessage += `Kết quả phân tích thực tế:`;
             images = [
-                { type: 'ai_result', url: groundTruth.aiResultUrl, label: 'Phân tích AI' }
+                { type: 'ai_result', url: groundTruth.aiResultUrl, label: 'Phân tích thực tế' }
             ];
             return { feedbackMessage, messageType, images };
         }
@@ -191,6 +191,7 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
         
         // Tạo phản hồi dựa trên kết quả
         if (correctCount === annotations.length && diagnosisCorrect) {
+            // Trường hợp hoàn hảo: Cả chẩn đoán và vùng đều đúng
             messageType = 'success';
             feedbackMessage = `Đánh giá: Chẩn đoán chính xác\n\n`;
             feedbackMessage += `Chẩn đoán: ${diagnosis}\n`;
@@ -202,32 +203,83 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
                 }
             });
             feedbackMessage += `\nNhận xét: ${getClinicSignificance(groundTruth.regions[0].label)}`;
-        } else if (correctCount + partialCount >= annotations.length * 0.5 && diagnosisCorrect) {
-            messageType = 'warning';
-            feedbackMessage = `Đánh giá: Cần cải thiện độ chính xác\n\n`;
-            feedbackMessage += `Chẩn đoán: ${diagnosis} - ${diagnosisCorrect ? 'Chính xác' : `Sai (Đúng: ${correctDiagnosis})`}\n`;
-            feedbackMessage += `Kết quả: ${correctCount} chính xác, ${partialCount} gần đúng, ${incorrectCount} sai\n\n`;
+        } else if (diagnosisCorrect && (correctCount === 0 && incorrectCount > 0)) {
+            // Trường hợp: Chẩn đoán đúng nhưng vùng khoanh hoàn toàn sai
+            messageType = 'error';
+            feedbackMessage = `Đánh giá: Chẩn đoán đúng nhưng định vị tổn thương sai\n\n`;
+            feedbackMessage += `Chẩn đoán: ${diagnosis} - Chính xác\n`;
+            feedbackMessage += `Vùng đánh dấu: ${incorrectCount} vùng sai vị trí\n\n`;
+            
+            feedbackMessage += `Nhận xét:\n`;
+            feedbackMessage += `Bạn đã xác định đúng bệnh lý nhưng chưa định vị chính xác vị trí tổn thương trên phim.\n\n`;
             
             feedbackMessage += `Phân tích chi tiết:\n`;
+            annotationResults.forEach((result, idx) => {
+                feedbackMessage += `Vùng ${idx + 1}: ${result.reason}\n`;
+            });
+            
+            feedbackMessage += `\nHướng dẫn định vị tổn thương ${correctDiagnosis}:\n`;
+            feedbackMessage += `- Vị trí: ${groundTruth.regions[0].label} thường ở thùy trên hoặc giữa phổi\n`;
+            feedbackMessage += `- Đặc điểm: Vùng mật độ tăng, đậm hơn nền phổi bình thường\n`;
+            feedbackMessage += `- Ranh giới: Không đều, có thể lan tỏa hoặc khu trú\n`;
+            feedbackMessage += `- Kích thước: Thường từ 1-3cm, có thể lớn hơn\n\n`;
+            feedbackMessage += `Kéo ảnh dưới đây sang khung hiển thị để học cách định vị chính xác:`;
+            
+            images = [
+                { type: 'ai_result', url: groundTruth.aiResultUrl, label: 'Kết quả thực tế' }
+            ];
+        } else if (diagnosisCorrect && correctCount < annotations.length) {
+            // Trường hợp: Chẩn đoán đúng nhưng một số vùng sai
+            messageType = 'warning';
+            feedbackMessage = `Đánh giá: Chẩn đoán đúng nhưng cần cải thiện định vị\n\n`;
+            feedbackMessage += `Chẩn đoán: ${diagnosis} - Chính xác\n`;
+            feedbackMessage += `Kết quả đánh dấu: ${correctCount} chính xác, ${partialCount} gần đúng, ${incorrectCount} sai\n\n`;
+            
+            feedbackMessage += `Nhận xét:\n`;
+            feedbackMessage += `Bạn đã xác định đúng bệnh lý và một phần vị trí tổn thương. Cần cải thiện độ chính xác trong việc khoanh vùng.\n\n`;
+            
+            feedbackMessage += `Phân tích từng vùng:\n`;
             annotationResults.forEach((result, idx) => {
                 if (result.accuracy === 'correct') {
                     feedbackMessage += `Vùng ${idx + 1}: Chính xác - ${result.matchedRegion.label}\n`;
                 } else if (result.accuracy === 'partial') {
-                    feedbackMessage += `Vùng ${idx + 1}: Overlap thấp - ${result.suggestion}\n`;
+                    feedbackMessage += `Vùng ${idx + 1}: Overlap ${result.overlap}% - ${result.suggestion}\n`;
                 } else {
-                    feedbackMessage += `Vùng ${idx + 1}: Sai vị trí\n`;
+                    feedbackMessage += `Vùng ${idx + 1}: Sai vị trí - ${result.reason}\n`;
                 }
             });
             
             feedbackMessage += `\nYêu cầu:\n`;
-            feedbackMessage += `- Xác định chính xác vùng mật độ tăng\n`;
-            feedbackMessage += `- So sánh với kết quả AI phía dưới\n`;
-            feedbackMessage += `- Chú ý ranh giới tổn thương`;
+            feedbackMessage += `- Quan sát kỹ hơn ranh giới tổn thương\n`;
+            feedbackMessage += `- Mở rộng hoặc thu nhỏ vùng cho chính xác\n`;
+            feedbackMessage += `- So sánh với kết quả thực tế phía dưới`;
             
             images = [
-                { type: 'ai_result', url: groundTruth.aiResultUrl, label: 'Kết quả phân tích AI' }
+                { type: 'ai_result', url: groundTruth.aiResultUrl, label: 'Kết quả phân tích thực tế' }
             ];
+        } else if (!diagnosisCorrect && correctCount === annotations.length) {
+            // Trường hợp: Vùng đúng nhưng chẩn đoán sai
+            messageType = 'warning';
+            feedbackMessage = `Đánh giá: Định vị chính xác nhưng chẩn đoán sai\n\n`;
+            feedbackMessage += `Chẩn đoán gửi lên: ${diagnosis}\n`;
+            feedbackMessage += `Chẩn đoán chuẩn: ${correctDiagnosis}\n`;
+            feedbackMessage += `Vùng đánh dấu: ${correctCount}/${annotations.length} chính xác\n\n`;
+            
+            feedbackMessage += `Nhận xét:\n`;
+            feedbackMessage += `Bạn đã định vị chính xác vị trí tổn thương nhưng nhận định sai về bệnh lý.\n\n`;
+            
+            feedbackMessage += `Phân tích:\n`;
+            annotationResults.forEach((result, idx) => {
+                if (result.accuracy === 'correct') {
+                    feedbackMessage += `Vùng ${idx + 1}: ${result.matchedRegion.label} - Overlap ${result.overlap}%\n`;
+                }
+            });
+            
+            feedbackMessage += `\nĐặc điểm phân biệt ${correctDiagnosis}:\n`;
+            feedbackMessage += `${getClinicSignificance(groundTruth.regions[0].label)}\n\n`;
+            feedbackMessage += `Yêu cầu xem xét lại tiền sử bệnh, triệu chứng lâm sàng và đặc điểm hình ảnh để đưa ra chẩn đoán chính xác.`;
         } else {
+            // Trường hợp: Cả chẩn đoán và vùng đều sai
             messageType = 'error';
             feedbackMessage = `Đánh giá: Chẩn đoán chưa đạt\n\n`;
             feedbackMessage += `Chẩn đoán gửi lên: ${diagnosis}\n`;
@@ -240,17 +292,19 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
             annotationResults.forEach((result, idx) => {
                 if (result.accuracy === 'incorrect') {
                     feedbackMessage += `Vùng ${idx + 1}: ${result.reason}\n`;
+                } else if (result.accuracy === 'partial') {
+                    feedbackMessage += `Vùng ${idx + 1}: Gần đúng nhưng cần điều chỉnh\n`;
                 }
             });
             
-            feedbackMessage += `\nĐặc điểm ${groundTruth.regions[0].label}:\n`;
+            feedbackMessage += `\nĐặc điểm ${groundTruth.regions[0].label} (${correctDiagnosis}):\n`;
             feedbackMessage += `- Vị trí: Thùy trên hoặc giữa phổi\n`;
             feedbackMessage += `- Hình ảnh: Mật độ tăng, vùng đậm hơn\n`;
             feedbackMessage += `- Ranh giới: Không đều, có thể kèm xơ hóa\n\n`;
             feedbackMessage += `Kéo ảnh dưới đây sang khung hiển thị để so sánh:`;
             
             images = [
-                { type: 'ai_result', url: groundTruth.aiResultUrl, label: 'Kết quả AI' }
+                { type: 'ai_result', url: groundTruth.aiResultUrl, label: 'Kết quả thực tế' }
             ];
         }
         
@@ -428,11 +482,11 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
                                                 )}
                                                 <img 
                                                     src={img.url} 
-                                                    alt={img.label || 'AI Result'}
+                                                    alt={img.label || 'Kết quả thực tế'}
                                                     draggable="true"
                                                     onDragStart={(e) => {
                                                         e.dataTransfer.setData('imageUrl', img.url);
-                                                        e.dataTransfer.setData('imageLabel', img.label || 'AI Result');
+                                                        e.dataTransfer.setData('imageLabel', img.label || 'Kết quả thực tế');
                                                     }}
                                                     className="w-full h-auto cursor-move hover:opacity-80 transition-opacity"
                                                     title="Kéo ảnh này sang khung hiển thị để so sánh"
