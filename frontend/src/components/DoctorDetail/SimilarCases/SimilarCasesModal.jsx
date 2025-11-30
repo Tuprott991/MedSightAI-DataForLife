@@ -316,7 +316,14 @@ export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo, 
                                                         modality: "Comparison"
                                                     }
                                                 ];
-                                                onCompareImages(comparisonImages);
+                                                // Pass case data with diagnosis for findings extraction
+                                                const caseData = {
+                                                    patientName: selectedCase.patientName,
+                                                    diagnosis: selectedCase.diagnosis,
+                                                    imageUrl: selectedCase.imageUrl,
+                                                    similarity: selectedCase.similarity
+                                                };
+                                                onCompareImages(comparisonImages, caseData);
                                                 onClose();
                                             }}
                                             className="w-full px-3 py-2 text-xs bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors font-medium"

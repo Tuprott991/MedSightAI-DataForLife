@@ -7,7 +7,7 @@ import { ZoomControls } from '../../custom/ZoomControls';
 import { ConfirmModal } from '../../custom/ConfirmModal';
 import { ImageToolsSidebar } from './ImageToolsSidebar';
 
-export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
+export const ImageViewer = ({ image, patientInfo, onRestoreOriginal, onSimilarCaseModeChange, onSimilarCaseDataChange, onImageChange }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [zoom, setZoom] = useState(100);
     const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -68,6 +68,17 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
         setActiveAdjustment(null);
         setActiveTool(null);
         setIsPanMode(false);
+        
+        // Exit similar case mode if active
+        if (comparisonImages) {
+            setComparisonImages(null);
+            if (onSimilarCaseModeChange) {
+                onSimilarCaseModeChange(false);
+            }
+            if (onSimilarCaseDataChange) {
+                onSimilarCaseDataChange(null);
+            }
+        }
         setSingleImageAnnotations([]);
         setMultipleImageAnnotations([]);
         setSelectedAnnotation(null);
@@ -77,8 +88,14 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
         setCurrentMeasurement(null);
     };
 
-    const handleCompareImages = (images) => {
+    const handleCompareImages = (images, caseData) => {
         setComparisonImages(images);
+        if (onSimilarCaseModeChange) {
+            onSimilarCaseModeChange(true);
+        }
+        if (onSimilarCaseDataChange) {
+            onSimilarCaseDataChange(caseData);
+        }
     };
 
 
@@ -709,6 +726,11 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
                                                 <span className="text-sm font-semibold text-teal-400">
                                                     {comparisonImages ? 'Ảnh của bệnh nhân' : 'xAI'}
                                                 </span>
+                                            ) : comparisonImages ? (
+                                                // Similar case comparison label
+                                                <span className="text-sm font-semibold text-amber-400">
+                                                    Ca bệnh tương đồng
+                                                </span>
                                             ) : (
                                                 // Right image label - Original | Prototype toggle
                                                 <div className="flex items-center gap-1">
@@ -941,7 +963,7 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal }) => {
                 onClose={() => setIsModalOpen(false)}
                 currentImage={images[0] || image}
                 patientInfo={patientInfo}
-                onCompareImages={handleCompareImages}
+                onCompareImages={(images, caseData) => handleCompareImages(images, caseData)}
             />
 
             {/* Delete Confirmation Modal */}

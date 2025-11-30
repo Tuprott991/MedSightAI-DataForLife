@@ -37,6 +37,8 @@ export const DoctorDetail = () => {
     const [isGeneratingReport, setIsGeneratingReport] = useState(false);
     const [showReportModal, setShowReportModal] = useState(false);
     const [reportData, setReportData] = useState(null);
+    const [isSimilarCaseMode, setIsSimilarCaseMode] = useState(false);
+    const [similarCaseData, setSimilarCaseData] = useState(null);
 
     const handleAIAnalyze = () => {
         setIsAnalyzing(true);
@@ -209,6 +211,9 @@ export const DoctorDetail = () => {
                             image={selectedImage}
                             patientInfo={patient}
                             onRestoreOriginal={handleRestoreOriginal}
+                            onSimilarCaseModeChange={setIsSimilarCaseMode}
+                            onSimilarCaseDataChange={setSimilarCaseData}
+                            onImageChange={setSelectedImage}
                         />
                     </div>
 
@@ -224,12 +229,15 @@ export const DoctorDetail = () => {
                                     {/* Chatbot Button */}
                                     <button
                                         onClick={handleChatbotToggle}
+                                        disabled={isSimilarCaseMode}
                                         className={`w-8 h-8 flex items-center justify-center rounded-full transition-all ${
-                                            showChatbot 
-                                                ? 'bg-teal-500 text-white' 
-                                                : 'bg-teal-500/20 text-teal-400 border border-teal-500/30 hover:bg-teal-500 hover:text-white'
-                                        } active:scale-95 cursor-pointer`}
-                                        title="Chatbot AI"
+                                            isSimilarCaseMode
+                                                ? 'bg-teal-500/20 text-teal-400 border border-teal-500/30 cursor-not-allowed opacity-50'
+                                                : showChatbot 
+                                                    ? 'bg-teal-500 text-white' 
+                                                    : 'bg-teal-500/20 text-teal-400 border border-teal-500/30 hover:bg-teal-500 hover:text-white active:scale-95 cursor-pointer'
+                                        }`}
+                                        title={isSimilarCaseMode ? "Không khả dụng khi so sánh ca bệnh" : "Chatbot AI"}
                                     >
                                         <Bot className="w-4 h-4" />
                                     </button>
@@ -237,13 +245,13 @@ export const DoctorDetail = () => {
                                     {/* Generate Report Button */}
                                     <button
                                         onClick={handleGenerateReport}
-                                        disabled={isGeneratingReport}
+                                        disabled={isGeneratingReport || isSimilarCaseMode}
                                         className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-all ${
-                                            isGeneratingReport
+                                            isGeneratingReport || isSimilarCaseMode
                                                 ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30 cursor-not-allowed opacity-50'
                                                 : 'bg-blue-500/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500 hover:text-white active:scale-95 cursor-pointer'
                                         }`}
-                                        title="Sinh báo cáo"
+                                        title={isSimilarCaseMode ? "Không khả dụng khi so sánh ca bệnh" : "Sinh báo cáo"}
                                     >
                                         {isGeneratingReport ? (
                                             <>
@@ -261,8 +269,13 @@ export const DoctorDetail = () => {
                                     {/* AI Analyze Button */}
                                     <button
                                         onClick={handleAIAnalyze}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-all bg-amber-500 text-white shadow-lg shadow-amber-500/50 hover:bg-amber-600 active:scale-95 cursor-pointer"
-                                        title="Phân tích AI"
+                                        disabled={isSimilarCaseMode}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-all ${
+                                            isSimilarCaseMode
+                                                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30 cursor-not-allowed opacity-50'
+                                                : 'bg-amber-500 text-white shadow-lg shadow-amber-500/50 hover:bg-amber-600 active:scale-95 cursor-pointer'
+                                        }`}
+                                        title={isSimilarCaseMode ? "Không khả dụng khi so sánh ca bệnh" : "Phân tích AI"}
                                     >
                                         <Sparkles className="w-3.5 h-3.5" />
                                         <span className="font-medium">Phân tích</span>
@@ -272,7 +285,7 @@ export const DoctorDetail = () => {
 
                             {/* Scrollable Content */}
                             <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
-                                {showChatbot ? (
+                                {(showChatbot || isSimilarCaseMode) ? (
                                     <div className="flex flex-col h-full">
                                         {/* Chatbot Messages */}
                                         <div className="flex-1 overflow-y-auto space-y-3 mb-4">
@@ -281,9 +294,116 @@ export const DoctorDetail = () => {
                                                     <Bot className="w-4 h-4 text-white" />
                                                 </div>
                                                 <div className="flex-1 bg-white/5 rounded-lg p-3">
-                                                    <p className="text-sm text-gray-300">
-                                                        Xin chào! Tôi là trợ lý AI y khoa. Tôi có thể giúp bạn hiểu rõ hơn về ca bệnh này, giải thích các phát hiện, hoặc trả lời câu hỏi của bạn về chẩn đoán và điều trị.
-                                                    </p>
+                                                    {isSimilarCaseMode && similarCaseData ? (
+                                                        <div className="text-sm text-gray-300 space-y-3">
+                                                            <p className="font-semibold text-teal-400">Phân tích so sánh ca bệnh</p>
+                                                            
+                                                            {(() => {
+                                                                // Get findings from both cases - auto-generate if not analyzed yet
+                                                                const currentFindings = analysisData?.findings || generateAnalysisData(patient.diagnosis, patient.image)?.findings || [];
+                                                                const similarFindings = generateAnalysisData(similarCaseData.diagnosis, similarCaseData.imageUrl)?.findings || [];
+                                                                
+                                                                // Find common and different findings
+                                                                const currentFindingTexts = currentFindings.map(f => f.text);
+                                                                const similarFindingTexts = similarFindings.map(f => f.text);
+                                                                const commonFindings = currentFindingTexts.filter(text => similarFindingTexts.includes(text));
+                                                                const uniqueCurrentFindings = currentFindingTexts.filter(text => !similarFindingTexts.includes(text));
+                                                                const uniqueSimilarFindings = similarFindingTexts.filter(text => !currentFindingTexts.includes(text));
+
+                                                                return (
+                                                                    <>
+                                                                        {/* Current Patient Findings (clickable) */}
+                                                                        <div className="space-y-1.5">
+                                                                            <p className="font-medium text-white">Triệu chứng ca bệnh nhân ({patient?.name}):</p>
+                                                                            <div className="flex flex-wrap gap-2">
+                                                                                {currentFindings.map((finding, idx) => (
+                                                                                    <button
+                                                                                        key={idx}
+                                                                                        onClick={() => {
+                                                                                            console.log('Clicked finding:', finding.text);
+                                                                                            console.log('Patient image:', patient.image);
+                                                                                            console.log('Current selectedImage:', selectedImage);
+                                                                                            
+                                                                                            const findingImagePath = getFindingImagePath(finding.text, patient.image);
+                                                                                            console.log('Finding image path:', findingImagePath);
+                                                                                            
+                                                                                            if (findingImagePath && Array.isArray(selectedImage) && selectedImage.length >= 2) {
+                                                                                                const newLeftImage = {
+                                                                                                    id: `xai-current-${idx}`,
+                                                                                                    url: findingImagePath,
+                                                                                                    type: `xAI: ${finding.text}`,
+                                                                                                    imageCode: `XAI-CURRENT-${idx}`,
+                                                                                                    modality: "AI-Enhanced"
+                                                                                                };
+                                                                                                console.log('Setting new left image:', newLeftImage);
+                                                                                                console.log('Keeping right image:', selectedImage[1]);
+                                                                                                setSelectedImage([newLeftImage, selectedImage[1]]);
+                                                                                            } else {
+                                                                                                console.log('Condition not met:', {
+                                                                                                    hasFindingPath: !!findingImagePath,
+                                                                                                    isArray: Array.isArray(selectedImage),
+                                                                                                    length: selectedImage?.length
+                                                                                                });
+                                                                                            }
+                                                                                        }}
+                                                                                        className="px-2.5 py-1 bg-teal-500/20 hover:bg-teal-500/30 border border-teal-500/40 text-teal-300 rounded-md text-xs transition-colors cursor-pointer"
+                                                                                    >
+                                                                                        {finding.text}
+                                                                                    </button>
+                                                                                ))}
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {/* Similar Case Findings (display only) */}
+                                                                        <div className="space-y-1.5">
+                                                                            <p className="font-medium text-white">Triệu chứng ca tương tự ({similarCaseData.patientName}):</p>
+                                                                            <div className="flex flex-wrap gap-2">
+                                                                                {similarFindings.map((finding, idx) => (
+                                                                                    <span
+                                                                                        key={idx}
+                                                                                        className="px-2.5 py-1 bg-gray-700/40 border border-gray-600/40 text-gray-300 rounded-md text-xs"
+                                                                                    >
+                                                                                        {finding.text}
+                                                                                    </span>
+                                                                                ))}
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {/* Comparison Analysis */}
+                                                                        <div className="pt-2 border-t border-white/10 space-y-2.5">
+                                                                            {commonFindings.length > 0 && (
+                                                                                <p className="leading-relaxed">
+                                                                                    <span className="font-medium text-green-400">Điểm tương đồng:</span> Cả hai ca bệnh đều có cùng triệu chứng <span className="text-green-300 font-medium">{commonFindings.join(', ')}</span>. Các dấu hiệu hình ảnh học thể hiện mức độ tổn thương phổi tương tự, với vị trí và phân bố tổn thương có nhiều điểm chung. Điều này gợi ý tiến trình bệnh lý và cơ chế gây tổn thương có sự tương đồng giữa hai ca.
+                                                                                </p>
+                                                                            )}
+                                                                            
+                                                                            {(uniqueCurrentFindings.length > 0 || uniqueSimilarFindings.length > 0) && (
+                                                                                <p className="leading-relaxed">
+                                                                                    <span className="font-medium text-amber-400">Điểm khác biệt:</span> Tuy nhiên, ca bệnh hiện tại 
+                                                                                    {uniqueCurrentFindings.length > 0 && (
+                                                                                        <span> có thêm triệu chứng <span className="text-amber-300 font-medium">{uniqueCurrentFindings.join(', ')}</span></span>
+                                                                                    )}
+                                                                                    {uniqueCurrentFindings.length > 0 && uniqueSimilarFindings.length > 0 && ', trong khi'}
+                                                                                    {uniqueSimilarFindings.length > 0 && (
+                                                                                        <span> ca tương tự có <span className="text-gray-300 font-medium">{uniqueSimilarFindings.join(', ')}</span></span>
+                                                                                    )}
+                                                                                    . Sự khác biệt này cần được xem xét trong bối cảnh lâm sàng tổng thể, tiền sử bệnh lý nền và các yếu tố nguy cơ đặc thù của từng bệnh nhân.
+                                                                                </p>
+                                                                            )}
+
+                                                                            <p className="leading-relaxed text-xs text-gray-400 italic mt-2">
+                                                                                * Click vào triệu chứng màu xanh để xem hình ảnh xAI chi tiết
+                                                                            </p>
+                                                                        </div>
+                                                                    </>
+                                                                );
+                                                            })()}
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-sm text-gray-300">
+                                                            Xin chào! Tôi là trợ lý AI y khoa. Tôi có thể giúp bạn hiểu rõ hơn về ca bệnh này, giải thích các phát hiện, hoặc trả lời câu hỏi của bạn về chẩn đoán và điều trị.
+                                                        </p>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
