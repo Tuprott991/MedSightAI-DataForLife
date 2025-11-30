@@ -137,9 +137,16 @@ export const DoctorDetail = () => {
                 modality: "AI-Enhanced"
             };
 
-            // If in similar case mode, keep the right image (similar case image)
-            if (isSimilarCaseMode && Array.isArray(selectedImage) && selectedImage.length >= 2) {
-                setSelectedImage([xaiImage, selectedImage[1]]);
+            // If in similar case mode, recreate right image from similarCaseData to use latest imageUrl
+            if (isSimilarCaseMode && similarCaseData) {
+                const rightImage = {
+                    id: `similar-${similarCaseData.patientName}`,
+                    url: similarCaseData.imageUrl,
+                    type: `Ca tương tự: ${similarCaseData.patientName}`,
+                    imageCode: `SIMILAR-CASE`,
+                    modality: "Comparison"
+                };
+                setSelectedImage([xaiImage, rightImage]);
             } else {
                 // Normal mode: create right side image data with both original and prototype
                 const rightImage = {
