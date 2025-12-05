@@ -19,12 +19,27 @@ class CSRDataset(Dataset):
         # 1. Load và xử lý CSV
         df = pd.read_csv(csv_file)
         
-        # Tách tên cột
-        # Giả định 6 cột cuối là Target, còn lại (trừ image_id, rad_id) là Concept
-        # Bạn cần kiểm tra lại chính xác tên cột trong file thật
-        target_cols = ['COPD', 'Lung tumor', 'Pneumonia', 'Tuberculosis', 'Other disease', 'No finding']
+        # Tách tên cột tự động
+        # Meta columns (không phải label)
         meta_cols = ['image_id', 'rad_id']
+        
+        # Known target diseases (tự động match các variants)
+        target_keywords = ['COPD', 'Lung tumor', 'Pneumonia', 'Tuberculosis', 'Other', 'No finding']
+        target_cols = []
+        
+        for col in df.columns:
+            if col in meta_cols:
+                continue
+            # Check nếu column name chứa target keyword
+            if any(keyword.lower() in col.lower() for keyword in target_keywords):
+                target_cols.append(col)
+        
+        # Concept columns = tất cả còn lại (không phải meta và target)
         concept_cols = [c for c in df.columns if c not in target_cols + meta_cols]
+        
+        print(f"📊 Dataset '{phase}' loaded:")
+        print(f"  - Concepts: {len(concept_cols)} columns: {concept_cols[:5]}...")
+        print(f"  - Targets: {len(target_cols)} columns: {target_cols}")
         
         self.concept_names = concept_cols
         self.target_names = target_cols
