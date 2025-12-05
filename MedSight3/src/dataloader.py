@@ -111,7 +111,7 @@ def get_dataloaders(train_csv, test_csv, train_dir, test_dir, batch_size=32):
     train_dataset = CSRDataset(train_csv, train_dir, phase='train', transform=train_transform)
     test_dataset = CSRDataset(test_csv, test_dir, phase='test', transform=val_transform)
     
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=8, pin_memory=True, persistent_workers=True)  # Giữ workers alive giữa các epochs)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=8, pin_memory=True, persistent_workers=True)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True, persistent_workers=True)  # Giữ workers alive giữa các epochs)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True, persistent_workers=True)
     
     return train_loader, test_loader, len(train_dataset.concept_names), len(train_dataset.target_names)
