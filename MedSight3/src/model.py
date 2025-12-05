@@ -29,7 +29,19 @@ class CSR(nn.Module):
         # Sử dụng ResNet bỏ lớp FC cuối cùng
 
         if backbone_type == 'medmae':
-            self.backbone = MedMAEBackbone(model_name=model_name if model_name is not None else 'facebook/vit-mae-base') # Thay bằng model path xịn
+            # Kiểm tra nếu model_name là path đến .pth file
+            pretrained_weights = None
+            hf_model = 'facebook/vit-mae-base'
+            
+            if model_name and model_name.endswith('.pth'):
+                pretrained_weights = model_name
+            elif model_name:
+                hf_model = model_name
+            
+            self.backbone = MedMAEBackbone(
+                model_name=hf_model,
+                pretrained_weights=pretrained_weights
+            )
             feature_dim = self.backbone.out_channels # 768
         else:
             base_model = getattr(models, backbone_type)(pretrained=True)
@@ -166,15 +178,16 @@ class CSR(nn.Module):
 if __name__ == "__main__":
     # Giả lập tham số
     BATCH_SIZE = 2
-    NUM_CONCEPTS = 5        # K: Ví dụ: Tràn dịch, Bóng tim to, Mờ phổi...
-    NUM_CLASSES = 3         # Target: Bình thường, Viêm phổi, Suy tim
-    NUM_PROTOTYPES = 2      # M: 2 mẫu cho mỗi concept
+    NUM_CONCEPTS = 14        # K: Ví dụ: Tràn dịch, Bóng tim to, Mờ phổi...
+    NUM_CLASSES = 15         # Target: Bình thường, Viêm phổi, Suy tim
+    NUM_PROTOTYPES = 5      # M: 5 mẫu cho mỗi concept
     
     # Khởi tạo model
     model = CSR(num_concepts=NUM_CONCEPTS, 
                 num_classes=NUM_CLASSES, 
                 num_prototypes_per_concept=NUM_PROTOTYPES,
-                backbone_name='resnet18')
+                backbone_type='medmae',
+                model_name='weights/pre_trained_medmae.pth')  # Đường dẫn tương đối từ MedSight3/
     
     # Dummy Input
     input_img = torch.randn(BATCH_SIZE, 3, 224, 224)
