@@ -1,89 +1,103 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import timm  # Khuyên dùng timm cho linh hoạt backbone
+import timm
 
-
-class MedicalConceptModel(nn.Module):
-    def __init__(self, num_classes=14, model_name="resnet50", pretrained=True):
+class CSRModel(nn.Module):
+    def __init__(self, num_classes=14, num_prototypes=5, model_name="resnet50", pretrained=True):
         super().__init__()
-
-        # 1. Backbone: Trích xuất đặc trưng không gian (Spatial Features)
-        # Output mong muốn: [Batch, Features, H_feat, W_feat]
+        
+        # --- PHẦN 1: CONCEPT MODEL (Giai đoạn 1) ---
+        # F: Feature Extractor
         self.backbone = timm.create_model(
-            model_name,
-            pretrained=pretrained,
-            features_only=True,
-            out_indices=(4,),  # Lấy output của layer cuối cùng
+            model_name, pretrained=pretrained, features_only=True, out_indices=(4,)
         )
-
-        # Lấy thông tin số kênh (channels) của backbone
         feature_info = self.backbone.feature_info.get_dicts()[-1]
-        self.feature_dim = feature_info["num_chs"]  # Ví dụ ResNet50 là 2048
+        self.feature_dim = feature_info["num_chs"]
 
-        # 2. Concept Head (Attention Mechanism)
-        # Tạo ra K bản đồ nhiệt cho K lớp bệnh
-        # Input: Feature_Dim -> Output: Num_Classes (1 map per class)
+        # C: Concept Head (Tạo CAMs)
         self.concept_head = nn.Conv2d(self.feature_dim, num_classes, kernel_size=1)
 
-        # 3. Projector & Classifier
-        # Project vector đặc trưng về không gian nhỏ hơn để tính Cosine Similarity hiệu quả
+        # --- PHẦN 2: PROTOTYPES (Giai đoạn 2) ---
         self.embedding_dim = 128
+        # P: Projector (Chiếu feature về không gian contrastive)
         self.projector = nn.Sequential(
             nn.Linear(self.feature_dim, 512),
-            nn.BatchNorm1d(512),
             nn.ReLU(),
-            nn.Linear(512, 128),  # Output dimension cho Contrastive
+            nn.Linear(512, self.embedding_dim)
         )
+        
+        # Learnable Prototypes: [Num_Classes, Num_Prototypes_Per_Class, Emb_Dim]
+        # Bài báo gọi là p^{k_m} [cite: 123]
+        self.prototypes = nn.Parameter(torch.randn(num_classes, num_prototypes, self.embedding_dim))
+        
+        # --- PHẦN 3: TASK HEAD (Giai đoạn 3) ---
+        # H: Task Head (Dự đoán bệnh từ điểm tương đồng)
+        # Input là vector similarity score có kích thước [Num_Classes * Num_Prototypes]
+        self.task_head = nn.Linear(num_classes * num_prototypes, num_classes)
 
-        # Classifier: Dự đoán xác suất bệnh từ Concept Vector
-        self.classifier = nn.Linear(self.embedding_dim, 1)
+    def get_features_and_cam(self, x):
+        """Dùng cho Giai đoạn 1"""
+        if x.size(1) == 1: x = x.repeat(1, 3, 1, 1)
+        features = self.backbone(x)[0]       # f
+        attn_logits = self.concept_head(features) # cam
+        return features, attn_logits
+
+    def get_projected_vectors(self, features, attn_logits):
+        """Dùng cho Giai đoạn 2: Lấy Local Concept Vectors v^k [cite: 145]"""
+        B, C, H, W = features.shape
+        K = attn_logits.shape[1]
+        
+        # 1. Normalize CAM (Spatial Softmax)
+        attn_weights = F.softmax(attn_logits.view(B, K, -1), dim=-1).view(B, K, H, W)
+        
+        # 2. Weighted Sum để lấy vector đại diện cho từng concept
+        # features: [B, C, H*W] -> [B, H*W, C]
+        features_flat = features.view(B, C, -1).permute(0, 2, 1)
+        # v = weights * features -> [B, K, C]
+        local_concept_vectors = torch.bmm(attn_weights.view(B, K, -1), features_flat)
+        
+        # 3. Project sang không gian embedding -> v' [cite: 192]
+        projected_vectors = self.projector(local_concept_vectors) # [B, K, Emb_Dim]
+        return F.normalize(projected_vectors, p=2, dim=-1)
 
     def forward(self, x):
-        # x: [Batch, 1, 384, 384] (Grayscale)
-        # Backbone thường cần 3 kênh màu, ta repeat channel 1 lên 3 lần
-        if x.size(1) == 1:
-            x = x.repeat(1, 3, 1, 1)
-
-        # 1. Spatial Features: [B, C, H, W] (Ví dụ: [B, 2048, 12, 12])
-        features = self.backbone(x)[0]
-        B, C, H, W = features.shape
-
-        # 2. Attention Maps (Logits): [B, Num_Classes, H, W]
-        attn_logits = self.concept_head(features)
-
-        # Chuyển thành trọng số (Softmax trên không gian H,W để tìm vùng quan trọng nhất)
-        # [B, K, H*W]
-        attn_weights = F.softmax(attn_logits.view(B, -1, H * W), dim=-1)
-        attn_maps = attn_weights.view(B, -1, H, W)
-
-        # 3. Concept Aggregation (Weighted Average Pooling)
-        # Ta nhân đặc trưng với attention map để lấy ra vector đại diện cho từng bệnh
-        # Features: [B, C, H*W] -> [B, H*W, C] (transpose)
-        features_flat = features.view(B, C, -1).permute(0, 2, 1)
-
-        # Concept Vectors = Attn_Weights x Features
-        # [B, K, H*W] x [B, H*W, C] -> [B, K, C]
-        concept_vectors_raw = torch.bmm(attn_weights, features_flat)
-
-        B, K, C = concept_vectors_raw.shape
-        concept_vectors_flat = concept_vectors_raw.view(B * K, C)
-
-        # 4. Projection & Classification
-        # [B, K, C] -> [B, K, Embedding_Dim]
-        concept_embeddings = self.projector(concept_vectors_flat)
-
-        # Normalize vectors để dùng cho Cosine Similarity Loss/Inference
-        concept_embeddings = concept_embeddings.view(B, K, -1)
-
-        # Normalize L2
-        concept_embeddings = F.normalize(concept_embeddings, p=2, dim=-1)
-
-        # Classification Logits: [B, K, 1] -> [B, K]
-        logits = self.classifier(concept_embeddings).squeeze(-1)
-
+        """Luồng chạy Full (Dùng cho Giai đoạn 3 & Inference)"""
+        # 1. Trích xuất đặc trưng & CAM
+        features, attn_logits = self.get_features_and_cam(x)
+        
+        # 2. Tính Similarity Map S [cite: 149]
+        # features: [B, C, H, W] -> project từng pixel -> [B, Emb_Dim, H, W]
+        # Đoạn này tính toán nặng, trong thực tế ta tính similarity trên projected vectors v'
+        
+        # Để đơn giản hóa theo luồng Inference của bài báo[cite: 126]:
+        # Ta lấy similarity giữa Prototypes và Feature Map đã project
+        # Nhưng để code chạy nhanh, ta dùng công thức (10) trong bài báo:
+        # s^{k_m} = max <p, P(f(h,w))>
+        
+        projected_vectors = self.get_projected_vectors(features, attn_logits) # [B, K, Emb_Dim]
+        
+        # Tính Similarity Score s [cite: 126]
+        # Prototypes: [K, M, Emb]
+        # Vectors: [B, K, Emb]
+        # Similarity: [B, K, M]
+        # (Lưu ý: đây là phiên bản đơn giản hóa, bản chuẩn phải tính trên từng patch HxW)
+        
+        prototypes_norm = F.normalize(self.prototypes, p=2, dim=-1)
+        
+        # Tính Cosine Similarity
+        # Kết quả: [B, K, M] (Batch, Class, Num_Prototypes)
+        sim_scores = torch.einsum('bkc,kmc->bkm', projected_vectors, prototypes_norm)
+        
+        # Flatten thành vector s [B, K*M]
+        s_vector = sim_scores.view(x.size(0), -1)
+        
+        # 3. Predict y từ s [cite: 128]
+        logits = self.task_head(s_vector)
+        
         return {
-            "logits": logits,  # [B, K] - Dùng cho Cls Loss
-            "attn_maps": attn_logits,  # [B, K, H, W] - Dùng cho Seg/Bbox Loss (lưu ý trả về logits chưa qua softmax cho loss)
-            "concept_vectors": concept_embeddings,  # [B, K, Emb_Dim] - Dùng cho Cosine/Contrastive
+            "logits": logits,
+            "attn_maps": attn_logits,
+            "projected_vectors": projected_vectors,
+            "sim_scores": sim_scores
         }

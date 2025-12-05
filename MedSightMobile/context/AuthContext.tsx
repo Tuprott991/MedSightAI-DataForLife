@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { auth, db, app } from '@/services/firebase';
 import { signOut, onAuthStateChanged, PhoneAuthProvider, signInWithCredential } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection } from 'firebase/firestore';
 
 // Mock storage for users (simulates Firestore for offline/testing)
 const mockUserDatabase: Record<string, any> = {};
