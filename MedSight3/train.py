@@ -327,22 +327,17 @@ def main():
     # 1. Prepare Data
     # Use bbox dataloader if bbox_csv is provided
     if args.train_bbox_csv and args.test_bbox_csv:
-        from src.dataloader_bbox import get_dataloaders_with_bbox
-        
-        # Validate resize_factor_csv files are provided
-        if not args.train_resize_factor_csv or not args.test_resize_factor_csv:
-            raise ValueError("Both --train_resize_factor_csv and --test_resize_factor_csv are required when using bbox")
+        from src.dataloader_bbox_simple import get_dataloaders_with_bbox_simple
         
         if rank == 0:
-            print(f"Loading data WITH bounding boxes:")
+            print(f"Loading data WITH bounding boxes (Simple - bbox already in 224x224 space):")
             print(f"  - Train bbox: {args.train_bbox_csv}")
             print(f"  - Test bbox: {args.test_bbox_csv}")
-            print(f"  - Train resize factors: {args.train_resize_factor_csv}")
-            print(f"  - Test resize factors: {args.test_resize_factor_csv}")
+            print(f"  ⚠️  Assuming bbox coordinates are ALREADY adjusted for 224x224 images")
         
-        train_loader, val_loader, test_loader, num_concepts, num_classes, train_sampler = get_dataloaders_with_bbox(
+        train_loader, val_loader, test_loader, num_concepts, num_classes, train_sampler = get_dataloaders_with_bbox_simple(
             args.train_csv, args.test_csv, args.train_bbox_csv, args.test_bbox_csv,
-            args.train_resize_factor_csv, args.test_resize_factor_csv, args.train_dir, args.test_dir,
+            args.train_dir, args.test_dir,
             batch_size=args.batch_size,
             rank=rank,
             world_size=world_size,
