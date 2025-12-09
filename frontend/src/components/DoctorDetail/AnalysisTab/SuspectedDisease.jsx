@@ -1,4 +1,5 @@
 import { Activity, RefreshCw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const getConfidenceColor = (confidence) => {
     if (confidence >= 80) return 'text-emerald-400';
@@ -13,6 +14,7 @@ const getConfidenceBarColor = (confidence) => {
 };
 
 export const SuspectedDisease = ({ diseases, onUpdateClick, isUpdating, selectedFindingIds }) => {
+    const { t } = useTranslation();
     const sortedDiseases = [...diseases].sort((a, b) => b.confidence - a.confidence);
 
     return (
@@ -20,7 +22,7 @@ export const SuspectedDisease = ({ diseases, onUpdateClick, isUpdating, selected
             <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold text-white flex items-center gap-2">
                     <Activity className="w-4 h-4 text-teal-500" />
-                    Bệnh nghi ngờ
+                    {t('doctorDetail.suspectedDisease')}
                 </h3>
                 {onUpdateClick && (
                     <button
@@ -29,7 +31,7 @@ export const SuspectedDisease = ({ diseases, onUpdateClick, isUpdating, selected
                         className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg transition-all bg-teal-500 hover:bg-teal-600 disabled:bg-teal-500/50 text-white disabled:cursor-not-allowed whitespace-nowrap shadow-lg shadow-teal-500/30"
                     >
                         <RefreshCw className={`w-3.5 h-3.5 ${isUpdating ? 'animate-spin' : ''}`} />
-                        <span className="font-medium">{isUpdating ? 'Đang cập nhật...' : 'Cập nhật'}</span>
+                        <span className="font-medium">{isUpdating ? t('doctorDetail.updating') : t('doctorDetail.update')}</span>
                     </button>
                 )}
             </div>

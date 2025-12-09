@@ -1,7 +1,10 @@
 import { Link } from 'react-router-dom';
 import { Home, ArrowLeft, AlertCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export const NotFound = () => {
+    const { t } = useTranslation();
+
     return (
         <div className="min-h-screen bg-[#1b1b1b] text-white flex items-center justify-center px-6">
             <div className="max-w-2xl w-full text-center">
@@ -21,9 +24,9 @@ export const NotFound = () => {
                 </div>
 
                 {/* Error Message */}
-                <h2 className="text-3xl md:text-4xl font-bold mb-4">Không Tìm Thấy Trang</h2>
+                <h2 className="text-3xl md:text-4xl font-bold mb-4">{t('notFound.title')}</h2>
                 <p className="text-gray-400 text-lg mb-8 max-w-md mx-auto">
-                    Xin lỗi, trang bạn tìm kiếm không tồn tại hoặc đã bị di chuyển.
+                    {t('notFound.description')}
                 </p>
 
                 {/* Action Buttons */}
@@ -33,7 +36,7 @@ export const NotFound = () => {
                         className="group inline-flex items-center justify-center gap-2 bg-teal-500 hover:bg-teal-600 text-white px-8 py-4 rounded-lg font-semibold transition-all transform hover:scale-105 shadow-lg shadow-teal-500/50"
                     >
                         <Home className="w-5 h-5" />
-                        Về Trang Chủ
+                        {t('notFound.backHome')}
                         <span className="absolute inset-0 rounded-lg bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></span>
                     </Link>
 
@@ -42,25 +45,25 @@ export const NotFound = () => {
                         className="inline-flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white px-8 py-4 rounded-lg font-semibold transition-all transform hover:scale-105 border border-white/20"
                     >
                         <ArrowLeft className="w-5 h-5" />
-                        Quay Lại
+                        {t('notFound.goBack')}
                     </button>
                 </div>
 
                 {/* Helpful Links */}
                 <div className="mt-12 pt-8 border-t border-white/10">
-                    <p className="text-gray-400 mb-4">Bạn có thể quan tâm đến:</p>
+                    <p className="text-gray-400 mb-4">{t('notFound.helpfulLinks')}</p>
                     <div className="flex flex-wrap gap-3 justify-center">
                         <Link
                             to="/doctor"
                             className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-teal-500/50 rounded-lg text-sm transition-all"
                         >
-                            Cổng Bác Sĩ
+                            {t('notFound.doctorPortal')}
                         </Link>
                         <Link
                             to="/student"
                             className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-teal-500/50 rounded-lg text-sm transition-all"
                         >
-                            Cổng Sinh Viên
+                            {t('notFound.studentPortal')}
                         </Link>
                     </div>
                 </div>

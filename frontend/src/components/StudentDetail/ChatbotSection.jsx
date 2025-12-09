@@ -48,8 +48,8 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
     // Mock ground truth data - vị trí đúng của bệnh lý
     const groundTruth = {
         regions: [
-            { x: 250, y: 150, width: 180, height: 200, label: 'Đám mờ phổi', severity: 'high' },
-            { x: 180, y: 320, width: 120, height: 140, label: 'Xơ hóa', severity: 'medium' }
+            { x: 250, y: 150, width: 180, height: 200, label: t('studentDetail.lesions.pulmonaryConsolidation'), severity: 'high' },
+            { x: 180, y: 320, width: 120, height: 140, label: t('studentDetail.lesions.fibrosis'), severity: 'medium' }
         ],
         // Chỉ dùng 1 ảnh kết quả thực tế
         aiResultUrl: '/src/mock_data/patient_data/01_Tuberculosis/Consolidation/Untitled.jpeg'
@@ -380,44 +380,52 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
 
     // Lấy ý nghĩa lâm sàng
     const getClinicSignificance = (label) => {
-        const significance = {
-            'Đám mờ phổi': 'Tổn thương này gợi ý viêm hoặc lao phổi. Cần kết hợp xét nghiệm đờm và tiền sử ho kéo dài.',
-            'Xơ hóa': 'Xơ hóa phổi là dấu hiệu của tổn thương mạn tính, thường gặp ở bệnh lao cũ đã điều trị.',
-            'Tim to': 'Tăng kích thước tim có thể do suy tim hoặc tăng áp phổi kéo dài.'
+        // Map Vietnamese labels to translation keys
+        const labelToKey = {
+            [t('studentDetail.lesions.pulmonaryConsolidation')]: 'pulmonaryConsolidation',
+            [t('studentDetail.lesions.fibrosis')]: 'fibrosis',
+            [t('studentDetail.lesions.cardiomegaly')]: 'cardiomegaly'
         };
-        return significance[label] || 'Tổn thương này cần đánh giá thêm với các xét nghiệm bổ sung.';
+
+        const key = labelToKey[label];
+        return key ? t(`studentDetail.clinicalSignificance.${key}`) : t('studentDetail.clinicalSignificance.default');
     };
 
     const generateMockResponse = (question) => {
         const lowerQuestion = question.toLowerCase();
 
         // Hỏi về vị trí tổn thương
-        if (lowerQuestion.includes('ở đâu') || lowerQuestion.includes('vị trí') || lowerQuestion.includes('nằm')) {
-            return `📍 **Vị trí tổn thương:**\n\nTrong ca bệnh này, các tổn thương chính nằm ở:\n• **Thùy trên phổi phải** - Đám mờ rõ ràng\n• **Vùng quanh rốn phổi** - Xơ hóa nhẹ\n\nBạn có thể thử khoanh vùng các khu vực bạn cho là bất thường, tôi sẽ đánh giá xem có chính xác không! 🎯`;
+        if (lowerQuestion.includes('ở đâu') || lowerQuestion.includes('vị trí') || lowerQuestion.includes('nằm') ||
+            lowerQuestion.includes('where') || lowerQuestion.includes('location')) {
+            return t('studentDetail.chatbotResponses.locationQuestion');
         }
 
         // Hỏi về heatmap hoặc AI
-        if (lowerQuestion.includes('heatmap') || lowerQuestion.includes('ai phát hiện') || lowerQuestion.includes('máy nhận')) {
-            return `🤖 **Phân tích AI:**\n\nAI đã phát hiện các vùng bất thường với độ tin cậy cao. Bạn muốn xem heatmap để so sánh với vùng bạn đã khoanh không?\n\nHeatmap sẽ hiển thị:\n🔴 Vùng đỏ: Bất thường mức cao\n🟡 Vùng vàng: Nghi ngờ\n🟢 Vùng xanh: Bình thường`;
+        if (lowerQuestion.includes('heatmap') || lowerQuestion.includes('ai phát hiện') || lowerQuestion.includes('máy nhận') ||
+            lowerQuestion.includes('ai detect') || lowerQuestion.includes('ai analysis')) {
+            return t('studentDetail.chatbotResponses.aiAnalysisQuestion');
         }
 
         // Hỏi về cách nhận biết
-        if (lowerQuestion.includes('nhận biết') || lowerQuestion.includes('phát hiện') || lowerQuestion.includes('cách')) {
-            return `🔍 **Cách nhận biết tổn thương:**\n\n1. **Quan sát mật độ:** Vùng bệnh thường sáng hơn (tăng đậm độ)\n2. **So sánh 2 bên:** Tìm sự khác biệt giữa phổi trái và phải\n3. **Ranh giới:** Tổn thương thường có ranh giới không rõ\n4. **Vị trí:** Lao phổi hay gặp ở thùy trên\n\nHãy thử khoanh vùng, tôi sẽ góp ý ngay! 💪`;
+        if (lowerQuestion.includes('nhận biết') || lowerQuestion.includes('phát hiện') || lowerQuestion.includes('cách') ||
+            lowerQuestion.includes('recognize') || lowerQuestion.includes('detect') || lowerQuestion.includes('how')) {
+            return t('studentDetail.chatbotResponses.recognitionGuide');
         }
 
         // Hỏi về chẩn đoán
-        if (lowerQuestion.includes('chẩn đoán') || lowerQuestion.includes('bệnh gì')) {
-            return `🏥 **Chẩn đoán:**\n\n${caseData?.diagnosis || 'Lao phổi'} - Độ tin cậy AI: 87%\n\n**Căn cứ chẩn đoán:**\n• Đám mờ ở thùy trên phổi\n• Có dấu hiệu xơ hóa\n• Ranh giới không đều\n\n**Cần làm thêm:**\n• Xét nghiệm đờm tìm BK\n• Test GeneXpert\n• CT scan nếu cần thiết`;
+        if (lowerQuestion.includes('chẩn đoán') || lowerQuestion.includes('bệnh gì') ||
+            lowerQuestion.includes('diagnosis') || lowerQuestion.includes('disease')) {
+            return t('studentDetail.chatbotResponses.diagnosisInfo').replace('{diagnosis}', caseData?.diagnosis || t('studentDetail.lesions.pulmonaryConsolidation'));
         }
 
         // Hỏi về điều trị
-        if (lowerQuestion.includes('điều trị') || lowerQuestion.includes('thuốc')) {
-            return `💊 **Phác đồ điều trị:**\n\n**Giai đoạn tấn công (2 tháng):**\n• Rifampicin + Isoniazid + Pyrazinamid + Ethambutol\n\n**Giai đoạn ổn định (4 tháng):**\n• Rifampicin + Isoniazid\n\n⚠️ **Lưu ý:**\n• Uống thuốc đều đặn\n• Không tự ý ngừng thuốc\n• Tái khám định kỳ`;
+        if (lowerQuestion.includes('điều trị') || lowerQuestion.includes('thuốc') ||
+            lowerQuestion.includes('treatment') || lowerQuestion.includes('medication')) {
+            return t('studentDetail.chatbotResponses.treatmentInfo');
         }
 
         // Response mặc định
-        return `Đó là câu hỏi hay! Bạn có thể:\n\n📝 Thử khoanh vùng các tổn thương trên ảnh\n🤖 Hỏi tôi về 'heatmap' để xem phân tích AI\n📍 Hỏi về 'vị trí' tổn thương\n🔍 Hỏi 'cách nhận biết' bệnh lý\n\nTôi sẽ đánh giá và góp ý cho bạn ngay! 💪`;
+        return t('studentDetail.chatbotResponses.defaultResponse');
     };
 
     const handleKeyPress = (e) => {
@@ -484,17 +492,17 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
                                                 )}
                                                 <img
                                                     src={img.url}
-                                                    alt={img.label || 'Kết quả thực tế'}
+                                                    alt={img.label || t('studentDetail.interactive.actualResult')}
                                                     draggable="true"
                                                     onDragStart={(e) => {
                                                         e.dataTransfer.setData('imageUrl', img.url);
-                                                        e.dataTransfer.setData('imageLabel', img.label || 'Kết quả thực tế');
+                                                        e.dataTransfer.setData('imageLabel', img.label || t('studentDetail.interactive.actualResult'));
                                                     }}
                                                     className="w-full h-auto cursor-move hover:opacity-80 transition-opacity"
-                                                    title="Kéo ảnh này sang khung hiển thị để so sánh"
+                                                    title={t('studentDetail.feedback.dragImageToCompare')}
                                                 />
                                                 <div className="bg-white/5 px-2 py-1 text-xs text-gray-400">
-                                                    Kéo sang khung ảnh để so sánh
+                                                    {t('studentDetail.feedback.dragImageToCompare')}
                                                 </div>
                                             </div>
                                         ))}

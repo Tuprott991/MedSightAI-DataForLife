@@ -1,6 +1,7 @@
-import { Calendar, User, Activity, Droplet } from 'lucide-react';
+import { User, Droplet } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { getTranslatedDiagnosis, getTranslatedGender } from '../../utils/diagnosisHelper';
 
 export const PatientCard = ({ patient }) => {
     const { t, i18n } = useTranslation();
@@ -68,28 +69,18 @@ export const PatientCard = ({ patient }) => {
                     <>
                         <h3 className="text-lg font-bold text-white mb-1">{patient.name}</h3>
                         {patient.status !== 'Admitted' && (
-                            <p className="text-sm text-teal-400 mb-4">{patient.diagnosis}</p>
+                            <p className="text-sm text-teal-400 mb-4">{getTranslatedDiagnosis(patient.diagnosis, t)}</p>
                         )}
 
                         <div className="space-y-2">
                             <div className="flex items-center gap-2 text-sm text-gray-400">
                                 <User className="w-4 h-4" />
-                                <span>{patient.age} {t('doctor.patientCard.years')} • {patient.gender === 'Male' ? t('doctorDetail.patientInfo.male') : t('doctorDetail.patientInfo.female')}</span>
+                                <span>{patient.age} {t('doctor.patientCard.years')} • {getTranslatedGender(patient.gender, t)}</span>
                             </div>
 
                             <div className="flex items-center gap-2 text-sm text-gray-400">
                                 <Droplet className="w-4 h-4" />
-                                <span>{new Date(patient.admissionDate).toLocaleDateString(i18n.language === 'vi' ? 'vi-VN' : 'en-US')}</span>
-                            </div>
-
-                            <div className="flex items-center gap-2 text-sm text-gray-400">
-                                <Calendar className="w-4 h-4" />
-                                <span>{new Date(patient.admissionDate).toLocaleDateString(i18n.language === 'vi' ? 'vi-VN' : 'en-US')}</span>
-                            </div>
-
-                            <div className="flex items-center gap-2 text-sm text-gray-400">
-                                <Activity className="w-4 h-4" />
-                                <span>{new Date(patient.lastVisit).toLocaleDateString(i18n.language === 'vi' ? 'vi-VN' : 'en-US')}</span>
+                                <span>{i18n.language === 'vi' ? 'Nhóm máu' : 'Blood Type'}: {patient.blood_type}</span>
                             </div>
                         </div>
 

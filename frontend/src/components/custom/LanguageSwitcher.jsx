@@ -3,7 +3,7 @@ import { Languages } from 'lucide-react';
 import { useState } from 'react';
 
 export const LanguageSwitcher = () => {
-    const { i18n } = useTranslation();
+    const { i18n, t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
 
     const languages = [
@@ -23,7 +23,7 @@ export const LanguageSwitcher = () => {
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className="flex items-center gap-2 px-3 py-2 rounded-lg bg-teal-500/10 hover:bg-teal-500/20 transition-all border border-teal-500/30 hover:border-teal-500/50 text-teal-400 hover:text-teal-300"
-                title="Change Language"
+                title={t('common.changeLanguage')}
             >
                 <Languages className="w-4 h-4" />
                 <span className="text-sm font-medium">{currentLanguage.flag}</span>
@@ -41,8 +41,8 @@ export const LanguageSwitcher = () => {
                                 key={lang.code}
                                 onClick={() => changeLanguage(lang.code)}
                                 className={`w-full flex items-center gap-3 px-4 py-3 transition-all ${currentLanguage.code === lang.code
-                                        ? 'bg-teal-500/20 text-teal-400 border-l-2 border-teal-500'
-                                        : 'text-gray-300 hover:bg-teal-500/10 hover:text-teal-400'
+                                    ? 'bg-teal-500/20 text-teal-400 border-l-2 border-teal-500'
+                                    : 'text-gray-300 hover:bg-teal-500/10 hover:text-teal-400'
                                     }`}
                             >
                                 <span className="text-xl">{lang.flag}</span>

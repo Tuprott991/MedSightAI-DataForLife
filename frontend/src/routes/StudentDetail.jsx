@@ -37,18 +37,13 @@ export const StudentDetail = () => {
     };
 
     const getStatusText = (status) => {
-        switch (status) {
-            case 'Critical':
-                return 'Nguy Kịch';
-            case 'Under Treatment':
-                return 'Đang Điều Trị';
-            case 'Stable':
-                return 'Ổn Định';
-            case 'Admitted':
-                return 'Tiếp Nhận';
-            default:
-                return status;
-        }
+        const statusMap = {
+            'Critical': t('doctor.patientCard.statusCritical'),
+            'Under Treatment': t('doctor.patientCard.statusUnderTreatment'),
+            'Stable': t('doctor.patientCard.statusStable'),
+            'Admitted': t('doctor.patientCard.statusAdmitted')
+        };
+        return statusMap[status] || status;
     };
 
     // Simulate API call to fetch case data

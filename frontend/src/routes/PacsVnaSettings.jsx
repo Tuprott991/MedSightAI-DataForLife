@@ -18,7 +18,7 @@ export const PacsVnaSettings = () => {
                 <div className="mb-6">
                     <h1 className="text-3xl font-bold text-white mb-2">{t('settings.title')}</h1>
                     <p className="text-gray-400">
-                        Cấu hình kết nối đến hệ thống lưu trữ hình ảnh y tế (PACS) và kho lưu trữ trung lập (VNA)
+                        {t('settings.description')}
                     </p>
                 </div>
 
@@ -31,7 +31,7 @@ export const PacsVnaSettings = () => {
                             : 'bg-[#141414] text-gray-400 hover:text-white hover:bg-white/5'
                             }`}
                     >
-                        PACS Settings
+                        {t('settings.pacsTab')}
                     </button>
                     <button
                         onClick={() => setActiveTab('vna')}
@@ -40,7 +40,7 @@ export const PacsVnaSettings = () => {
                             : 'bg-[#141414] text-gray-400 hover:text-white hover:bg-white/5'
                             }`}
                     >
-                        VNA Settings
+                        {t('settings.vnaTab')}
                     </button>
                 </div>
 

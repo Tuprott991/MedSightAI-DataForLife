@@ -1,6 +1,7 @@
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Thermometer } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const getSeverityColor = (severity) => {
     switch (severity) {
@@ -40,6 +41,7 @@ const getConfidenceBgColor = (confidence) => {
 };
 
 export const KeyFindings = ({ findings, onFindingClick, onFindingSelectionChange, selectedFindingId }) => {
+    const { t } = useTranslation();
     const [selectedFindings, setSelectedFindings] = useState(() =>
         findings.reduce((acc, f) => ({ ...acc, [f.id]: true }), {})
     );
@@ -81,7 +83,7 @@ export const KeyFindings = ({ findings, onFindingClick, onFindingSelectionChange
         <div>
             <h3 className="text-sm font-semibold text-white flex items-center gap-2 mb-3">
                 <Thermometer className="w-4 h-4 text-teal-500" />
-                Các triệu chứng
+                {t('doctorDetail.symptoms')}
             </h3>
             <style>{`
                 .checkbox-custom {
@@ -100,11 +102,10 @@ export const KeyFindings = ({ findings, onFindingClick, onFindingSelectionChange
                 {sortedFindings.map((finding) => (
                     <div
                         key={finding.id}
-                        className={`p-2.5 rounded-lg border transition-all ${
-                            selectedFindingId === finding.id 
-                                ? 'border-teal-400 border-2 bg-teal-500/20 shadow-lg shadow-teal-500/20' 
+                        className={`p-2.5 rounded-lg border transition-all ${selectedFindingId === finding.id
+                                ? 'border-teal-400 border-2 bg-teal-500/20 shadow-lg shadow-teal-500/20'
                                 : `border-white ${getConfidenceBgColor(finding.confidence)}`
-                        }`}
+                            }`}
                     >
                         <div className="flex items-start gap-3">
                             <input

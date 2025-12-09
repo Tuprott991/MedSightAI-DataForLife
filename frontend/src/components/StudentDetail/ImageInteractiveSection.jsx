@@ -227,7 +227,7 @@ export const ImageInteractiveSection = ({ caseData, onAnnotationsChange }) => {
                         <button
                             onClick={handleZoomOut}
                             className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors cursor-pointer"
-                            title="Zoom Out"
+                            title={t('studentDetail.imageTools.zoomOut')}
                         >
                             <ZoomOut className="w-4 h-4" />
                         </button>
@@ -237,7 +237,7 @@ export const ImageInteractiveSection = ({ caseData, onAnnotationsChange }) => {
                         <button
                             onClick={handleZoomIn}
                             className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors cursor-pointer"
-                            title="Zoom In"
+                            title={t('studentDetail.imageTools.zoomIn')}
                         >
                             <ZoomIn className="w-4 h-4" />
                         </button>
@@ -248,7 +248,7 @@ export const ImageInteractiveSection = ({ caseData, onAnnotationsChange }) => {
                             onClick={handleUndo}
                             disabled={historyIndex <= 0}
                             className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                            title="Undo"
+                            title={t('studentDetail.imageTools.undo')}
                         >
                             <Undo className="w-4 h-4" />
                         </button>
@@ -256,7 +256,7 @@ export const ImageInteractiveSection = ({ caseData, onAnnotationsChange }) => {
                             onClick={handleRedo}
                             disabled={historyIndex >= history.length - 1}
                             className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                            title="Redo"
+                            title={t('studentDetail.imageTools.redo')}
                         >
                             <Redo className="w-4 h-4" />
                         </button>
@@ -269,10 +269,10 @@ export const ImageInteractiveSection = ({ caseData, onAnnotationsChange }) => {
                                 ? 'bg-teal-500 text-white'
                                 : 'text-gray-400 hover:text-white hover:bg-white/10'
                                 }`}
-                            title="Pan/Move Image"
+                            title={t('studentDetail.imageTools.panMove')}
                         >
                             <Hand className="w-3.5 h-3.5" />
-                            <span>Di Chuyển</span>
+                            <span>{t('studentDetail.imageTools.move')}</span>
                         </button>
 
                         <button
@@ -281,20 +281,20 @@ export const ImageInteractiveSection = ({ caseData, onAnnotationsChange }) => {
                                 ? 'bg-teal-500 text-white'
                                 : 'text-gray-400 hover:text-white hover:bg-white/10'
                                 }`}
-                            title="Draw Bounding Box"
+                            title={t('studentDetail.imageTools.drawBox')}
                         >
                             <Pencil className="w-3.5 h-3.5" />
-                            <span>Vẽ</span>
+                            <span>{t('studentDetail.imageTools.draw')}</span>
                         </button>
 
                         {boxes.length > 0 && (
                             <button
                                 onClick={clearAllBoxes}
                                 className={`cursor-pointer flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded transition-colors border border-red-500 text-red-500 hover:bg-red-500/10 hover:text-red-400`}
-                                title="Delete All Annotations"
+                                title={t('studentDetail.imageTools.deleteAllAnnotations')}
                             >
                                 <Trash2 className="w-3.5 h-3.5" />
-                                <span>Xóa tất cả</span>
+                                <span>{t('studentDetail.imageTools.deleteAll')}</span>
                             </button>
                         )}
                     </div>

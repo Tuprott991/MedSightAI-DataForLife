@@ -1,7 +1,10 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Calendar, Folder, MoreVertical, User } from 'lucide-react';
+import { ChevronDown, ChevronRight, Calendar, Folder, MoreVertical, User, Droplet } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { getTranslatedGender } from '../../../utils/diagnosisHelper';
 
 export const ImageListGrouped = ({ imageGroups, selectedImage, onImageSelect, patient }) => {
+    const { t, i18n } = useTranslation();
     const [expandedGroups, setExpandedGroups] = useState([imageGroups[0]?.id]);
     const [viewMode, setViewMode] = useState('images'); // 'images' or 'patient'
     const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -17,7 +20,7 @@ export const ImageListGrouped = ({ imageGroups, selectedImage, onImageSelect, pa
     const isExpanded = (groupId) => expandedGroups.includes(groupId);
 
     const getTitle = () => {
-        return viewMode === 'images' ? 'Hình Ảnh Y Khoa' : 'Thông Tin Bệnh Nhân';
+        return viewMode === 'images' ? t('doctorDetail.imageGallery.allImages') : t('doctorDetail.patientInfo.title');
     };
 
     const getIcon = () => {
@@ -57,7 +60,7 @@ export const ImageListGrouped = ({ imageGroups, selectedImage, onImageSelect, pa
                                     }`}
                             >
                                 <Folder className="w-4 h-4" />
-                                Hình Ảnh Y Khoa
+                                {t('doctorDetail.imageGallery.allImages')}
                             </button>
                             <button
                                 onClick={() => {
@@ -70,7 +73,7 @@ export const ImageListGrouped = ({ imageGroups, selectedImage, onImageSelect, pa
                                     }`}
                             >
                                 <User className="w-4 h-4" />
-                                Thông Tin Bệnh Nhân
+                                {t('doctorDetail.patientInfo.title')}
                             </button>
                         </div>
                     )}
@@ -149,53 +152,42 @@ export const ImageListGrouped = ({ imageGroups, selectedImage, onImageSelect, pa
                     /* Patient Information View */
                     <div className="space-y-3">
                         <div className="bg-[#0f0f0f] border border-white/5 rounded-lg p-3">
-                            <h4 className="text-xs font-semibold text-teal-400 mb-2">Thông Tin Cá Nhân</h4>
+                            <h4 className="text-xs font-semibold text-teal-400 mb-2">{t('doctorDetail.patientInfo.title')}</h4>
 
                             <div className="space-y-3">
                                 <div className="flex justify-between">
-                                    <p className="text-xs text-gray-500">Họ Tên</p>
+                                    <p className="text-xs text-gray-500">{t('doctorDetail.patientInfo.name')}</p>
                                     <p className="text-sm text-white">{patient?.name || 'N/A'}</p>
                                 </div>
                                 <div className="flex justify-between">
-                                    <p className="text-xs text-gray-500">Tuổi</p>
-                                    <p className="text-sm text-white">{patient?.age || 'N/A'} tuổi</p>
+                                    <p className="text-xs text-gray-500">{t('doctorDetail.patientInfo.age')}</p>
+                                    <p className="text-sm text-white">{patient?.age || 'N/A'} {t('doctorDetail.patientInfo.years')}</p>
                                 </div>
                                 <div className="flex justify-between">
-                                    <p className="text-xs text-gray-500">Giới Tính</p>
-                                    <p className="text-sm text-white">{patient?.gender === 'Male' ? 'Nam' : patient?.gender === 'Female' ? 'Nữ' : 'N/A'}</p>
+                                    <p className="text-xs text-gray-500">{t('doctorDetail.patientInfo.gender')}</p>
+                                    <p className="text-sm text-white">{patient?.gender ? getTranslatedGender(patient.gender, t) : 'N/A'}</p>
                                 </div>
                                 <div className="flex justify-between">
-                                    <p className="text-xs text-gray-500">Nhóm Máu</p>
-                                    <p className="text-sm text-white">{patient?.bloodType || 'N/A'}</p>
+                                    <p className="text-xs text-gray-500">{i18n.language === 'vi' ? 'Nhóm máu' : 'Blood Type'}</p>
+                                    <p className="text-sm text-white">{patient?.blood_type || 'N/A'}</p>
                                 </div>
                             </div>
                         </div>
 
                         <div className="bg-[#0f0f0f] border border-white/5 rounded-lg p-3">
-                            <h4 className="text-xs font-semibold text-teal-400 mb-2">Thông Tin Y Tế</h4>
+                            <h4 className="text-xs font-semibold text-teal-400 mb-2">{t('doctorDetail.status')}</h4>
                             <div className="space-y-3">
                                 <div className="flex justify-between">
-                                    <p className="text-xs text-gray-500">Chẩn Đoán</p>
-                                    <p className="text-sm text-white">{patient?.diagnosis || 'N/A'}</p>
-                                </div>
-                                <div className="flex justify-between">
-                                    <p className="text-xs text-gray-500">Tình Trạng</p>
+                                    <p className="text-xs text-gray-500">{t('doctorDetail.patientInfo.status')}</p>
                                     <span className={`inline-block text-xs px-2 py-0.5 rounded ${patient?.status === 'Critical' ? 'bg-red-500/20 text-red-400' :
                                         patient?.status === 'Under Treatment' ? 'bg-yellow-500/20 text-yellow-400' :
                                             'bg-teal-500/20 text-teal-400'
                                         }`}>
-                                        {patient?.status === 'Critical' ? 'Nguy Kịch' :
-                                            patient?.status === 'Under Treatment' ? 'Đang Điều Trị' :
-                                                patient?.status === 'Stable' ? 'Ổn Định' : 'N/A'}
+                                        {patient?.status === 'Critical' ? t('doctorDetail.patientInfo.critical') :
+                                            patient?.status === 'Under Treatment' ? t('doctorDetail.patientInfo.stable') :
+                                                patient?.status === 'Stable' ? t('doctorDetail.patientInfo.stable') :
+                                                    patient?.status === 'Admitted' ? t('doctorDetail.patientInfo.improving') : 'N/A'}
                                     </span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <p className="text-xs text-gray-500">Ngày Nhập Viện</p>
-                                    <p className="text-sm text-white">{patient?.admissionDate ? new Date(patient.admissionDate).toLocaleDateString('vi-VN') : 'N/A'}</p>
-                                </div>
-                                <div className="flex justify-between">
-                                    <p className="text-xs text-gray-500">Khám Gần Nhất</p>
-                                    <p className="text-sm text-white">{patient?.lastVisit ? new Date(patient.lastVisit).toLocaleDateString('vi-VN') : 'N/A'}</p>
                                 </div>
                             </div>
                         </div>

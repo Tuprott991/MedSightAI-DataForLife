@@ -1,4 +1,5 @@
 import { ZoomIn, ZoomOut } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export const ZoomControls = ({
     zoom,
@@ -10,6 +11,8 @@ export const ZoomControls = ({
     showReset = true,
     className = ""
 }) => {
+    const { t } = useTranslation();
+
     return (
         <div className={`flex items-center gap-1 ${className}`}>
             {showReset && (
@@ -18,7 +21,7 @@ export const ZoomControls = ({
                         onClick={onReset}
                         className="px-2.5 py-1.5 text-xs text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors cursor-pointer"
                     >
-                        Đặt Lại
+                        {t('common.reset')}
                     </button>
                     <div className="w-px h-4 bg-white/10 mx-1"></div>
                 </>
@@ -28,7 +31,7 @@ export const ZoomControls = ({
                 onClick={onZoomOut}
                 disabled={zoom <= minZoom}
                 className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                title="Zoom Out"
+                title={t('common.zoomOut')}
             >
                 <ZoomOut className="w-4 h-4" />
             </button>
@@ -41,7 +44,7 @@ export const ZoomControls = ({
                 onClick={onZoomIn}
                 disabled={zoom >= maxZoom}
                 className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                title="Zoom In"
+                title={t('common.zoomIn')}
             >
                 <ZoomIn className="w-4 h-4" />
             </button>

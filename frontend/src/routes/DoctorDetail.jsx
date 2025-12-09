@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { patientsData } from '../constants/patients';
 import { medicalImagesGroups, generateAnalysisData, getFindingImagePath, getPrototypeImagePath } from '../constants/medicalData';
 import { generatePatientReport } from '../constants/reportData';
+import { getTranslatedDiagnosis } from '../utils/diagnosisHelper';
 import {
     ImageListGrouped,
     ImageViewer
@@ -150,7 +151,7 @@ export const DoctorDetail = () => {
                 const rightImage = {
                     id: `similar-${similarCaseData.patientName}`,
                     url: similarCaseData.imageUrl,
-                    type: `Ca tương tự: ${similarCaseData.patientName}`,
+                    type: `${t('similarCase.similarCase')}: ${similarCaseData.patientName}`,
                     imageCode: `SIMILAR-CASE`,
                     modality: "Comparison"
                 };
@@ -260,7 +261,7 @@ export const DoctorDetail = () => {
                         <div className="bg-[#1a1a1a] border border-white/10 rounded-xl overflow-hidden h-[calc(100vh-110px)] flex flex-col">
                             {/* Header with Action Buttons */}
                             <div className="px-4 py-3 border-b border-white/10 bg-[#141414] flex items-center justify-between">
-                                <h3 className="text-base font-semibold text-white">Báo Cáo</h3>
+                                <h3 className="text-base font-semibold text-white">{t('report.title')}</h3>
 
                                 {/* Action Buttons */}
                                 <div className="flex items-center gap-2">
@@ -269,12 +270,12 @@ export const DoctorDetail = () => {
                                         onClick={handleChatbotToggle}
                                         disabled={isSimilarCaseMode}
                                         className={`w-8 h-8 flex items-center justify-center rounded-full transition-all ${isSimilarCaseMode
-                                                ? 'bg-teal-500/20 text-teal-400 border border-teal-500/30 cursor-not-allowed opacity-50'
-                                                : showChatbot
-                                                    ? 'bg-teal-500 text-white'
-                                                    : 'bg-teal-500/20 text-teal-400 border border-teal-500/30 hover:bg-teal-500 hover:text-white active:scale-95 cursor-pointer'
+                                            ? 'bg-teal-500/20 text-teal-400 border border-teal-500/30 cursor-not-allowed opacity-50'
+                                            : showChatbot
+                                                ? 'bg-teal-500 text-white'
+                                                : 'bg-teal-500/20 text-teal-400 border border-teal-500/30 hover:bg-teal-500 hover:text-white active:scale-95 cursor-pointer'
                                             }`}
-                                        title={isSimilarCaseMode ? "Không khả dụng khi so sánh ca bệnh" : "Chatbot AI"}
+                                        title={isSimilarCaseMode ? t('report.notAvailableInComparison') : t('report.chatbotTooltip')}
                                     >
                                         <Bot className="w-4 h-4" />
                                     </button>
@@ -284,20 +285,20 @@ export const DoctorDetail = () => {
                                         onClick={handleGenerateReport}
                                         disabled={isGeneratingReport || isSimilarCaseMode}
                                         className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-all ${isGeneratingReport || isSimilarCaseMode
-                                                ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30 cursor-not-allowed opacity-50'
-                                                : 'bg-blue-500/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500 hover:text-white active:scale-95 cursor-pointer'
+                                            ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30 cursor-not-allowed opacity-50'
+                                            : 'bg-blue-500/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500 hover:text-white active:scale-95 cursor-pointer'
                                             }`}
-                                        title={isSimilarCaseMode ? "Không khả dụng khi so sánh ca bệnh" : "Sinh báo cáo"}
+                                        title={isSimilarCaseMode ? t('report.notAvailableInComparison') : t('report.generate')}
                                     >
                                         {isGeneratingReport ? (
                                             <>
                                                 <div className="w-3.5 h-3.5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
-                                                <span className="font-medium">Đang tạo...</span>
+                                                <span className="font-medium">{t('report.generating')}</span>
                                             </>
                                         ) : (
                                             <>
                                                 <FileText className="w-3.5 h-3.5" />
-                                                <span className="font-medium">Sinh báo cáo</span>
+                                                <span className="font-medium">{t('report.generate')}</span>
                                             </>
                                         )}
                                     </button>
@@ -307,13 +308,13 @@ export const DoctorDetail = () => {
                                         onClick={handleAIAnalyze}
                                         disabled={isSimilarCaseMode}
                                         className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-all ${isSimilarCaseMode
-                                                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30 cursor-not-allowed opacity-50'
-                                                : 'bg-amber-500 text-white shadow-lg shadow-amber-500/50 hover:bg-amber-600 active:scale-95 cursor-pointer'
+                                            ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30 cursor-not-allowed opacity-50'
+                                            : 'bg-amber-500 text-white shadow-lg shadow-amber-500/50 hover:bg-amber-600 active:scale-95 cursor-pointer'
                                             }`}
-                                        title={isSimilarCaseMode ? "Không khả dụng khi so sánh ca bệnh" : "Phân tích AI"}
+                                        title={isSimilarCaseMode ? t('report.notAvailableInComparison') : t('report.analyze')}
                                     >
                                         <Sparkles className="w-3.5 h-3.5" />
-                                        <span className="font-medium">Phân tích</span>
+                                        <span className="font-medium">{t('report.analyze')}</span>
                                     </button>
                                 </div>
                             </div>
@@ -332,11 +333,11 @@ export const DoctorDetail = () => {
                                                     {isLoadingSimilarAnalysis ? (
                                                         <div className="flex items-center gap-2 text-sm text-gray-300">
                                                             <div className="w-4 h-4 border-2 border-teal-500 border-t-transparent rounded-full animate-spin"></div>
-                                                            <span>Đang phân tích ca bệnh tương tự...</span>
+                                                            <span>{t('report.analyzingSimilarCase')}</span>
                                                         </div>
                                                     ) : isSimilarCaseMode && similarCaseData ? (
                                                         <div className="text-sm text-gray-300 space-y-3">
-                                                            <p className="font-semibold text-teal-400">Phân tích so sánh ca bệnh</p>
+                                                            <p className="font-semibold text-teal-400">{t('report.similarCaseComparison')}</p>
 
                                                             {(() => {
                                                                 // Get findings from both cases - auto-generate if not analyzed yet
@@ -354,7 +355,7 @@ export const DoctorDetail = () => {
                                                                     <>
                                                                         {/* Current Patient Findings (clickable) */}
                                                                         <div className="space-y-1.5">
-                                                                            <p className="font-medium text-white">Triệu chứng ca bệnh nhân ({patient?.name}):</p>
+                                                                            <p className="font-medium text-white">{t('report.currentSymptoms')} ({patient?.name}):</p>
                                                                             <div className="flex flex-wrap gap-2">
                                                                                 {currentFindings.map((finding, idx) => (
                                                                                     <button
@@ -374,7 +375,7 @@ export const DoctorDetail = () => {
 
                                                                         {/* Similar Case Findings (display only) */}
                                                                         <div className="space-y-1.5">
-                                                                            <p className="font-medium text-white">Triệu chứng ca tương tự ({similarCaseData.patientName}):</p>
+                                                                            <p className="font-medium text-white">{t('report.similarSymptoms')} ({similarCaseData.patientName}):</p>
                                                                             <div className="flex flex-wrap gap-2">
                                                                                 {similarFindings.map((finding, idx) => (
                                                                                     <span
@@ -391,26 +392,26 @@ export const DoctorDetail = () => {
                                                                         <div className="pt-2 border-t border-white/10 space-y-2.5">
                                                                             {commonFindings.length > 0 && (
                                                                                 <p className="leading-relaxed">
-                                                                                    <span className="font-medium text-green-400">Điểm tương đồng:</span> Cả hai ca bệnh đều có cùng triệu chứng <span className="text-green-300 font-medium">{commonFindings.join(', ')}</span>. Các dấu hiệu hình ảnh học thể hiện mức độ tổn thương phổi tương tự, với vị trí và phân bố tổn thương có nhiều điểm chung. Điều này gợi ý tiến trình bệnh lý và cơ chế gây tổn thương có sự tương đồng giữa hai ca.
+                                                                                    <span className="font-medium text-green-400">{t('report.similarities')}:</span> {i18n.language === 'en' ? 'Both cases share the same symptoms' : 'Cả hai ca bệnh đều có cùng triệu chứng'} <span className="text-green-300 font-medium">{commonFindings.join(', ')}</span>. {i18n.language === 'en' ? 'The imaging findings show similar patterns of lung involvement, with comparable locations and distributions of lesions. This suggests similar pathological processes and mechanisms of injury between the two cases.' : 'Các dấu hiệu hình ảnh học thể hiện mức độ tổn thương phổi tương tự, với vị trí và phân bố tổn thương có nhiều điểm chung. Điều này gợi ý tiến trình bệnh lý và cơ chế gây tổn thương có sự tương đồng giữa hai ca.'}
                                                                                 </p>
                                                                             )}
 
                                                                             {(uniqueCurrentFindings.length > 0 || uniqueSimilarFindings.length > 0) && (
                                                                                 <p className="leading-relaxed">
-                                                                                    <span className="font-medium text-amber-400">Điểm khác biệt:</span> Tuy nhiên, ca bệnh hiện tại
+                                                                                    <span className="font-medium text-amber-400">{t('report.differences')}:</span> {i18n.language === 'en' ? 'However, the current case' : 'Tuy nhiên, ca bệnh hiện tại'}
                                                                                     {uniqueCurrentFindings.length > 0 && (
-                                                                                        <span> có thêm triệu chứng <span className="text-amber-300 font-medium">{uniqueCurrentFindings.join(', ')}</span></span>
+                                                                                        <span> {i18n.language === 'en' ? 'has additional symptoms' : 'có thêm triệu chứng'} <span className="text-amber-300 font-medium">{uniqueCurrentFindings.join(', ')}</span></span>
                                                                                     )}
-                                                                                    {uniqueCurrentFindings.length > 0 && uniqueSimilarFindings.length > 0 && ', trong khi'}
+                                                                                    {uniqueCurrentFindings.length > 0 && uniqueSimilarFindings.length > 0 && (i18n.language === 'en' ? ', while' : ', trong khi')}
                                                                                     {uniqueSimilarFindings.length > 0 && (
-                                                                                        <span> ca tương tự có <span className="text-gray-300 font-medium">{uniqueSimilarFindings.join(', ')}</span></span>
+                                                                                        <span> {i18n.language === 'en' ? 'the similar case has' : 'ca tương tự có'} <span className="text-gray-300 font-medium">{uniqueSimilarFindings.join(', ')}</span></span>
                                                                                     )}
-                                                                                    . Sự khác biệt này cần được xem xét trong bối cảnh lâm sàng tổng thể, tiền sử bệnh lý nền và các yếu tố nguy cơ đặc thù của từng bệnh nhân.
+                                                                                    . {i18n.language === 'en' ? 'These differences should be considered in the overall clinical context, underlying medical history, and specific risk factors of each patient.' : 'Sự khác biệt này cần được xem xét trong bối cảnh lâm sàng tổng thể, tiền sử bệnh lý nền và các yếu tố nguy cơ đặc thù của từng bệnh nhân.'}
                                                                                 </p>
                                                                             )}
 
                                                                             <p className="leading-relaxed text-xs text-gray-400 italic mt-2">
-                                                                                * Click vào triệu chứng màu xanh để xem hình ảnh xAI chi tiết
+                                                                                {t('report.clickSymptomNote')}
                                                                             </p>
                                                                         </div>
                                                                     </>
@@ -419,7 +420,7 @@ export const DoctorDetail = () => {
                                                         </div>
                                                     ) : (
                                                         <p className="text-sm text-gray-300">
-                                                            Xin chào! Tôi là trợ lý AI y khoa. Tôi có thể giúp bạn hiểu rõ hơn về ca bệnh này, giải thích các phát hiện, hoặc trả lời câu hỏi của bạn về chẩn đoán và điều trị.
+                                                            {t('chatbot.greeting')}
                                                         </p>
                                                     )}
                                                 </div>
@@ -431,7 +432,7 @@ export const DoctorDetail = () => {
                                             <div className="flex gap-2">
                                                 <input
                                                     type="text"
-                                                    placeholder="Đặt câu hỏi cho AI..."
+                                                    placeholder={t('chatbot.placeholder')}
                                                     className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-teal-500"
                                                 />
                                                 <button className="bg-teal-500 text-white rounded-lg px-4 py-2 hover:bg-teal-600 transition-colors">
@@ -448,8 +449,8 @@ export const DoctorDetail = () => {
                                                 <div className="absolute inset-0 border-4 border-transparent border-t-amber-500 rounded-full animate-spin"></div>
                                                 <Sparkles className="w-8 h-8 text-amber-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
                                             </div>
-                                            <p className="text-base font-medium text-white mb-1">Đang suy luận...</p>
-                                            <p className="text-sm text-gray-400">AI đang phân tích hình ảnh y tế</p>
+                                            <p className="text-base font-medium text-white mb-1">{t('report.analyzing')}</p>
+                                            <p className="text-sm text-gray-400">{t('report.analyzeSubtitle')}</p>
                                         </div>
                                     </div>
                                 ) : analysisData ? (
@@ -474,8 +475,8 @@ export const DoctorDetail = () => {
                                     <div className="flex items-center justify-center h-full text-center">
                                         <div>
                                             <Sparkles className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-                                            <p className="text-sm text-gray-500">Nhấp "Phân Tích AI" để tạo</p>
-                                            <p className="text-sm text-gray-500">phân tích tự động</p>
+                                            <p className="text-sm text-gray-500">{t('report.clickToAnalyze')}</p>
+                                            <p className="text-sm text-gray-500">{t('report.autoAnalysis')}</p>
                                         </div>
                                     </div>
                                 )}
@@ -496,8 +497,8 @@ export const DoctorDetail = () => {
                                     <FileText className="w-5 h-5 text-white" />
                                 </div>
                                 <div>
-                                    <h3 className="text-lg font-semibold text-gray-800">Báo Cáo Chẩn Đoán Hình Ảnh</h3>
-                                    <p className="text-sm text-gray-600">Bệnh nhân: {patient.name}</p>
+                                    <h3 className="text-lg font-semibold text-gray-800">{t('report.reportTitle')}</h3>
+                                    <p className="text-sm text-gray-600">{t('report.patient')}: {patient.name}</p>
                                 </div>
                             </div>
                             <button

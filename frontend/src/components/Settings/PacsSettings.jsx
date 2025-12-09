@@ -93,8 +93,8 @@ const PacsSettings = () => {
                     <Server className="w-6 h-6 text-teal-500" />
                 </div>
                 <div>
-                    <h2 className="text-xl font-bold text-white">Cài đặt PACS</h2>
-                    <p className="text-sm text-gray-400">Cấu hình kết nối đến PACS Server</p>
+                    <h2 className="text-xl font-bold text-white">{t('settings.pacs.title')}</h2>
+                    <p className="text-sm text-gray-400">{t('settings.pacs.subtitle')}</p>
                 </div>
             </div>
 
@@ -103,13 +103,13 @@ const PacsSettings = () => {
                 {/* Host */}
                 <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Host <span className="text-red-400">*</span>
+                        {t('settings.pacs.host')} <span className="text-red-400">{t('settings.required')}</span>
                     </label>
                     <input
                         type="text"
                         value={config.host}
                         onChange={(e) => handleChange('host', e.target.value)}
-                        placeholder="192.168.1.100 hoặc pacs.example.com"
+                        placeholder={t('settings.pacs.hostPlaceholder')}
                         className="w-full px-4 py-2.5 bg-[#1a1a1a] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
                     />
                 </div>
@@ -117,50 +117,50 @@ const PacsSettings = () => {
                 {/* Port */}
                 <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Port <span className="text-red-400">*</span>
+                        {t('settings.pacs.port')} <span className="text-red-400">{t('settings.required')}</span>
                     </label>
                     <input
                         type="number"
                         value={config.port}
                         onChange={(e) => handleChange('port', parseInt(e.target.value) || 0)}
-                        placeholder="104"
+                        placeholder={t('settings.pacs.portPlaceholder')}
                         min="1"
                         max="65535"
                         className="w-full px-4 py-2.5 bg-[#1a1a1a] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Port mặc định DICOM: 104</p>
+                    <p className="text-xs text-gray-500 mt-1">{t('settings.pacs.portHelp')}</p>
                 </div>
 
                 {/* Local AE Title */}
                 <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Local AE Title <span className="text-red-400">*</span>
+                        {t('settings.pacs.localAETitle')} <span className="text-red-400">{t('settings.required')}</span>
                     </label>
                     <input
                         type="text"
                         value={config.localAETitle}
                         onChange={(e) => handleChange('localAETitle', e.target.value.toUpperCase())}
-                        placeholder="MEDSIGHT"
+                        placeholder={t('settings.pacs.localAETitlePlaceholder')}
                         maxLength="16"
                         className="w-full px-4 py-2.5 bg-[#1a1a1a] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Tên AE của ứng dụng này (tối đa 16 ký tự)</p>
+                    <p className="text-xs text-gray-500 mt-1">{t('settings.pacs.localAETitleHelp')}</p>
                 </div>
 
                 {/* Remote AE Title */}
                 <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Remote AE Title <span className="text-red-400">*</span>
+                        {t('settings.pacs.remoteAETitle')} <span className="text-red-400">{t('settings.required')}</span>
                     </label>
                     <input
                         type="text"
                         value={config.remoteAETitle}
                         onChange={(e) => handleChange('remoteAETitle', e.target.value.toUpperCase())}
-                        placeholder="PACS"
+                        placeholder={t('settings.pacs.remoteAETitlePlaceholder')}
                         maxLength="16"
                         className="w-full px-4 py-2.5 bg-[#1a1a1a] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Tên AE của PACS Server (tối đa 16 ký tự)</p>
+                    <p className="text-xs text-gray-500 mt-1">{t('settings.pacs.remoteAETitleHelp')}</p>
                 </div>
             </div>
 
@@ -183,14 +183,14 @@ const PacsSettings = () => {
                             </p>
                             {testResult.success && testResult.details && (
                                 <div className="mt-2 text-sm text-gray-400 space-y-1">
-                                    <p>• Server: {testResult.details.serverInfo}</p>
-                                    <p>• Response Time: {testResult.details.responseTime}</p>
-                                    <p>• Local AE: {testResult.details.localAE}</p>
-                                    <p>• Remote AE: {testResult.details.remoteAE}</p>
+                                    <p>• {t('settings.pacs.serverInfo')}: {testResult.details.serverInfo}</p>
+                                    <p>• {t('settings.pacs.responseTime')}: {testResult.details.responseTime}</p>
+                                    <p>• {t('settings.pacs.localAE')}: {testResult.details.localAE}</p>
+                                    <p>• {t('settings.pacs.remoteAE')}: {testResult.details.remoteAE}</p>
                                 </div>
                             )}
                             {!testResult.success && testResult.errorCode && (
-                                <p className="mt-1 text-xs text-gray-500">Error Code: {testResult.errorCode}</p>
+                                <p className="mt-1 text-xs text-gray-500">{t('settings.pacs.errorCode')}: {testResult.errorCode}</p>
                             )}
                         </div>
                     </div>
@@ -207,12 +207,12 @@ const PacsSettings = () => {
                     {isTesting ? (
                         <>
                             <Loader2 className="w-4 h-4 animate-spin" />
-                            <span>Đang kiểm tra...</span>
+                            <span>{t('settings.pacs.testing')}</span>
                         </>
                     ) : (
                         <>
                             <Wifi className="w-4 h-4" />
-                            <span>Test Connection</span>
+                            <span>{t('settings.pacs.testConnection')}</span>
                         </>
                     )}
                 </button>
@@ -225,10 +225,10 @@ const PacsSettings = () => {
                     {isSaving ? (
                         <>
                             <Loader2 className="w-4 h-4 animate-spin" />
-                            <span>Đang lưu...</span>
+                            <span>{t('settings.pacs.saving')}</span>
                         </>
                     ) : (
-                        <span>Lưu cấu hình</span>
+                        <span>{t('settings.pacs.save')}</span>
                     )}
                 </button>
             </div>

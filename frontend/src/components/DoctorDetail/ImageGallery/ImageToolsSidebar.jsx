@@ -1,4 +1,5 @@
 import { Square, Circle, Pencil, Sun, Contrast, RotateCcw, Eraser, Ruler, RotateCw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export const ImageToolsSidebar = ({
     activeTool,
@@ -12,12 +13,14 @@ export const ImageToolsSidebar = ({
     onRotateRight,
     onReset
 }) => {
+    const { t } = useTranslation();
+
     return (
         <div className="w-14 border-r border-white/10 bg-[#141414] flex flex-col">
             <div className="flex-1 overflow-y-auto p-1.5 space-y-3">
                 {/* Annotation Tools Group */}
                 <div>
-                    <h4 className="text-[11px] font-semibold text-gray-300 mb-2 text-center">Khoanh Vùng</h4>
+                    <h4 className="text-[11px] font-semibold text-gray-300 mb-2 text-center">{t('doctorDetail.imageTools.annotationGroup')}</h4>
                     <div className="grid grid-cols-2 gap-1">
                         <button
                             onClick={() => onToolChange('square')}
@@ -25,7 +28,7 @@ export const ImageToolsSidebar = ({
                                 ? 'bg-teal-500 text-white'
                                 : 'text-gray-300 hover:text-white hover:bg-white/5'
                                 }`}
-                            title="Hình Vuông"
+                            title={t('doctorDetail.imageTools.square')}
                         >
                             <Square className="w-4 h-4" />
                         </button>
@@ -35,7 +38,7 @@ export const ImageToolsSidebar = ({
                                 ? 'bg-teal-500 text-white'
                                 : 'text-gray-300 hover:text-white hover:bg-white/5'
                                 }`}
-                            title="Hình Tròn"
+                            title={t('doctorDetail.imageTools.circle')}
                         >
                             <Circle className="w-4 h-4" />
                         </button>
@@ -45,7 +48,7 @@ export const ImageToolsSidebar = ({
                                 ? 'bg-teal-500 text-white'
                                 : 'text-gray-300 hover:text-white hover:bg-white/5'
                                 }`}
-                            title="Tự Do"
+                            title={t('doctorDetail.imageTools.freehand')}
                         >
                             <Pencil className="w-4 h-4" />
                         </button>
@@ -55,7 +58,7 @@ export const ImageToolsSidebar = ({
                                 ? 'bg-red-500 text-white'
                                 : 'text-gray-300 hover:text-white hover:bg-white/5'
                                 }`}
-                            title="Xóa"
+                            title={t('doctorDetail.imageTools.eraser')}
                         >
                             <Eraser className="w-4 h-4" />
                         </button>
@@ -67,7 +70,7 @@ export const ImageToolsSidebar = ({
 
                 {/* Measurement Tools Group */}
                 <div>
-                    <h4 className="text-[11px] font-semibold text-gray-300 mb-2 text-center">Thước Đo</h4>
+                    <h4 className="text-[11px] font-semibold text-gray-300 mb-2 text-center">{t('doctorDetail.imageTools.measurementGroup')}</h4>
                     <div className="flex justify-center">
                         <button
                             onClick={() => onToolChange('ruler')}
@@ -75,7 +78,7 @@ export const ImageToolsSidebar = ({
                                 ? 'bg-purple-500 text-white'
                                 : 'text-gray-300 hover:text-white hover:bg-white/5'
                                 }`}
-                            title="Đo Khoảng Cách"
+                            title={t('doctorDetail.imageTools.ruler')}
                         >
                             <Ruler className="w-4 h-4" />
                         </button>
@@ -87,7 +90,7 @@ export const ImageToolsSidebar = ({
 
                 {/* Light Adjustment Tools Group */}
                 <div>
-                    <h4 className="text-[11px] font-semibold text-gray-300 mb-2 text-center">Ánh Sáng</h4>
+                    <h4 className="text-[11px] font-semibold text-gray-300 mb-2 text-center">{t('doctorDetail.imageTools.lightGroup')}</h4>
                     <div className="grid grid-cols-2 gap-1">
                         <button
                             onClick={onBrightnessClick}
@@ -95,7 +98,7 @@ export const ImageToolsSidebar = ({
                                 ? 'bg-amber-500 text-white'
                                 : 'text-gray-300 hover:text-white hover:bg-white/5'
                                 }`}
-                            title="Độ Sáng"
+                            title={t('doctorDetail.imageTools.brightness')}
                         >
                             <Sun className="w-4 h-4" />
                         </button>
@@ -105,7 +108,7 @@ export const ImageToolsSidebar = ({
                                 ? 'bg-amber-500 text-white'
                                 : 'text-gray-300 hover:text-white hover:bg-white/5'
                                 }`}
-                            title="Độ Tương Phản"
+                            title={t('doctorDetail.imageTools.contrast')}
                         >
                             <Contrast className="w-4 h-4" />
                         </button>
@@ -117,19 +120,19 @@ export const ImageToolsSidebar = ({
 
                 {/* Other Utilities Group */}
                 <div>
-                    <h4 className="text-[11px] font-semibold text-gray-300 mb-2 text-center">Tiện Ích Khác</h4>
+                    <h4 className="text-[11px] font-semibold text-gray-300 mb-2 text-center">{t('doctorDetail.imageTools.utilitiesGroup')}</h4>
                     <div className="grid grid-cols-2 gap-1">
                         <button
                             onClick={onRotateLeft}
                             className="aspect-square flex items-center justify-center rounded transition-colors text-gray-300 hover:text-white hover:bg-white/5"
-                            title="Xoay Trái"
+                            title={t('doctorDetail.imageTools.rotateLeft')}
                         >
                             <RotateCcw className="w-4 h-4" />
                         </button>
                         <button
                             onClick={onRotateRight}
                             className="aspect-square flex items-center justify-center rounded transition-colors text-gray-300 hover:text-white hover:bg-white/5"
-                            title="Xoay Phải"
+                            title={t('doctorDetail.imageTools.rotateRight')}
                         >
                             <RotateCw className="w-4 h-4" />
                         </button>
@@ -141,9 +144,9 @@ export const ImageToolsSidebar = ({
                     <button
                         onClick={onReset}
                         className="w-full py-1 flex items-center justify-center rounded bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white transition-colors cursor-pointer"
-                        title="Đặt Lại Tất Cả"
+                        title={t('doctorDetail.imageTools.resetAll')}
                     >
-                        Đặt Lại
+                        {t('doctorDetail.imageTools.reset')}
                     </button>
                 </div>
             </div>

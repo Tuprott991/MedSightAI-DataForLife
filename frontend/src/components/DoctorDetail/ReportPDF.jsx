@@ -1,9 +1,11 @@
 import { FileText, Download, Printer } from 'lucide-react';
 import { getFindingImagePath } from '../../constants/medicalData';
+import { useTranslation } from 'react-i18next';
 
 export const ReportPDF = ({ reportData, patient, selectedImage, analysisData }) => {
+    const { t } = useTranslation();
     if (!reportData || !patient) return null;
-    
+
     // Get all xAI images for all findings
     const allXaiImages = [];
     if (analysisData?.findings) {
@@ -18,7 +20,7 @@ export const ReportPDF = ({ reportData, patient, selectedImage, analysisData }) 
             }
         });
     }
-    
+
     const originalImage = patient.image;
 
     const handlePrint = () => {
@@ -32,11 +34,11 @@ export const ReportPDF = ({ reportData, patient, selectedImage, analysisData }) 
 
         // Clone the content
         const clonedContent = printContent.cloneNode(true);
-        
+
         // Create a new window for printing to PDF
         const printWindow = window.open('', '_blank');
         if (!printWindow) {
-            alert('Vui lòng cho phép popup để tải báo cáo');
+            alert(t('report.allowPopup'));
             return;
         }
 
@@ -46,7 +48,7 @@ export const ReportPDF = ({ reportData, patient, selectedImage, analysisData }) 
             <html>
             <head>
                 <meta charset="UTF-8">
-                <title>Báo Cáo Chẩn Đoán - ${patient.name}</title>
+                <title>${t('report.reportTitle')} - ${patient.name}</title>
                 <style>
                     * { margin: 0; padding: 0; box-sizing: border-box; }
                     body { 
@@ -66,9 +68,9 @@ export const ReportPDF = ({ reportData, patient, selectedImage, analysisData }) 
             </body>
             </html>
         `);
-        
+
         printWindow.document.close();
-        
+
         // Wait for content to load, then trigger print dialog
         setTimeout(() => {
             printWindow.focus();
@@ -87,14 +89,14 @@ export const ReportPDF = ({ reportData, patient, selectedImage, analysisData }) 
                     className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                 >
                     <Printer className="w-4 h-4" />
-                    <span>In báo cáo</span>
+                    <span>{t('report.printReport')}</span>
                 </button>
                 <button
                     onClick={handleDownload}
                     className="flex items-center gap-2 px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors"
                 >
                     <Download className="w-4 h-4" />
-                    <span>Tải xuống</span>
+                    <span>{t('report.download')}</span>
                 </button>
             </div>
 
@@ -104,52 +106,52 @@ export const ReportPDF = ({ reportData, patient, selectedImage, analysisData }) 
                 <div className="relative mb-6 pb-4">
                     <div className="border-2 border-gray-400 rounded-lg p-8 relative">
                         <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-white px-3">
-                            <span className="text-xs font-semibold text-gray-600 uppercase">Thông tin bệnh viện</span>
+                            <span className="text-xs font-semibold text-gray-600 uppercase">{t('report.hospitalInfo')}</span>
                         </div>
                         <div className="text-center mt-2">
-                            <p className="text-sm text-gray-500 italic">Đây là thông tin bệnh viện</p>
+                            <p className="text-sm text-gray-500 italic">{t('report.hospitalInfoPlaceholder')}</p>
                         </div>
                     </div>
                 </div>
 
                 {/* Title */}
                 <div className="text-center mb-6">
-                    <h1 className="text-2xl font-bold text-gray-800 mb-2">BÁO CÁO CHẨN ĐOÁN HÌNH ẢNH</h1>
-                    <div className="text-sm text-gray-600">KHOA CHẨN ĐOÁN HÌNH ẢNH</div>
+                    <h1 className="text-2xl font-bold text-gray-800 mb-2">{t('report.diagnosticReportTitle').toUpperCase()}</h1>
+                    <div className="text-sm text-gray-600">{t('report.imagingDepartment').toUpperCase()}</div>
                 </div>
 
                 {/* Patient Information */}
                 <div className="mb-6">
                     <h2 className="text-lg font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-300">
-                        I. THÔNG TIN BỆNH NHÂN
+                        I. {t('report.patientInformation').toUpperCase()}
                     </h2>
                     <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
                         <div className="flex">
-                            <span className="font-semibold w-32">Họ và tên:</span>
+                            <span className="font-semibold w-32">{t('report.fullName')}:</span>
                             <span className="flex-1">{reportData.thong_tin_benh_nhan.ho_ten}</span>
                         </div>
                         <div className="flex">
-                            <span className="font-semibold w-32">Tuổi:</span>
+                            <span className="font-semibold w-32">{t('report.age')}:</span>
                             <span className="flex-1">{reportData.thong_tin_benh_nhan.tuoi}</span>
                         </div>
                         <div className="flex">
-                            <span className="font-semibold w-32">Giới tính:</span>
+                            <span className="font-semibold w-32">{t('report.gender')}:</span>
                             <span className="flex-1">{reportData.thong_tin_benh_nhan.gioi_tinh}</span>
                         </div>
                         <div className="flex">
-                            <span className="font-semibold w-32">Nhóm máu:</span>
+                            <span className="font-semibold w-32">{t('report.bloodType')}:</span>
                             <span className="flex-1">{reportData.thong_tin_benh_nhan.nhom_mau}</span>
                         </div>
                         <div className="flex">
-                            <span className="font-semibold w-32">Ngày chụp:</span>
+                            <span className="font-semibold w-32">{t('report.scanDate')}:</span>
                             <span className="flex-1">{reportData.thong_tin_benh_nhan.ngay_chup}</span>
                         </div>
                         <div className="flex">
-                            <span className="font-semibold w-32">Ngày đọc phim:</span>
+                            <span className="font-semibold w-32">{t('report.readDate')}:</span>
                             <span className="flex-1">{reportData.thong_tin_benh_nhan.ngay_doc_phim}</span>
                         </div>
                         <div className="flex col-span-2">
-                            <span className="font-semibold w-32">Chẩn đoán LS:</span>
+                            <span className="font-semibold w-32">{t('report.clinicalDiagnosis')}:</span>
                             <span className="flex-1">{reportData.thong_tin_benh_nhan.chan_doan_lam_sang}</span>
                         </div>
                     </div>
@@ -158,17 +160,17 @@ export const ReportPDF = ({ reportData, patient, selectedImage, analysisData }) 
                 {/* Report Details */}
                 <div className="mb-6">
                     <h2 className="text-lg font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-300">
-                        II. BÁO CÁO X-QUANG
+                        II. {t('report.xrayReport').toUpperCase()}
                     </h2>
-                    
+
                     <div className="space-y-3 text-sm">
                         <div>
-                            <span className="font-semibold">MeSH Tags: </span>
+                            <span className="font-semibold">{t('report.meshTags')}: </span>
                             <span className="text-gray-700">
                                 {allXaiImages.map((xaiImg, index) => (
                                     <span key={index}>
-                                        <a 
-                                            href={`#xai-${index}`} 
+                                        <a
+                                            href={`#xai-${index}`}
                                             className="text-teal-600 hover:text-teal-700 underline cursor-pointer"
                                         >
                                             {xaiImg.finding}
@@ -180,17 +182,17 @@ export const ReportPDF = ({ reportData, patient, selectedImage, analysisData }) 
                         </div>
 
                         <div>
-                            <span className="font-semibold">Loại ảnh: </span>
+                            <span className="font-semibold">{t('report.imageType')}: </span>
                             <span className="text-gray-700">{reportData.bao_cao_x_quang.loai_anh}</span>
                         </div>
 
                         <div>
-                            <span className="font-semibold">Chỉ định: </span>
+                            <span className="font-semibold">{t('report.indication')}: </span>
                             <span className="text-gray-700">{reportData.bao_cao_x_quang.chi_dinh}</span>
                         </div>
 
                         <div>
-                            <span className="font-semibold">So sánh: </span>
+                            <span className="font-semibold">{t('report.comparison')}: </span>
                             <span className="text-gray-700">{reportData.bao_cao_x_quang.so_sanh}</span>
                         </div>
                     </div>
@@ -198,7 +200,7 @@ export const ReportPDF = ({ reportData, patient, selectedImage, analysisData }) 
 
                 {/* Description */}
                 <div className="mb-6">
-                    <h3 className="text-base font-semibold text-gray-800 mb-2">Mô tả:</h3>
+                    <h3 className="text-base font-semibold text-gray-800 mb-2">{t('report.description')}:</h3>
                     <p className="text-sm text-gray-700 leading-relaxed text-justify">
                         {reportData.bao_cao_x_quang.mo_ta}
                     </p>
@@ -206,7 +208,7 @@ export const ReportPDF = ({ reportData, patient, selectedImage, analysisData }) 
 
                 {/* Conclusion */}
                 <div className="mb-8">
-                    <h3 className="text-base font-semibold text-gray-800 mb-2">Kết luận:</h3>
+                    <h3 className="text-base font-semibold text-gray-800 mb-2">{t('report.conclusion')}:</h3>
                     <p className="text-sm text-gray-700 leading-relaxed text-justify">
                         {reportData.bao_cao_x_quang.ket_luan}
                     </p>
@@ -215,18 +217,18 @@ export const ReportPDF = ({ reportData, patient, selectedImage, analysisData }) 
                 {/* Medical Images Section */}
                 <div id="medical-images" className="mb-8 page-break-before">
                     <h2 className="text-lg font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-300">
-                        III. HÌNH ẢNH CHẨN ĐOÁN
+                        III. {t('report.diagnosticImages').toUpperCase()}
                     </h2>
-                    
+
                     {/* Original Image */}
                     <div className="mb-6">
                         <div className="border-2 border-amber-400 rounded-lg p-3">
                             <div className="text-center mb-2">
-                                <span className="text-sm font-semibold text-amber-600">Ảnh X-quang Gốc</span>
+                                <span className="text-sm font-semibold text-amber-600">{t('report.originalXray')}</span>
                             </div>
-                            <img 
-                                src={originalImage} 
-                                alt="Original X-Ray" 
+                            <img
+                                src={originalImage}
+                                alt="Original X-Ray"
                                 className="w-full h-auto object-contain border border-gray-200 rounded mx-auto"
                                 style={{ maxHeight: '500px', maxWidth: '600px' }}
                             />
@@ -237,7 +239,7 @@ export const ReportPDF = ({ reportData, patient, selectedImage, analysisData }) 
                     {allXaiImages.length > 0 && (
                         <div>
                             <h3 className="text-base font-semibold text-gray-700 mb-3">
-                                Hình ảnh phân tích AI (xAI) - {allXaiImages.length} triệu chứng
+                                {t('report.xaiImages')} - {allXaiImages.length} {t('report.symptoms')}
                             </h3>
                             <div className="grid grid-cols-2 gap-4">
                                 {allXaiImages.map((xaiImg, index) => (
@@ -246,16 +248,15 @@ export const ReportPDF = ({ reportData, patient, selectedImage, analysisData }) 
                                             <span className="text-sm font-semibold text-teal-600">
                                                 xAI: {xaiImg.finding}
                                             </span>
-                                            <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${
-                                                xaiImg.severity === 'Cao' ? 'bg-red-100 text-red-700' :
-                                                xaiImg.severity === 'Trung bình' ? 'bg-amber-100 text-amber-700' :
-                                                'bg-green-100 text-green-700'
-                                            }`}>
+                                            <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${xaiImg.severity === 'Cao' ? 'bg-red-100 text-red-700' :
+                                                    xaiImg.severity === 'Trung bình' ? 'bg-amber-100 text-amber-700' :
+                                                        'bg-green-100 text-green-700'
+                                                }`}>
                                                 {xaiImg.severity}
                                             </span>
                                         </div>
-                                        <img 
-                                            src={xaiImg.url} 
+                                        <img
+                                            src={xaiImg.url}
                                             alt={`xAI: ${xaiImg.finding}`}
                                             className="w-full h-auto object-contain border border-gray-200 rounded"
                                             style={{ maxHeight: '350px' }}
@@ -264,7 +265,7 @@ export const ReportPDF = ({ reportData, patient, selectedImage, analysisData }) 
                                 ))}
                             </div>
                             <p className="text-xs text-gray-500 italic mt-3 text-center">
-                                * Hình ảnh xAI hiển thị vùng phát hiện bất thường được đánh dấu bởi AI cho từng triệu chứng
+                                {t('report.xaiNote')}
                             </p>
                         </div>
                     )}
@@ -277,9 +278,9 @@ export const ReportPDF = ({ reportData, patient, selectedImage, analysisData }) 
                         <div className="relative">
                             <div className="border-2 border-gray-400 rounded-lg p-8 relative h-32 flex items-center justify-center">
                                 <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-white px-3">
-                                    <span className="text-xs font-semibold text-gray-600 uppercase">Người nhận báo cáo</span>
+                                    <span className="text-xs font-semibold text-gray-600 uppercase">{t('report.reportRecipient')}</span>
                                 </div>
-                                <p className="text-sm text-gray-500 italic text-center">Đây là chỗ chữ ký của người nhận</p>
+                                <p className="text-sm text-gray-500 italic text-center">{t('report.recipientSignature')}</p>
                             </div>
                         </div>
 
@@ -287,9 +288,9 @@ export const ReportPDF = ({ reportData, patient, selectedImage, analysisData }) 
                         <div className="relative">
                             <div className="border-2 border-gray-400 rounded-lg p-8 relative h-32 flex items-center justify-center">
                                 <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-white px-3">
-                                    <span className="text-xs font-semibold text-gray-600 uppercase">Bác sĩ chẩn đoán</span>
+                                    <span className="text-xs font-semibold text-gray-600 uppercase">{t('report.diagnosticDoctor')}</span>
                                 </div>
-                                <p className="text-sm text-gray-500 italic text-center">Đây là chỗ chữ ký của bác sĩ</p>
+                                <p className="text-sm text-gray-500 italic text-center">{t('report.doctorSignature')}</p>
                             </div>
                         </div>
                     </div>
@@ -297,8 +298,8 @@ export const ReportPDF = ({ reportData, patient, selectedImage, analysisData }) 
 
                 {/* Footer */}
                 <div className="mt-6 pt-4 border-t border-gray-200 text-center text-xs text-gray-500">
-                    <p>Báo cáo này được tạo tự động bởi hệ thống MedSightAI</p>
-                    <p>Vui lòng liên hệ bác sĩ điều trị để được tư vấn chi tiết</p>
+                    <p>{t('report.autoGenerated')}</p>
+                    <p>{t('report.contactDoctor')}</p>
                 </div>
             </div>
 

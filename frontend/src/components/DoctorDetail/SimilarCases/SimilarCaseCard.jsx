@@ -1,6 +1,9 @@
 import { Eye, Calendar, User, Activity } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { getTranslatedDiagnosis } from '../../../utils/diagnosisHelper';
 
 export const SimilarCaseCard = ({ caseData, onSelect, isSelected }) => {
+    const { t } = useTranslation();
     const {
         id,
         patientName,
@@ -26,12 +29,15 @@ export const SimilarCaseCard = ({ caseData, onSelect, isSelected }) => {
                 />
                 {/* Similarity Badge */}
                 <div className="absolute top-2 right-2 bg-teal-500 text-white text-xs font-bold px-2 py-1 rounded">
-                    {similarity}% Khớp
+                    {similarity}% {t('similarCase.match')}
                 </div>
                 {/* Status Badge */}
                 {status && (
                     <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm text-white text-xs px-2 py-1 rounded">
-                        {status === 'Resolved' ? 'Đã Hồi Phục' : status === 'Stable' ? 'Ổn Định' : status === 'Under Treatment' ? 'Đang Điều Trị' : status === 'Critical' ? 'Nguy Kịch' : status}
+                        {status === 'Resolved' ? t('similarCase.resolved') :
+                            status === 'Stable' ? t('similarCase.stable') :
+                                status === 'Under Treatment' ? t('similarCase.underTreatment') :
+                                    status === 'Critical' ? t('similarCase.critical') : status}
                     </div>
                 )}
             </div>
@@ -44,7 +50,7 @@ export const SimilarCaseCard = ({ caseData, onSelect, isSelected }) => {
                         {patientName}
                     </h3>
                     <p className="text-xs text-gray-400 line-clamp-2">
-                        {diagnosis}
+                        {getTranslatedDiagnosis(diagnosis, t)}
                     </p>
                 </div>
 
@@ -57,7 +63,7 @@ export const SimilarCaseCard = ({ caseData, onSelect, isSelected }) => {
                         }`}
                 >
                     <Eye className="w-3 h-3" />
-                    <span>{isSelected ? 'Đã Chọn' : 'Xem Chi Tiết'}</span>
+                    <span>{isSelected ? t('similarCase.selected') : t('similarCase.viewDetails')}</span>
                 </button>
             </div>
         </div>

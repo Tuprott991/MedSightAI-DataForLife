@@ -1,12 +1,33 @@
 import { X, Loader2, AlertCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { getTranslatedDiagnosis } from '../../../utils/diagnosisHelper';
 import { SimilarCaseCard } from './SimilarCaseCard';
 
 export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo, onCompareImages }) => {
+    const { t, i18n } = useTranslation();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [similarCases, setSimilarCases] = useState([]);
     const [selectedCase, setSelectedCase] = useState(null);
+
+    // Helper function to translate status
+    const getTranslatedStatus = (status) => {
+        const statusMap = {
+            'Resolved': t('similarCase.resolved'),
+            'Stable': t('similarCase.stable'),
+            'Under Treatment': t('similarCase.underTreatment'),
+            'Critical': t('similarCase.critical')
+        };
+        return statusMap[status] || status;
+    };
+
+    // Helper function to translate gender
+    const getTranslatedGender = (gender) => {
+        if (gender === 'M') return i18n.language === 'vi' ? 'Nam' : 'Male';
+        if (gender === 'F') return i18n.language === 'vi' ? 'Nữ' : 'Female';
+        return gender;
+    };
 
     // Reset selected case when modal opens
     useEffect(() => {
@@ -59,74 +80,74 @@ export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo, 
                         id: 1,
                         patientName: "Nguyễn Văn An",
                         age: 52,
-                        gender: "Nam",
+                        gender: "M",
                         diagnosis: diseaseCategory,
                         imageUrl: "/src/mock_data/similar/85f4441055a2d9fc80b3.jpg",
                         similarity: 94,
                         date: "2025-10-15",
-                        status: "Đã khỏi"
+                        status: "Resolved"
                     },
                     {
                         id: 2,
                         patientName: "Trần Thị Bình",
                         age: 48,
-                        gender: "Nữ",
+                        gender: "F",
                         diagnosis: diseaseCategory,
                         imageUrl: "/src/mock_data/similar/1cea1c080dba81e4d8ab.jpg",
                         similarity: 89,
                         date: "2025-09-22",
-                        status: "Ổn định"
+                        status: "Stable"
                     },
                     {
                         id: 3,
                         patientName: "Lê Văn Cường",
                         age: 55,
-                        gender: "Nam",
+                        gender: "M",
                         diagnosis: diseaseCategory,
                         imageUrl: "/src/mock_data/similar/5c5f83be920c1e52471d.jpg",
                         similarity: 87,
                         date: "2025-08-10",
-                        status: "Đang điều trị"
+                        status: "Under Treatment"
                     },
                     {
                         id: 4,
                         patientName: "Nguyễn Văn Dũng",
                         age: 46,
-                        gender: "Nữ",
+                        gender: "F",
                         diagnosis: diseaseCategory,
                         imageUrl: "/src/mock_data/similar/56b2d159c0eb4cb515fa.jpg",
                         similarity: 85,
                         date: "2025-11-12",
-                        status: "Nguy kịch"
+                        status: "Critical"
                     },
                     {
                         id: 5,
                         patientName: "Hoàng Văn Em",
                         age: 60,
-                        gender: "Nam",
+                        gender: "M",
                         diagnosis: diseaseCategory,
                         imageUrl: "/src/mock_data/similar/50399ed98f6b03355a7a.jpg",
                         similarity: 83,
                         date: "2025-07-18",
-                        status: "Đã khỏi"
+                        status: "Resolved"
                     },
                     {
                         id: 6,
                         patientName: "Đỗ Thị Phương",
                         age: 51,
-                        gender: "Nữ",
+                        gender: "F",
                         diagnosis: diseaseCategory,
                         imageUrl: "/src/mock_data/similar/c83f2fdc3e6eb230eb7f.jpg",
                         similarity: 81,
                         date: "2025-06-25",
-                        status: "Ổn định"
+                        status: "Stable"
                     }
                 ];
 
                 setSimilarCases(mockData);
                 setLoading(false);
             } catch (err) {
-                setError('Không thể tải các ca bệnh tương tự. Vui lòng thử lại.');
+                setError(t('similarCase.errorLoading'));
                 setLoading(false);
                 console.error('Error fetching similar cases:', err);
             }
@@ -178,8 +199,8 @@ export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo, 
                                 <span className="text-teal-500 text-lg font-bold">SC</span>
                             </div>
                             <div>
-                                <h2 className="text-xl font-bold text-white">Ca Bệnh Tương Tự</h2>
-                                <p className="text-xs text-gray-400">Kết quả phân tích AI dựa trên mẫu hình ảnh</p>
+                                <h2 className="text-xl font-bold text-white">{t('similarCase.title')}</h2>
+                                <p className="text-xs text-gray-400">{t('similarCase.aiAnalysisResult')}</p>
                             </div>
                         </div>
 
@@ -187,7 +208,7 @@ export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo, 
                         <button
                             onClick={onClose}
                             className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-                            title="Đóng (ESC)"
+                            title={t('similarCase.close')}
                         >
                             <X className="w-5 h-5" />
                         </button>
@@ -199,10 +220,10 @@ export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo, 
                         <div className="flex-4 flex flex-col">
                             <div className="mb-4">
                                 <h3 className="text-sm font-semibold text-white mb-1">
-                                    {loading ? 'Đang tìm kiếm...' : `Tìm thấy ${similarCases.length} Ca Bệnh Tương Tự`}
+                                    {loading ? t('similarCase.searching') : `${t('similarCase.found')} ${similarCases.length} ${t('similarCase.title')}`}
                                 </h3>
                                 <p className="text-xs text-gray-400">
-                                    Dựa trên mẫu hình ảnh và chẩn đoán
+                                    {t('similarCase.basedOn')}
                                 </p>
                             </div>
 
@@ -213,7 +234,7 @@ export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo, 
                                     <div className="flex items-center justify-center h-full">
                                         <div className="text-center">
                                             <Loader2 className="w-12 h-12 text-teal-500 mx-auto mb-3 animate-spin" />
-                                            <p className="text-sm text-gray-400">Đang phân tích các ca bệnh tương tự...</p>
+                                            <p className="text-sm text-gray-400">{t('similarCase.analyzingCases')}</p>
                                         </div>
                                     </div>
                                 ) : error ? (
@@ -226,7 +247,7 @@ export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo, 
                                                 onClick={() => window.location.reload()}
                                                 className="px-4 py-2 text-sm bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors"
                                             >
-                                                Thử Lại
+                                                {t('similarCase.retry')}
                                             </button>
                                         </div>
                                     </div>
@@ -249,7 +270,7 @@ export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo, 
                                             <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
                                                 <span className="text-2xl">🔍</span>
                                             </div>
-                                            <p className="text-sm text-gray-400">Không tìm thấy ca bệnh tương tự</p>
+                                            <p className="text-sm text-gray-400">{t('similarCase.noResults')}</p>
                                         </div>
                                     </div>
                                 )}
@@ -262,30 +283,30 @@ export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo, 
                                 // Selected Case Details
                                 <div className="space-y-4">
                                     <div>
-                                        <h3 className="text-sm font-semibold text-white mb-2">Chi Tiết Ca Bệnh</h3>
+                                        <h3 className="text-sm font-semibold text-white mb-2">{t('similarCase.caseDetails')}</h3>
                                         <div className="space-y-2">
                                             <div>
-                                                <p className="text-xs text-gray-500">Bệnh Nhân</p>
+                                                <p className="text-xs text-gray-500">{t('similarCase.patient')}</p>
                                                 <p className="text-sm text-white">{selectedCase.patientName}</p>
                                             </div>
                                             <div>
-                                                <p className="text-xs text-gray-500">Tuổi / Giới Tính</p>
-                                                <p className="text-sm text-white">{selectedCase.age} tuổi, {selectedCase.gender === 'M' ? 'Nam' : 'Nữ'}</p>
+                                                <p className="text-xs text-gray-500">{t('similarCase.ageGender')}</p>
+                                                <p className="text-sm text-white">{selectedCase.age} {t('similarCase.yearsOld')}, {getTranslatedGender(selectedCase.gender)}</p>
                                             </div>
                                             <div>
-                                                <p className="text-xs text-gray-500">Chẩn Đoán</p>
-                                                <p className="text-sm text-white">{selectedCase.diagnosis}</p>
+                                                <p className="text-xs text-gray-500">{t('similarCase.diagnosis')}</p>
+                                                <p className="text-sm text-white">{getTranslatedDiagnosis(selectedCase.diagnosis, t)}</p>
                                             </div>
                                             <div>
-                                                <p className="text-xs text-gray-500">Ngày Khám</p>
-                                                <p className="text-sm text-white">{new Date(selectedCase.date).toLocaleDateString('vi-VN')}</p>
+                                                <p className="text-xs text-gray-500">{t('similarCase.examinationDate')}</p>
+                                                <p className="text-sm text-white">{new Date(selectedCase.date).toLocaleDateString(i18n.language === 'vi' ? 'vi-VN' : 'en-US')}</p>
                                             </div>
                                             <div>
-                                                <p className="text-xs text-gray-500">Tình Trạng</p>
-                                                <p className="text-sm text-white">{selectedCase.status === 'Resolved' ? 'Đã Hồi Phục' : selectedCase.status === 'Stable' ? 'Ổn Định' : selectedCase.status === 'Under Treatment' ? 'Đang Điều Trị' : selectedCase.status === 'Critical' ? 'Nguy Kịch' : selectedCase.status}</p>
+                                                <p className="text-xs text-gray-500">{t('similarCase.status')}</p>
+                                                <p className="text-sm text-white">{getTranslatedStatus(selectedCase.status)}</p>
                                             </div>
                                             <div>
-                                                <p className="text-xs text-gray-500">Độ Tương Đồng</p>
+                                                <p className="text-xs text-gray-500">{t('similarCase.similarity')}</p>
                                                 <div className="flex items-center gap-2">
                                                     <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
                                                         <div
@@ -311,7 +332,7 @@ export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo, 
                                                     {
                                                         id: selectedCase.id + 1000,
                                                         url: selectedCase.imageUrl,
-                                                        type: `Ca tương tự: ${selectedCase.patientName}`,
+                                                        type: `${t('similarCase.similarCase')}: ${selectedCase.patientName}`,
                                                         imageCode: `SIMILAR-${selectedCase.id}`,
                                                         modality: "Comparison"
                                                     }
@@ -328,7 +349,7 @@ export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo, 
                                             }}
                                             className="w-full px-3 py-2 text-xs bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors font-medium"
                                         >
-                                            So Sánh Hình Ảnh
+                                            {t('similarCase.compareImages')}
                                         </button>
                                     </div>
                                 </div>
@@ -336,7 +357,7 @@ export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo, 
                                 // No Selection Placeholder
                                 <div className="flex items-center justify-center h-full text-center">
                                     <p className="text-xs text-gray-500">
-                                        Chọn một ca bệnh để xem chi tiết
+                                        {t('similarCase.selectCase')}
                                     </p>
                                 </div>
                             )}

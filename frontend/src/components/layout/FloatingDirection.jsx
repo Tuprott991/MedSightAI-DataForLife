@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { ArrowUp } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export const FloatingDirection = () => {
+    const { t } = useTranslation();
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
@@ -38,7 +40,7 @@ export const FloatingDirection = () => {
                 }`}
         >
             <ArrowUp className="w-5 h-5" />
-            <span className="text-sm font-medium whitespace-nowrap">Lên đầu trang</span>
+            <span className="text-sm font-medium whitespace-nowrap">{t('navigation.scrollToTop')}</span>
         </button>
     );
 };

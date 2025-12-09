@@ -98,8 +98,8 @@ const VnaSettings = () => {
                     <Database className="w-6 h-6 text-teal-500" />
                 </div>
                 <div>
-                    <h2 className="text-xl font-bold text-white">Cài đặt VNA</h2>
-                    <p className="text-sm text-gray-400">Cấu hình kết nối đến VNA Server (DICOMweb)</p>
+                    <h2 className="text-xl font-bold text-white">{t('settings.vna.title')}</h2>
+                    <p className="text-sm text-gray-400">{t('settings.vna.subtitle')}</p>
                 </div>
             </div>
 
@@ -108,13 +108,13 @@ const VnaSettings = () => {
                 {/* Base URL */}
                 <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Base URL <span className="text-red-400">*</span>
+                        {t('settings.vna.baseUrl')} <span className="text-red-400">{t('settings.required')}</span>
                     </label>
                     <input
                         type="text"
                         value={config.baseUrl}
                         onChange={(e) => handleChange('baseUrl', e.target.value)}
-                        placeholder="https://vna.example.com hoặc http://192.168.1.200:8080"
+                        placeholder={t('settings.vna.baseUrlPlaceholder')}
                         className="w-full px-4 py-2.5 bg-[#1a1a1a] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
                     />
                 </div>
@@ -123,60 +123,60 @@ const VnaSettings = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-300 mb-2">
-                            QIDO Endpoint
+                            {t('settings.vna.qidoEndpoint')}
                         </label>
                         <input
                             type="text"
                             value={config.qidoEndpoint}
                             onChange={(e) => handleChange('qidoEndpoint', e.target.value)}
-                            placeholder="/qido-rs"
+                            placeholder={t('settings.vna.qidoEndpointPlaceholder')}
                             className="w-full px-4 py-2.5 bg-[#1a1a1a] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
                         />
-                        <p className="text-xs text-gray-500 mt-1">Query (QIDO-RS)</p>
+                        <p className="text-xs text-gray-500 mt-1">{t('settings.vna.qidoHelp')}</p>
                     </div>
 
                     <div>
                         <label className="block text-sm font-medium text-gray-300 mb-2">
-                            WADO Endpoint
+                            {t('settings.vna.wadoEndpoint')}
                         </label>
                         <input
                             type="text"
                             value={config.wadoEndpoint}
                             onChange={(e) => handleChange('wadoEndpoint', e.target.value)}
-                            placeholder="/wado-rs"
+                            placeholder={t('settings.vna.wadoEndpointPlaceholder')}
                             className="w-full px-4 py-2.5 bg-[#1a1a1a] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
                         />
-                        <p className="text-xs text-gray-500 mt-1">Retrieve (WADO-RS)</p>
+                        <p className="text-xs text-gray-500 mt-1">{t('settings.vna.wadoHelp')}</p>
                     </div>
 
                     <div>
                         <label className="block text-sm font-medium text-gray-300 mb-2">
-                            STOW Endpoint
+                            {t('settings.vna.stowEndpoint')}
                         </label>
                         <input
                             type="text"
                             value={config.stowEndpoint}
                             onChange={(e) => handleChange('stowEndpoint', e.target.value)}
-                            placeholder="/stow-rs"
+                            placeholder={t('settings.vna.stowEndpointPlaceholder')}
                             className="w-full px-4 py-2.5 bg-[#1a1a1a] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
                         />
-                        <p className="text-xs text-gray-500 mt-1">Store (STOW-RS)</p>
+                        <p className="text-xs text-gray-500 mt-1">{t('settings.vna.stowHelp')}</p>
                     </div>
                 </div>
 
                 {/* Authentication Type */}
                 <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Phương thức xác thực
+                        {t('settings.vna.authType')}
                     </label>
                     <select
                         value={config.authType}
                         onChange={(e) => handleChange('authType', e.target.value)}
                         className="w-full px-4 py-2.5 bg-[#1a1a1a] border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
                     >
-                        <option value="none">Không xác thực</option>
-                        <option value="basic">Basic Authentication</option>
-                        <option value="token">Token/Bearer</option>
+                        <option value="none">{t('settings.vna.authNone')}</option>
+                        <option value="basic">{t('settings.vna.authBasic')}</option>
+                        <option value="token">{t('settings.vna.authToken')}</option>
                     </select>
                 </div>
 
@@ -185,27 +185,27 @@ const VnaSettings = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-[#1a1a1a] rounded-lg border border-white/5">
                         <div>
                             <label className="block text-sm font-medium text-gray-300 mb-2">
-                                Username <span className="text-red-400">*</span>
+                                {t('settings.vna.username')} <span className="text-red-400">{t('settings.required')}</span>
                             </label>
                             <input
                                 type="text"
                                 value={config.username}
                                 onChange={(e) => handleChange('username', e.target.value)}
-                                placeholder="admin"
+                                placeholder={t('settings.vna.usernamePlaceholder')}
                                 className="w-full px-4 py-2.5 bg-[#0a0a0a] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
                             />
                         </div>
 
                         <div>
                             <label className="block text-sm font-medium text-gray-300 mb-2">
-                                Password <span className="text-red-400">*</span>
+                                {t('settings.vna.password')} <span className="text-red-400">{t('settings.required')}</span>
                             </label>
                             <div className="relative">
                                 <input
                                     type={showPassword ? 'text' : 'password'}
                                     value={config.password}
                                     onChange={(e) => handleChange('password', e.target.value)}
-                                    placeholder="••••••••"
+                                    placeholder={t('settings.vna.passwordPlaceholder')}
                                     className="w-full px-4 py-2.5 pr-10 bg-[#0a0a0a] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
                                 />
                                 <button
@@ -224,16 +224,16 @@ const VnaSettings = () => {
                 {config.authType === 'token' && (
                     <div className="p-4 bg-[#1a1a1a] rounded-lg border border-white/5">
                         <label className="block text-sm font-medium text-gray-300 mb-2">
-                            Access Token <span className="text-red-400">*</span>
+                            {t('settings.vna.token')} <span className="text-red-400">{t('settings.required')}</span>
                         </label>
                         <textarea
                             value={config.token}
                             onChange={(e) => handleChange('token', e.target.value)}
-                            placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                            placeholder={t('settings.vna.tokenPlaceholder')}
                             rows="3"
                             className="w-full px-4 py-2.5 bg-[#0a0a0a] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all font-mono text-sm"
                         />
-                        <p className="text-xs text-gray-500 mt-1">JWT token hoặc API key</p>
+                        <p className="text-xs text-gray-500 mt-1">{t('settings.vna.tokenHelp')}</p>
                     </div>
                 )}
             </div>
@@ -257,14 +257,14 @@ const VnaSettings = () => {
                             </p>
                             {testResult.success && testResult.details && (
                                 <div className="mt-2 text-sm text-gray-400 space-y-1">
-                                    <p>• Server Version: {testResult.details.serverVersion}</p>
-                                    <p>• Response Time: {testResult.details.responseTime}</p>
-                                    <p>• Capabilities: {testResult.details.capabilities.join(', ')}</p>
-                                    <p>• Auth Type: {testResult.details.authType}</p>
+                                    <p>• {t('settings.vna.serverVersion')}: {testResult.details.serverVersion}</p>
+                                    <p>• {t('settings.vna.responseTime')}: {testResult.details.responseTime}</p>
+                                    <p>• {t('settings.vna.capabilities')}: {testResult.details.capabilities.join(', ')}</p>
+                                    <p>• {t('settings.vna.authTypeLabel')}: {testResult.details.authType}</p>
                                 </div>
                             )}
                             {!testResult.success && testResult.errorCode && (
-                                <p className="mt-1 text-xs text-gray-500">Error Code: {testResult.errorCode}</p>
+                                <p className="mt-1 text-xs text-gray-500">{t('settings.vna.errorCode')}: {testResult.errorCode}</p>
                             )}
                         </div>
                     </div>
@@ -281,12 +281,12 @@ const VnaSettings = () => {
                     {isTesting ? (
                         <>
                             <Loader2 className="w-4 h-4 animate-spin" />
-                            <span>Đang kiểm tra...</span>
+                            <span>{t('settings.vna.testing')}</span>
                         </>
                     ) : (
                         <>
                             <Wifi className="w-4 h-4" />
-                            <span>Test Connection</span>
+                            <span>{t('settings.vna.testConnection')}</span>
                         </>
                     )}
                 </button>
@@ -299,10 +299,10 @@ const VnaSettings = () => {
                     {isSaving ? (
                         <>
                             <Loader2 className="w-4 h-4 animate-spin" />
-                            <span>Đang lưu...</span>
+                            <span>{t('settings.vna.saving')}</span>
                         </>
                     ) : (
-                        <span>Lưu cấu hình</span>
+                        <span>{t('settings.vna.save')}</span>
                     )}
                 </button>
             </div>

@@ -1,5 +1,5 @@
-import HistoryScreen from '@/screens/HistoryScreen';
+import DashboardScreen from '@/screens/DashboardScreen';
 
 export default function HomeScreen() {
-  return <HistoryScreen />;
+  return <DashboardScreen />;
 }
