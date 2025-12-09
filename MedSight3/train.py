@@ -419,9 +419,9 @@ def main():
         # Tính pos_weight từ concept columns
         concept_values = torch.tensor(df_agg[concept_cols].values, dtype=torch.float32)
         pos_weight = (concept_values == 0).sum(dim=0) / (concept_values == 1).sum(dim=0).clamp(min=1)
-        # Clip pos_weight để tránh loss quá extreme (max 10x)
-        pos_weight = pos_weight.clamp(max=10.0)
-        print(f"Pos weights range: {pos_weight.min():.2f} - {pos_weight.max():.2f} (clipped to max 10)")
+        # Clip pos_weight để tránh loss quá extreme (max 20x)
+        pos_weight = pos_weight.clamp(max=20.0)
+        print(f"Pos weights range: {pos_weight.min():.2f} - {pos_weight.max():.2f} (clipped to max 20)")
     else:
         # Các rank khác dùng uniform weights (sẽ được broadcast từ rank 0)
         pos_weight = torch.ones(num_concepts)
@@ -429,7 +429,7 @@ def main():
     # Stage 1: Learning rate thấp hơn để ổn định, nhất là khi dùng pos_weight
     optimizer = optim.AdamW([
         {'params': model.module.backbone.parameters(), 'lr': args.lr * 0.01}, # Backbone học rất chậm
-        {'params': model.module.concept_head.parameters(), 'lr': args.lr * 0.1}  # Concept head cũng thận trọng
+        {'params': model.module.concept_head.parameters(), 'lr': args.lr * 0.2}  # Concept head cũng thận trọng
     ])
     
     # Use BBoxGuidedConceptLoss if bboxes available, else standard BCE
