@@ -170,6 +170,23 @@ class CSRDatasetWithBBoxSimple(Dataset):
         }
 
 
+def custom_collate_fn(batch):
+    """Custom collate function to handle variable-length bboxes."""
+    images = torch.stack([item['image'] for item in batch])
+    concepts = torch.stack([item['concepts'] for item in batch])
+    targets = torch.stack([item['targets'] for item in batch])
+    bboxes = [item['bboxes'] for item in batch]  # Keep as list
+    image_ids = [item['image_id'] for item in batch]
+    
+    return {
+        'image': images,
+        'concepts': concepts,
+        'targets': targets,
+        'bboxes': bboxes,  # List of lists
+        'image_id': image_ids
+    }
+
+
 def get_dataloaders_with_bbox_simple(train_csv, test_csv, train_bbox_csv, test_bbox_csv, 
                                       train_dir, test_dir, batch_size=16, rank=-1, world_size=1, val_split=0.1):
     """
@@ -239,14 +256,15 @@ def get_dataloaders_with_bbox_simple(train_csv, test_csv, train_bbox_csv, test_b
         train_sampler = None
         shuffle = True
     
-    # Create DataLoaders
+    # Create DataLoaders with custom collate function
     train_loader = DataLoader(
         train_dataset, 
         batch_size=batch_size, 
         shuffle=shuffle,
         sampler=train_sampler,
         num_workers=4,
-        pin_memory=True
+        pin_memory=True,
+        collate_fn=custom_collate_fn
     )
     
     val_loader = DataLoader(
@@ -254,7 +272,8 @@ def get_dataloaders_with_bbox_simple(train_csv, test_csv, train_bbox_csv, test_b
         batch_size=batch_size, 
         shuffle=False,
         num_workers=4,
-        pin_memory=True
+        pin_memory=True,
+        collate_fn=custom_collate_fn
     )
     
     test_loader = DataLoader(
@@ -262,7 +281,8 @@ def get_dataloaders_with_bbox_simple(train_csv, test_csv, train_bbox_csv, test_b
         batch_size=batch_size, 
         shuffle=False,
         num_workers=4,
-        pin_memory=True
+        pin_memory=True,
+        collate_fn=custom_collate_fn
     )
     
     return train_loader, val_loader, test_loader, num_concepts, num_classes, train_sampler

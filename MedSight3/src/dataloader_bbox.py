@@ -185,9 +185,9 @@ class CSRDatasetWithBBox(Dataset):
         if self.transform:
             image = self.transform(image)
         
-        # Get labels
-        concepts = torch.tensor(row[self.concept_cols].values, dtype=torch.float32)
-        targets = torch.tensor(row[self.target_cols].values, dtype=torch.float32)
+        # Get labels - ensure numeric conversion
+        concepts = torch.tensor(row[self.concept_cols].values.astype(float), dtype=torch.float32)
+        targets = torch.tensor(row[self.target_cols].values.astype(float), dtype=torch.float32)
         
         return {
             'image': image,
@@ -196,6 +196,23 @@ class CSRDatasetWithBBox(Dataset):
             'bboxes': bboxes,  # List of bbox dicts
             'image_id': image_id
         }
+
+
+def custom_collate_fn(batch):
+    """Custom collate function to handle variable-length bboxes."""
+    images = torch.stack([item['image'] for item in batch])
+    concepts = torch.stack([item['concepts'] for item in batch])
+    targets = torch.stack([item['targets'] for item in batch])
+    bboxes = [item['bboxes'] for item in batch]  # Keep as list
+    image_ids = [item['image_id'] for item in batch]
+    
+    return {
+        'image': images,
+        'concepts': concepts,
+        'targets': targets,
+        'bboxes': bboxes,  # List of lists
+        'image_id': image_ids
+    }
 
 
 def get_dataloaders_with_bbox(train_csv, test_csv, train_bbox_csv, test_bbox_csv, 
@@ -248,7 +265,7 @@ def get_dataloaders_with_bbox(train_csv, test_csv, train_bbox_csv, test_bbox_csv
     num_concepts = len(full_train_dataset.concept_cols)
     num_classes = len(full_train_dataset.target_cols)
     
-    # Create dataloaders
+    # Create dataloaders with custom collate function
     if world_size > 1:
         # DDP mode
         train_sampler = DistributedSampler(train_dataset, num_replicas=world_size, 
@@ -257,21 +274,27 @@ def get_dataloaders_with_bbox(train_csv, test_csv, train_bbox_csv, test_bbox_csv
                                         rank=rank, shuffle=False)
         
         train_loader = DataLoader(train_dataset, batch_size=batch_size, 
-                                 sampler=train_sampler, num_workers=4)
+                                 sampler=train_sampler, num_workers=4,
+                                 collate_fn=custom_collate_fn)
         val_loader = DataLoader(val_dataset, batch_size=batch_size,
-                               sampler=val_sampler, num_workers=4)
+                               sampler=val_sampler, num_workers=4,
+                               collate_fn=custom_collate_fn)
         test_loader = DataLoader(test_dataset, batch_size=batch_size,
                                  sampler=DistributedSampler(test_dataset, num_replicas=world_size,
                                                            rank=rank, shuffle=False),
-                                 num_workers=4)
+                                 num_workers=4,
+                                 collate_fn=custom_collate_fn)
     else:
         # Single GPU
         train_sampler = None
         train_loader = DataLoader(train_dataset, batch_size=batch_size, 
-                                 shuffle=True, num_workers=4)
+                                 shuffle=True, num_workers=4,
+                                 collate_fn=custom_collate_fn)
         val_loader = DataLoader(val_dataset, batch_size=batch_size,
-                               shuffle=False, num_workers=4)
+                               shuffle=False, num_workers=4,
+                               collate_fn=custom_collate_fn)
         test_loader = DataLoader(test_dataset, batch_size=batch_size, 
-                                shuffle=False, num_workers=4)
+                                shuffle=False, num_workers=4,
+                                collate_fn=custom_collate_fn)
     
     return train_loader, val_loader, test_loader, num_concepts, num_classes, train_sampler
