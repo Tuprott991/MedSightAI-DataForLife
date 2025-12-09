@@ -35,7 +35,10 @@ def parse_args():
     # Data paths
     parser.add_argument('--train_csv', type=str, default='labels_train.csv', help='Path to training CSV')
     parser.add_argument('--test_csv', type=str, default='labels_test.csv', help='Path to test CSV')
-    parser.add_argument('--bbox_csv', type=str, default=None, help='Path to bbox annotations CSV (optional for Stage 1)')
+    parser.add_argument('--train_bbox_csv', type=str, default=None, help='Path to train bbox annotations CSV (optional for Stage 1)')
+    parser.add_argument('--test_bbox_csv', type=str, default=None, help='Path to test bbox annotations CSV (optional for Stage 1)')
+    parser.add_argument('--train_resize_factor_csv', type=str, default=None, help='Path to train resize factor CSV (required when using bbox)')
+    parser.add_argument('--test_resize_factor_csv', type=str, default=None, help='Path to test resize factor CSV (required when using bbox)')
     parser.add_argument('--train_dir', type=str, default='train/', help='Path to training images')
     parser.add_argument('--test_dir', type=str, default='test/', help='Path to test images')
     
@@ -84,25 +87,35 @@ def train_one_epoch(model, loader, optimizer, criterion, stage, scaler, device, 
             # --- GIAI ĐOẠN 1: Train Concept Model ---
             if stage == 1:
                 # CAMs từ concept_head: (B, K, H, W)
-                # Dùng Global Max Pooling để lấy activation mạnh nhất của mỗi concept
-                # Max pooling phản ánh sự hiện diện của concept tốt hơn mean
                 cams = outputs['cams']  # (B, K, H, W)
-                concept_logits = F.adaptive_max_pool2d(cams, (1, 1)).squeeze(-1).squeeze(-1)  # (B, K)
-                loss = criterion(concept_logits, concepts_gt)
+                
+                # Check if using BBoxGuidedConceptLoss (needs spatial CAMs + bboxes)
+                if hasattr(criterion, 'alpha') and hasattr(criterion, 'beta'):
+                    # BBoxGuidedConceptLoss: Pass raw CAMs (does max pooling internally)
+                    # Also need to pass bboxes if available
+                    bboxes = batch.get('bboxes', None)
+                    loss = criterion(cams, concepts_gt, bboxes)
+                else:
+                    # Standard BCEWithLogitsLoss: Need to max pool first
+                    concept_logits = F.adaptive_max_pool2d(cams, (1, 1)).squeeze(-1).squeeze(-1)  # (B, K)
+                    loss = criterion(concept_logits, concepts_gt)
             
             # --- GIAI ĐOẠN 2: Train Prototypes (Contrastive) ---
             elif stage == 2:
                 # DDP wrap: Phải dùng .module để truy cập methods của model gốc
                 actual_model = model.module if hasattr(model, 'module') else model
                 
-                # Lấy vector cục bộ: (B, K, Dim)
-                local_vectors = actual_model.get_local_concept_vectors(outputs['features'], outputs['cams'])
-                # Chiếu qua Projector: (B, K, Projection_Dim)
-                projected = actual_model.projector(local_vectors.permute(0, 2, 1).unsqueeze(-1)).squeeze(-1).permute(0, 2, 1)
+                # Use projected features from forward pass: (B, 128, H, W)
+                f_proj = outputs['projected_features']
+                
+                # Get local concept vectors in PROJECTED space
+                # Apply CAM-weighted pooling to projected features
+                local_vectors = actual_model.get_local_concept_vectors(f_proj, outputs['cams'])
+                # (B, K, 128) - Already in projection space
                 
                 # Tính Loss Contrastive
                 # Chỉ tính loss cho những concept có trong ảnh (concepts_gt == 1)
-                loss = criterion(projected, actual_model.prototypes, concepts_gt, 
+                loss = criterion(local_vectors, actual_model.prototypes, concepts_gt, 
                                  num_prototypes_per_concept=actual_model.M)
                 
             # --- GIAI ĐOẠN 3: Train Task Head (Disease Prediction) ---
@@ -255,13 +268,13 @@ def validate(model, loader, device, rank=0, stage=3, criterion=None, compute_iou
                 cams = outputs['cams']
                 concept_logits = F.adaptive_max_pool2d(cams, (1, 1)).squeeze(-1).squeeze(-1)
                 
-                # Handle bbox loss if present
-                if 'bboxes' in batch and hasattr(criterion, 'forward'):
-                    # BBoxGuidedConceptLoss
-                    bboxes = batch['bboxes']
+                # Check if using BBoxGuidedConceptLoss
+                if hasattr(criterion, 'alpha') and hasattr(criterion, 'beta'):
+                    # BBoxGuidedConceptLoss: Pass raw CAMs
+                    bboxes = batch.get('bboxes', None)
                     loss = criterion(cams, concepts, bboxes)
                 else:
-                    # Standard BCE
+                    # Standard BCE: Use max-pooled logits
                     loss = criterion(concept_logits, concepts)
                     bboxes = batch.get('bboxes', [])
                 
@@ -313,18 +326,30 @@ def main():
     
     # 1. Prepare Data
     # Use bbox dataloader if bbox_csv is provided
-    if args.bbox_csv:
+    if args.train_bbox_csv and args.test_bbox_csv:
         from src.dataloader_bbox import get_dataloaders_with_bbox
+        
+        # Validate resize_factor_csv files are provided
+        if not args.train_resize_factor_csv or not args.test_resize_factor_csv:
+            raise ValueError("Both --train_resize_factor_csv and --test_resize_factor_csv are required when using bbox")
+        
         if rank == 0:
-            print(f"Loading data WITH bounding boxes from {args.bbox_csv}")
+            print(f"Loading data WITH bounding boxes:")
+            print(f"  - Train bbox: {args.train_bbox_csv}")
+            print(f"  - Test bbox: {args.test_bbox_csv}")
+            print(f"  - Train resize factors: {args.train_resize_factor_csv}")
+            print(f"  - Test resize factors: {args.test_resize_factor_csv}")
+        
         train_loader, val_loader, test_loader, num_concepts, num_classes, train_sampler = get_dataloaders_with_bbox(
-            args.train_csv, args.test_csv, args.train_dir, args.test_dir,
-            bbox_csv=args.bbox_csv,
+            args.train_csv, args.test_csv, args.train_bbox_csv, args.test_bbox_csv,
+            args.train_resize_factor_csv, args.test_resize_factor_csv, args.train_dir, args.test_dir,
             batch_size=args.batch_size,
             rank=rank,
             world_size=world_size,
             val_split=0.1  # 10% của training set làm validation
         )
+    elif args.train_bbox_csv or args.test_bbox_csv:
+        raise ValueError("Both --train_bbox_csv and --test_bbox_csv must be provided together")
     else:
         if rank == 0:
             print("Loading data WITHOUT bounding boxes (standard dataloader)")
@@ -413,7 +438,7 @@ def main():
     ])
     
     # Use BBoxGuidedConceptLoss if bboxes available, else standard BCE
-    if args.bbox_csv:
+    if args.train_bbox_csv and args.test_bbox_csv:
         if rank == 0:
             print(f"Using BBoxGuidedConceptLoss (alpha={args.alpha}, beta={args.beta}) with pos_weight")
         criterion_s1 = BBoxGuidedConceptLoss(
@@ -489,7 +514,11 @@ def main():
     # ====================================================
     if rank == 0:
         print("\n--- START STAGE 3: Task Learning ---")
-    # Freeze Projector & Prototypes
+    
+    # Freeze ALL previous layers (Backbone, Concept Head, Projector, Prototypes)
+    # Only Task Head should be trainable
+    for param in model.module.backbone.parameters(): param.requires_grad = False
+    for param in model.module.concept_head.parameters(): param.requires_grad = False
     for param in model.module.projector.parameters(): param.requires_grad = False
     model.module.prototypes.requires_grad = False
     

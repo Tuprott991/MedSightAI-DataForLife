@@ -18,16 +18,17 @@ class BBoxGuidedConceptLoss(nn.Module):
     2. Spatial localization loss (CAMs should be high inside bbox, low outside)
     """
     
-    def __init__(self, alpha=1.0, beta=0.5):
+    def __init__(self, alpha=1.0, beta=0.5, pos_weight=None):
         """
         Args:
             alpha: Weight for classification loss
             beta: Weight for localization loss
+            pos_weight: Positive class weights for BCE (Tensor of shape (K,))
         """
         super().__init__()
         self.alpha = alpha
         self.beta = beta
-        self.bce_loss = nn.BCEWithLogitsLoss(reduction='none')
+        self.bce_loss = nn.BCEWithLogitsLoss(pos_weight=pos_weight, reduction='none') if pos_weight is not None else nn.BCEWithLogitsLoss(reduction='none')
     
     def forward(self, cams, concepts_gt, bboxes=None):
         """

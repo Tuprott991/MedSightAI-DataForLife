@@ -23,7 +23,9 @@ When your dataset has bounding box annotations (like VinDr-CXR), you can **signi
 
 ## 📊 Data Format
 
-Your CSV should have these columns:
+### Required Files
+
+**1. BBox Annotations CSV** (`bbox_csv`)
 ```
 image_id, rad_id, class_name, x_min, y_min, x_max, y_max
 ```
@@ -36,10 +38,26 @@ image_id,rad_id,class_name,x_min,y_min,x_max,y_max
 0005e8e3,R8,Consolidation,932.47,567.78,1197.77,896.41
 ```
 
+**2. Resize Factors CSV** (`resize_factor_csv`)
+Since images are resized to 224×224 for training, we need resize factors to transform bbox coordinates from original image space to resized space.
+
+```
+image_id, original_height, original_width, target_height, target_width, resize_factor_h, resize_factor_w
+```
+
+Example:
+```csv
+image_id,original_height,original_width,target_height,target_width,resize_factor_h,resize_factor_w
+0005e8e3,2500,2500,224,224,0.0896,0.0896
+00063ef3,2048,2048,224,224,0.1094,0.1094
+```
+
 **Notes:**
 - Images with "No finding" will have empty bbox coords (OK, will be skipped)
 - Multiple bboxes per image are supported
-- Coordinates should be in original image pixel space (will be normalized automatically)
+- **Bbox coordinates** should be in **original image pixel space** (e.g., 900.96, not normalized)
+- **Resize factors** are calculated as: `resize_factor = target_size / original_size`
+- Both train and test sets need resize factor CSV
 
 ## 🚀 Usage
 
@@ -56,7 +74,10 @@ torchrun --nproc_per_node=2 train.py \
 ```bash
 # Stage 1: Concept learning with bbox supervision
 torchrun --nproc_per_node=2 train_stage1_bbox.py \
-    --bbox_csv data/vindr_annotations.csv \
+    --train_bbox_csv data/vindr_train_annotations.csv \
+    --test_bbox_csv data/vindr_test_annotations.csv \
+    --train_resize_factor_csv data/vindr_train_resize_factors.csv \
+    --test_resize_factor_csv data/vindr_test_resize_factors.csv \
     --epochs 20 \
     --batch_size 16 \
     --lr 1e-4 \
@@ -65,7 +86,10 @@ torchrun --nproc_per_node=2 train_stage1_bbox.py \
 ```
 
 **Parameters:**
-- `--bbox_csv`: Path to CSV with bbox annotations
+- `--train_bbox_csv`: Path to CSV with train bbox annotations (required)
+- `--test_bbox_csv`: Path to CSV with test bbox annotations (required)
+- `--train_resize_factor_csv`: Path to CSV with train resize factors (required)
+- `--test_resize_factor_csv`: Path to CSV with test resize factors (required)
 - `--alpha`: Weight for classification loss (default: 1.0)
 - `--beta`: Weight for localization loss (default: 0.5)
   - Higher β → stronger spatial supervision

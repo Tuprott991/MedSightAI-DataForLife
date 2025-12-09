@@ -11,20 +11,34 @@ Enhanced `train.py` with:
 
 ```bash
 # BBox supervision (optional)
---bbox_csv PATH              # Path to bbox CSV (image_id, rad_id, class_name, x_min, y_min, x_max, y_max)
---alpha 1.0                  # Weight for classification loss in BBoxGuidedConceptLoss
---beta 0.5                   # Weight for localization loss in BBoxGuidedConceptLoss
+--train_bbox_csv PATH              # Path to train bbox CSV (image_id, rad_id, class_name, x_min, y_min, x_max, y_max)
+--test_bbox_csv PATH               # Path to test bbox CSV (image_id, rad_id, class_name, x_min, y_min, x_max, y_max)
+--train_resize_factor_csv PATH     # Path to train resize factors CSV (required when using bbox)
+--test_resize_factor_csv PATH      # Path to test resize factors CSV (required when using bbox)
+--alpha 1.0                        # Weight for classification loss in BBoxGuidedConceptLoss
+--beta 0.5                         # Weight for localization loss in BBoxGuidedConceptLoss
 ```
 
 **Example usage:**
 ```bash
 # Standard training (no bbox)
-python train.py --train_csv data/train.csv --test_csv data/test.csv ...
+python train.py --train_csv data/train.csv --test_csv data/test.csv \
+    --train_dir data/train --test_dir data/test ...
 
 # With bbox supervision
 python train.py --train_csv data/train.csv --test_csv data/test.csv \
-    --bbox_csv data/train_bboxes.csv --alpha 1.0 --beta 0.5 ...
+    --train_dir data/train --test_dir data/test \
+    --train_bbox_csv data/train_bboxes.csv \
+    --test_bbox_csv data/test_bboxes.csv \
+    --train_resize_factor_csv data/train_resize_factors.csv \
+    --test_resize_factor_csv data/test_resize_factors.csv \
+    --alpha 1.0 --beta 0.5 ...
 ```
+
+**Important:** 
+- Both `--train_bbox_csv` and `--test_bbox_csv` must be provided together
+- Both `--train_resize_factor_csv` and `--test_resize_factor_csv` are **required** when using bbox
+- Resize factors needed for coordinate transformation from original to 224×224 space
 
 ---
 
@@ -183,7 +197,10 @@ python train.py \
     --test_csv data/test.csv \
     --train_dir data/train_images \
     --test_dir data/test_images \
-    --bbox_csv data/train_bboxes.csv \
+    --train_bbox_csv data/train_bboxes.csv \
+    --test_bbox_csv data/test_bboxes.csv \
+    --train_resize_factor_csv data/train_resize_factors.csv \
+    --test_resize_factor_csv data/test_resize_factors.csv \
     --alpha 1.0 \
     --beta 0.5 \
     --epochs_stage1 15 \
@@ -193,6 +210,12 @@ python train.py \
     --lr 0.001 \
     --exp_name "bbox_supervised"
 ```
+
+**Required Files:**
+- `train_bboxes.csv`: BBox annotations for train set
+- `test_bboxes.csv`: BBox annotations for test set
+- `train_resize_factors.csv`: Train resize factors mapping original→224×224
+- `test_resize_factors.csv`: Test resize factors mapping original→224×224
 
 **Expected metrics:**
 - AUC, mAP, F1-macro, F1-micro + **IoU** (for Stage 1 only)

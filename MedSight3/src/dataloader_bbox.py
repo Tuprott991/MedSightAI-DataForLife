@@ -15,12 +15,15 @@ from utils import dicom_to_image
 class CSRDatasetWithBBox(Dataset):
     """Dataset with bounding box annotations for improved CAM localization."""
     
-    def __init__(self, csv_file, bbox_csv_file, root_dir, phase='train', transform=None):
+    def __init__(self, csv_file, bbox_csv_file, resize_factor_csv_file, root_dir, phase='train', transform=None):
         """
         Args:
             csv_file: Path to labels CSV (image-level annotations)
             bbox_csv_file: Path to bbox CSV with columns:
                           [image_id, rad_id, class_name, x_min, y_min, x_max, y_max]
+            resize_factor_csv_file: Path to resize factor CSV for this split with columns:
+                          [image_id, original_height, original_width, target_height, target_width, 
+                           resize_factor_h, resize_factor_w]
             root_dir: Folder containing images
             phase: 'train' or 'test'
             transform: Image transforms
@@ -61,11 +64,24 @@ class CSRDatasetWithBBox(Dataset):
         # 2. Load bounding box annotations
         self.bbox_df = pd.read_csv(bbox_csv_file)
         
+        # 3. Load resize factors (for bbox coordinate transformation)
+        self.resize_df = pd.read_csv(resize_factor_csv_file)
+        # Create lookup dict for fast access
+        self.resize_factors = {}
+        for _, row in self.resize_df.iterrows():
+            self.resize_factors[row['image_id']] = {
+                'resize_factor_w': row['resize_factor_w'],
+                'resize_factor_h': row['resize_factor_h'],
+                'target_width': row['target_width'],
+                'target_height': row['target_height']
+            }
+        
         print(f"📊 Dataset '{phase}' with BBox loaded:")
         print(f"  - Images: {len(self.data)}")
         print(f"  - Concepts: {len(concept_cols)}")
         print(f"  - Targets: {len(target_cols)}")
         print(f"  - BBox annotations: {len(self.bbox_df)} rows")
+        print(f"  - Resize factors: {len(self.resize_factors)} images")
         
         # Check how many images have bboxes
         images_with_bbox = self.bbox_df[
@@ -77,12 +93,23 @@ class CSRDatasetWithBBox(Dataset):
     def __len__(self):
         return len(self.data)
     
-    def _parse_bboxes(self, image_id, img_width, img_height):
-        """Parse bounding boxes for a single image."""
+    def _parse_bboxes(self, image_id):
+        """Parse bounding boxes for a single image using resize factors."""
         sample_df = self.bbox_df[self.bbox_df['image_id'] == image_id]
         
         if len(sample_df) == 0:
             return []
+        
+        # Get resize factors for this image
+        if image_id not in self.resize_factors:
+            print(f"Warning: No resize factors found for {image_id}, skipping bboxes")
+            return []
+        
+        resize_info = self.resize_factors[image_id]
+        resize_factor_w = resize_info['resize_factor_w']
+        resize_factor_h = resize_info['resize_factor_h']
+        target_w = resize_info['target_width']
+        target_h = resize_info['target_height']
         
         bboxes = []
         
@@ -103,11 +130,18 @@ class CSRDatasetWithBBox(Dataset):
             
             concept_idx = self.concept_name_to_idx[class_name]
             
-            # Normalize bbox to [0, 1]
-            x_min = float(row['x_min']) / img_width
-            y_min = float(row['y_min']) / img_height
-            x_max = float(row['x_max']) / img_width
-            y_max = float(row['y_max']) / img_height
+            # Transform bbox from original coordinates to resized coordinates
+            # Original bbox is in original image space
+            x_min_resized = float(row['x_min']) * resize_factor_w
+            y_min_resized = float(row['y_min']) * resize_factor_h
+            x_max_resized = float(row['x_max']) * resize_factor_w
+            y_max_resized = float(row['y_max']) * resize_factor_h
+            
+            # Normalize to [0, 1] using target dimensions (224x224)
+            x_min = x_min_resized / target_w
+            y_min = y_min_resized / target_h
+            x_max = x_max_resized / target_w
+            y_max = y_max_resized / target_h
             
             # Clamp to [0, 1]
             x_min = max(0.0, min(x_min, 1.0))
@@ -144,11 +178,8 @@ class CSRDatasetWithBBox(Dataset):
         else:
             raise FileNotFoundError(f"Image not found: {image_id}")
         
-        # Get original image dimensions for bbox normalization
-        img_width, img_height = image.size
-        
-        # Parse bboxes BEFORE transforming image
-        bboxes = self._parse_bboxes(image_id, img_width, img_height)
+        # Parse bboxes using resize factors (already accounts for 224x224 target)
+        bboxes = self._parse_bboxes(image_id)
         
         # Transform image
         if self.transform:
@@ -167,13 +198,17 @@ class CSRDatasetWithBBox(Dataset):
         }
 
 
-def get_dataloaders_with_bbox(train_csv, test_csv, bbox_csv, train_dir, test_dir,
+def get_dataloaders_with_bbox(train_csv, test_csv, train_bbox_csv, test_bbox_csv, 
+                               train_resize_factor_csv, test_resize_factor_csv, train_dir, test_dir,
                                batch_size=16, rank=-1, world_size=1, val_split=0.1):
     """
     Create dataloaders with bounding box support.
     
     Args:
-        bbox_csv: Path to CSV with bbox annotations
+        train_bbox_csv: Path to CSV with bbox annotations for train set
+        test_bbox_csv: Path to CSV with bbox annotations for test set
+        train_resize_factor_csv: Path to CSV with resize factors for train set
+        test_resize_factor_csv: Path to CSV with resize factors for test set
         Other args: Same as get_dataloaders()
     
     Returns:
@@ -199,9 +234,9 @@ def get_dataloaders_with_bbox(train_csv, test_csv, bbox_csv, train_dir, test_dir
     ])
     
     # Load datasets
-    full_train_dataset = CSRDatasetWithBBox(train_csv, bbox_csv, train_dir, 
+    full_train_dataset = CSRDatasetWithBBox(train_csv, train_bbox_csv, train_resize_factor_csv, train_dir, 
                                             phase='train', transform=train_transform)
-    test_dataset = CSRDatasetWithBBox(test_csv, bbox_csv, test_dir,
+    test_dataset = CSRDatasetWithBBox(test_csv, test_bbox_csv, test_resize_factor_csv, test_dir,
                                       phase='test', transform=val_transform)
     
     # Split train into train + val
