@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { User, Lock, Eye, EyeOff } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export const LoginForm = ({ onLogin }) => {
+    const { t } = useTranslation();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -15,13 +17,13 @@ export const LoginForm = ({ onLogin }) => {
 
         // Validation
         if (!username.trim()) {
-            setError('Vui lòng nhập email');
+            setError(t('auth.login.emailPlaceholder'));
             setIsLoading(false);
             return;
         }
 
         if (!password) {
-            setError('Vui lòng nhập mật khẩu');
+            setError(t('auth.login.passwordPlaceholder'));
             setIsLoading(false);
             return;
         }
@@ -32,17 +34,17 @@ export const LoginForm = ({ onLogin }) => {
                 'admin@example.com': {
                     username: 'admin@example.com',
                     role: 'admin',
-                    name: 'Quản trị viên'
+                    name: t('auth.login.admin')
                 },
                 'doctor@example.com': {
                     username: 'doctor@example.com',
                     role: 'doctor',
-                    name: 'Bác sĩ'
+                    name: t('auth.login.doctor')
                 },
                 'student@example.com': {
                     username: 'student@example.com',
                     role: 'student',
-                    name: 'Sinh viên'
+                    name: t('auth.login.student')
                 }
             };
 
@@ -62,7 +64,7 @@ export const LoginForm = ({ onLogin }) => {
             {/* Email Field */}
             <div>
                 <label htmlFor="username" className="block text-sm font-medium text-gray-300 mb-2">
-                    Email
+                    {t('auth.login.email')}
                 </label>
                 <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -74,7 +76,7 @@ export const LoginForm = ({ onLogin }) => {
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         className="block w-full pl-10 pr-3 py-3 border border-white/10 rounded-lg bg-[#1a1a1a] text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
-                        placeholder="Nhập email"
+                        placeholder={t('auth.login.emailPlaceholder')}
                         disabled={isLoading}
                     />
                 </div>
@@ -83,7 +85,7 @@ export const LoginForm = ({ onLogin }) => {
             {/* Password Field */}
             <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
-                    Mật khẩu
+                    {t('auth.login.password')}
                 </label>
                 <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -95,7 +97,7 @@ export const LoginForm = ({ onLogin }) => {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         className="block w-full pl-10 pr-12 py-3 border border-white/10 rounded-lg bg-[#1a1a1a] text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
-                        placeholder="Nhập mật khẩu"
+                        placeholder={t('auth.login.passwordPlaceholder')}
                         disabled={isLoading}
                     />
                     <button
@@ -126,13 +128,13 @@ export const LoginForm = ({ onLogin }) => {
                 disabled={isLoading}
                 className="w-full py-3 px-4 bg-teal-500 hover:bg-teal-600 disabled:bg-teal-500/50 text-white font-medium rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 focus:ring-offset-[#0a0a0a] disabled:cursor-not-allowed"
             >
-                {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+                {isLoading ? t('common.loading') : t('auth.login.signIn')}
             </button>
 
             {/* Additional Links */}
             <div className="text-center">
                 <a href="#" className="text-sm text-teal-400 hover:text-teal-300 transition-colors">
-                    Quên mật khẩu?
+                    {t('auth.login.forgotPassword')}
                 </a>
             </div>
         </form>

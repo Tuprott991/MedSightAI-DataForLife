@@ -1,0 +1,293 @@
+{
+  "app": {
+    "name": "MedSightAI",
+    "tagline": "Nền Tảng Chăm Sóc Sức Khỏe Với AI"
+  },
+  "nav": {
+    "home": "Trang Chủ",
+    "doctor": "Dành Cho Bác Sĩ",
+    "student": "Dành Cho Sinh Viên",
+    "back": "Quay Lại",
+    "settings": "Cài Đặt",
+    "help": "Trợ Giúp",
+    "notifications": "Thông Báo",
+    "profile": "Hồ Sơ",
+    "logout": "Đăng Xuất",
+    "pacsSettings": "Cài Đặt PACS/VNA"
+  },
+  "home": {
+    "hero": {
+      "badge": "Nền Tảng Chăm Sóc Sức Khỏe Với AI",
+      "title": "MedSightAI",
+      "description": "Cách mạng hóa chăm sóc sức khỏe với <strong>trí tuệ nhân tạo</strong>. Trao quyền cho bác sĩ và sinh viên với các công cụ chẩn đoán tiên tiến và thông tin y khoa.",
+      "doctorButton": "Dành Cho Bác Sĩ",
+      "studentButton": "Dành Cho Sinh Viên",
+      "trustedBy": "Được tin dùng bởi các tổ chức y tế hàng đầu trên toàn cầu • Tuân thủ HIPAA • Chứng nhận ISO 27001"
+    },
+    "features": {
+      "title": "Tính Năng Mạnh Mẽ",
+      "subtitle": "Công cụ toàn diện cho chăm sóc sức khỏe hiện đại",
+      "aiDiagnostics": {
+        "title": "Chẩn Đoán AI",
+        "description": "Thuật toán học máy tiên tiến phân tích hình ảnh y tế với độ chính xác cao"
+      },
+      "similarCases": {
+        "title": "Trường Hợp Tương Tự",
+        "description": "Tìm kiếm và so sánh các trường hợp bệnh nhân tương tự từ cơ sở dữ liệu"
+      },
+      "interactiveLearning": {
+        "title": "Học Tập Tương Tác",
+        "description": "Công cụ giáo dục thực hành cho sinh viên y khoa và bác sĩ nội trú"
+      },
+      "reportGeneration": {
+        "title": "Tạo Báo Cáo",
+        "description": "Tự động tạo báo cáo y tế với các mẫu có thể tùy chỉnh"
+      },
+      "secureCloud": {
+        "title": "Đám Mây An Toàn",
+        "description": "Lưu trữ đám mây tuân thủ HIPAA cho tất cả dữ liệu bệnh nhân và hồ sơ y tế"
+      },
+      "realTimeCollab": {
+        "title": "Cộng Tác Thời Gian Thực",
+        "description": "Cộng tác với đồng nghiệp và chuyên gia theo thời gian thực"
+      }
+    },
+    "cta": {
+      "title": "Sẵn Sàng Chuyển Đổi Phòng Khám Của Bạn?",
+      "description": "Tham gia cùng hàng nghìn chuyên gia y tế đang sử dụng MedSightAI để mang lại kết quả tốt hơn cho bệnh nhân.",
+      "getStarted": "Bắt Đầu",
+      "learnMore": "Tìm Hiểu Thêm"
+    },
+    "stats": {
+      "professionals": "Chuyên Gia Y Tế",
+      "casesAnalyzed": "Ca Bệnh Đã Phân Tích",
+      "accuracy": "Độ Chính Xác Chẩn Đoán",
+      "satisfaction": "Độ Hài Lòng Người Dùng"
+    }
+  },
+  "doctor": {
+    "title": "Quản Lý Bệnh Nhân",
+    "searchPlaceholder": "Tìm kiếm bệnh nhân...",
+    "filters": {
+      "all": "Tất Cả",
+      "critical": "Nguy Kịch",
+      "stable": "Ổn Định",
+      "improving": "Đang Cải Thiện"
+    },
+    "patientCard": {
+      "years": "tuổi",
+      "images": "ảnh",
+      "view": "Xem Chi Tiết"
+    },
+    "noResults": "Không tìm thấy bệnh nhân",
+    "pagination": {
+      "previous": "Trước",
+      "next": "Tiếp",
+      "showing": "Hiển thị",
+      "to": "đến",
+      "of": "trong tổng số",
+      "patients": "bệnh nhân"
+    }
+  },
+  "student": {
+    "title": "Trường Hợp Đào Tạo",
+    "searchPlaceholder": "Tìm kiếm trường hợp đào tạo...",
+    "filters": {
+      "all": "Tất Cả",
+      "tuberculosis": "Lao Phổi",
+      "pneumonia": "Viêm Phổi",
+      "noFinding": "Không Phát Hiện",
+      "other": "Khác"
+    }
+  },
+  "doctorDetail": {
+    "tabs": {
+      "overview": "Tổng Quan",
+      "images": "Hình Ảnh",
+      "analysis": "Phân Tích",
+      "report": "Báo Cáo"
+    },
+    "patientInfo": {
+      "title": "Thông Tin Bệnh Nhân",
+      "name": "Tên Bệnh Nhân",
+      "age": "Tuổi",
+      "years": "tuổi",
+      "gender": "Giới Tính",
+      "male": "Nam",
+      "female": "Nữ",
+      "id": "Mã Bệnh Nhân",
+      "admissionDate": "Ngày Nhập Viện",
+      "department": "Khoa",
+      "physician": "Bác Sĩ Điều Trị",
+      "status": "Tình Trạng",
+      "critical": "Nguy Kịch",
+      "stable": "Ổn Định",
+      "improving": "Đang Cải Thiện"
+    },
+    "aiConfidence": {
+      "title": "Độ Tin Cậy AI",
+      "overallScore": "Điểm Chẩn Đoán Tổng Thể",
+      "breakdown": "Chi Tiết Độ Tin Cậy",
+      "diseaseDetection": "Phát Hiện Bệnh",
+      "imageQuality": "Chất Lượng Hình Ảnh",
+      "anatomicalMatch": "Khớp Giải Phẫu"
+    },
+    "keyFindings": {
+      "title": "Phát Hiện Chính",
+      "noFindings": "Không phát hiện dấu hiệu đáng kể"
+    },
+    "recommendations": {
+      "title": "Khuyến Nghị AI",
+      "noRecommendations": "Không có khuyến nghị"
+    },
+    "suspectedDisease": {
+      "title": "Bệnh Nghi Ngờ",
+      "confidence": "Độ Tin Cậy",
+      "noDiseases": "Không nghi ngờ bệnh nào"
+    },
+    "similarCases": {
+      "title": "Trường Hợp Tương Tự",
+      "findSimilar": "Tìm Trường Hợp Tương Tự",
+      "modalTitle": "Trường Hợp Tương Tự",
+      "close": "Đóng",
+      "viewCase": "Xem Trường Hợp",
+      "noSimilarCases": "Không tìm thấy trường hợp tương tự",
+      "searching": "Đang tìm kiếm trường hợp tương tự..."
+    },
+    "imageGallery": {
+      "allImages": "Tất Cả Hình Ảnh",
+      "groupedByType": "Nhóm Theo Loại",
+      "zoomIn": "Phóng To",
+      "zoomOut": "Thu Nhỏ",
+      "resetZoom": "Đặt Lại Zoom",
+      "fitToScreen": "Vừa Màn Hình",
+      "actualSize": "Kích Thước Thật"
+    },
+    "report": {
+      "generate": "Tạo Báo Cáo",
+      "download": "Tải PDF",
+      "print": "In",
+      "medicalReport": "Báo Cáo Y Tế",
+      "date": "Ngày",
+      "clinicalFindings": "Phát Hiện Lâm Sàng",
+      "aiAnalysis": "Phân Tích AI",
+      "recommendations": "Khuyến Nghị"
+    }
+  },
+  "studentDetail": {
+    "tabs": {
+      "interactive": "Tương Tác",
+      "chatbot": "Gia Sư AI",
+      "submit": "Nộp Bài"
+    },
+    "interactive": {
+      "instructions": "Nhấp vào các vùng hình ảnh để tìm hiểu về các cấu trúc giải phẫu và phát hiện khác nhau",
+      "learningMode": "Chế Độ Học Tập Đang Hoạt Động",
+      "reset": "Đặt Lại",
+      "regions": "vùng",
+      "toggleComparison": "So Sánh"
+    },
+    "chatbot": {
+      "title": "Trợ Lý AI",
+      "subtitle": "Hỏi tôi bất cứ điều gì về ca bệnh này",
+      "greeting": "Xin chào! Tôi là trợ lý AI y khoa của bạn. Tôi có thể giúp bạn hiểu rõ hơn về ca bệnh này. Hãy hỏi tôi bất cứ điều gì!",
+      "placeholder": "Nhập câu hỏi của bạn...",
+      "send": "Gửi",
+      "typing": "Đang gõ..."
+    },
+    "submit": {
+      "diagnosis": "Chẩn Đoán",
+      "diagnosisPlaceholder": "Ví dụ: Bệnh Động Mạch Vành",
+      "submit": "Gửi",
+      "success": "Đã gửi chẩn đoán thành công!",
+      "error": "Vui lòng nhập chẩn đoán"
+    }
+  },
+  "settings": {
+    "title": "Cài Đặt PACS/VNA",
+    "pacs": {
+      "title": "Cấu Hình PACS",
+      "serverUrl": "URL Máy Chủ PACS",
+      "serverUrlPlaceholder": "VD: https://pacs.hospital.com",
+      "aeTitle": "Tiêu Đề AE",
+      "aeTitlePlaceholder": "VD: MEDSIGHTAI",
+      "port": "Cổng",
+      "portPlaceholder": "VD: 11112",
+      "testConnection": "Kiểm Tra Kết Nối",
+      "save": "Lưu Cài Đặt PACS"
+    },
+    "vna": {
+      "title": "Cấu Hình VNA",
+      "vendorUrl": "URL Nhà Cung Cấp VNA",
+      "vendorUrlPlaceholder": "VD: https://vna.vendor.com",
+      "apiKey": "Khóa API",
+      "apiKeyPlaceholder": "Nhập khóa API VNA của bạn",
+      "storageLocation": "Vị Trí Lưu Trữ",
+      "storageLocationPlaceholder": "VD: /medical-images",
+      "testConnection": "Kiểm Tra Kết Nối",
+      "save": "Lưu Cài Đặt VNA"
+    },
+    "success": "Lưu cài đặt thành công!",
+    "error": "Lưu cài đặt thất bại",
+    "connectionSuccess": "Kết nối thành công!",
+    "connectionError": "Kết nối thất bại"
+  },
+  "auth": {
+    "login": {
+      "title": "Chào Mừng Trở Lại",
+      "subtitle": "Đăng nhập vào tài khoản của bạn",
+      "email": "Email",
+      "emailPlaceholder": "Nhập email của bạn",
+      "password": "Mật Khẩu",
+      "passwordPlaceholder": "Nhập mật khẩu",
+      "role": "Vai Trò",
+      "selectRole": "Chọn vai trò của bạn",
+      "doctor": "Bác Sĩ",
+      "student": "Sinh Viên",
+      "admin": "Quản Trị Viên",
+      "rememberMe": "Ghi nhớ đăng nhập",
+      "forgotPassword": "Quên mật khẩu?",
+      "signIn": "Đăng Nhập",
+      "noAccount": "Chưa có tài khoản?",
+      "signUp": "Đăng ký"
+    },
+    "logout": {
+      "title": "Xác Nhận Đăng Xuất",
+      "message": "Bạn có chắc chắn muốn đăng xuất?",
+      "confirm": "Đồng Ý, Đăng Xuất",
+      "cancel": "Hủy"
+    }
+  },
+  "common": {
+    "loading": "Đang tải...",
+    "error": "Lỗi",
+    "success": "Thành công",
+    "cancel": "Hủy",
+    "confirm": "Xác nhận",
+    "save": "Lưu",
+    "delete": "Xóa",
+    "edit": "Sửa",
+    "close": "Đóng",
+    "search": "Tìm kiếm",
+    "filter": "Lọc",
+    "clear": "Xóa",
+    "apply": "Áp dụng",
+    "upload": "Tải lên",
+    "download": "Tải xuống",
+    "print": "In",
+    "share": "Chia sẻ",
+    "export": "Xuất",
+    "import": "Nhập",
+    "hide": "Ẩn",
+    "show": "Hiện",
+    "refresh": "Làm mới",
+    "view": "Xem",
+    "details": "Chi tiết",
+    "more": "Thêm",
+    "less": "Ít hơn",
+    "all": "Tất cả",
+    "none": "Không có",
+    "yes": "Có",
+    "no": "Không"
+  }
+}

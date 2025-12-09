@@ -1,16 +1,24 @@
 import { X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export const ConfirmModal = ({
     isOpen,
     onClose,
     onConfirm,
-    title = "Xác nhận",
-    message = "Bạn có chắc chắn muốn thực hiện hành động này?",
-    confirmText = "Xác nhận",
-    cancelText = "Hủy",
+    title,
+    message,
+    confirmText,
+    cancelText,
     confirmColor = "red" // 'red', 'teal', 'amber'
 }) => {
+    const { t } = useTranslation();
     if (!isOpen) return null;
+
+    // Use translation with fallback to props
+    const modalTitle = title || t('common.confirm');
+    const modalMessage = message || t('nav.logoutConfirm');
+    const modalConfirmText = confirmText || t('common.confirm');
+    const modalCancelText = cancelText || t('common.cancel');
 
     const getConfirmButtonClass = () => {
         switch (confirmColor) {
@@ -37,7 +45,7 @@ export const ConfirmModal = ({
             <div className="relative bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
                 {/* Header */}
                 <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-white">{title}</h3>
+                    <h3 className="text-lg font-semibold text-white">{modalTitle}</h3>
                     <button
                         onClick={onClose}
                         className="p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors"
@@ -48,7 +56,7 @@ export const ConfirmModal = ({
 
                 {/* Body */}
                 <div className="px-6 py-6">
-                    <p className="text-sm text-gray-300">{message}</p>
+                    <p className="text-sm text-gray-300">{modalMessage}</p>
                 </div>
 
                 {/* Footer */}
@@ -57,7 +65,7 @@ export const ConfirmModal = ({
                         onClick={onClose}
                         className="px-4 py-2 text-sm bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white rounded transition-colors"
                     >
-                        {cancelText}
+                        {modalCancelText}
                     </button>
                     <button
                         onClick={() => {
@@ -66,7 +74,7 @@ export const ConfirmModal = ({
                         }}
                         className={`px-4 py-2 text-sm rounded transition-colors ${getConfirmButtonClass()}`}
                     >
-                        {confirmText}
+                        {modalConfirmText}
                     </button>
                 </div>
             </div>

@@ -2,8 +2,10 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../components/authentication';
 import { LoginForm } from '../components/authentication';
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const Login = () => {
+    const { t } = useTranslation();
     const { login, isAuthenticated, user } = useAuth();
     const navigate = useNavigate();
 
@@ -71,13 +73,13 @@ const Login = () => {
                             />
                         </svg>
                     </div>
-                    <h1 className="text-3xl font-bold text-white mb-2">MedSightAI</h1>
-                    <p className="text-gray-400">Hệ thống hỗ trợ chẩn đoán y tế thông minh</p>
+                    <h1 className="text-3xl font-bold text-white mb-2">{t('app.name')}</h1>
+                    <p className="text-gray-400">{t('app.tagline')}</p>
                 </div>
 
                 {/* Login Card */}
                 <div className="bg-[#141414]/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/10 p-8">
-                    <h2 className="text-2xl font-bold text-white mb-6">Đăng nhập</h2>
+                    <h2 className="text-2xl font-bold text-white mb-6">{t('auth.login.title')}</h2>
                     <LoginForm onLogin={handleLogin} />
                 </div>
 

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Undo, Redo, PanelLeft, PanelLeftClose, Hand, PanelRight, PanelRightClose } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useSidebar } from '../../layout';
 import { SimilarCasesButton } from '../SimilarCases/SimilarCasesButton';
 import { SimilarCasesModal } from '../SimilarCases/SimilarCasesModal';
@@ -8,6 +9,7 @@ import { ConfirmModal } from '../../custom/ConfirmModal';
 import { ImageToolsSidebar } from './ImageToolsSidebar';
 
 export const ImageViewer = ({ image, patientInfo, onRestoreOriginal, onSimilarCaseModeChange, onSimilarCaseDataChange, onImageChange }) => {
+    const { t } = useTranslation();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [zoom, setZoom] = useState(100);
     const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -25,7 +27,7 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal, onSimilarCa
     // Drawing states - separate for single and multiple image modes
     const [singleImageAnnotations, setSingleImageAnnotations] = useState([]);
     const [multipleImageAnnotations, setMultipleImageAnnotations] = useState([]);
-    
+
     // Ruler/measurement states
     const [measurements, setMeasurements] = useState([]);
     const [currentMeasurement, setCurrentMeasurement] = useState(null);
@@ -78,7 +80,7 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal, onSimilarCa
         setActiveAdjustment(null);
         setActiveTool(null);
         setIsPanMode(false);
-        
+
         // Exit similar case mode if active
         if (comparisonImages) {
             setComparisonImages(null);
@@ -293,7 +295,7 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal, onSimilarCa
             const dx = currentMeasurement.end.x - currentMeasurement.start.x;
             const dy = currentMeasurement.end.y - currentMeasurement.start.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
-            
+
             // Only save if distance is meaningful (> 5 pixels)
             if (distance > 5) {
                 setMeasurements(prev => [...prev, currentMeasurement]);
@@ -351,7 +353,7 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal, onSimilarCa
 
     const handleMeasurementClick = (index, e) => {
         e.stopPropagation();
-        
+
         // If eraser is active, delete measurement directly without confirmation
         if (activeTool === 'eraser') {
             const newMeasurements = measurements.filter((_, i) => i !== index);
@@ -381,24 +383,24 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal, onSimilarCa
         const dx = measurement.end.x - measurement.start.x;
         const dy = measurement.end.y - measurement.start.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        
+
         // Calculate midpoint for label
         const midX = (measurement.start.x + measurement.end.x) / 2;
         const midY = (measurement.start.y + measurement.end.y) / 2;
-        
+
         // Calculate angle for perpendicular label offset
         const angle = Math.atan2(dy, dx);
         const offsetX = -Math.sin(angle) * 20;
         const offsetY = Math.cos(angle) * 20;
-        
+
         const labelX = midX + offsetX;
         const labelY = midY + offsetY;
-        
+
         // Format distance (assuming 1 pixel = 0.01cm for medical imaging)
         const distanceCM = (distance * 0.01).toFixed(2);
-        
+
         return (
-            <g 
+            <g
                 key={`measurement-${index}`}
                 onClick={!isTemp ? (e) => handleMeasurementClick(index, e) : undefined}
                 style={{ cursor: activeTool === 'eraser' && !isTemp ? 'pointer' : 'default' }}
@@ -618,7 +620,7 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal, onSimilarCa
     if (!image || (Array.isArray(image) && image.length === 0)) {
         return (
             <div className="bg-[#1a1a1a] border border-white/10 rounded-xl flex items-center justify-center h-[calc(100vh-110px)]">
-                <p className="text-gray-500">Không có hình ảnh được chọn</p>
+                <p className="text-gray-500">{t('doctor.noResults')}</p>
             </div>
         );
     }
@@ -738,22 +740,20 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal, onSimilarCa
                                                 <div className="flex items-center gap-1">
                                                     <button
                                                         onClick={() => setShowPrototype(false)}
-                                                        className={`px-3 py-1 text-xs font-semibold rounded transition-colors ${
-                                                            !showPrototype
+                                                        className={`px-3 py-1 text-xs font-semibold rounded transition-colors ${!showPrototype
                                                                 ? 'bg-amber-500 text-white'
                                                                 : 'text-amber-400 hover:bg-amber-500/20'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         Original
                                                     </button>
                                                     <span className="text-gray-500">|</span>
                                                     <button
                                                         onClick={() => setShowPrototype(true)}
-                                                        className={`px-3 py-1 text-xs font-semibold rounded transition-colors ${
-                                                            showPrototype
+                                                        className={`px-3 py-1 text-xs font-semibold rounded transition-colors ${showPrototype
                                                                 ? 'bg-amber-500 text-white'
                                                                 : 'text-amber-400 hover:bg-amber-500/20'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         Prototype
                                                     </button>
@@ -836,7 +836,7 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal, onSimilarCa
                                                         {/* Render current drawing shape */}
                                                         {currentShape && renderShape(currentShape, -1, true)}
                                                         {/* Render saved measurements */}
-                                                        {measurements.map((measurement, idx) => 
+                                                        {measurements.map((measurement, idx) =>
                                                             renderMeasurement(measurement, idx, false)
                                                         )}
                                                         {/* Render current measurement */}
@@ -895,7 +895,7 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal, onSimilarCa
                                         {/* Render current drawing shape */}
                                         {currentShape && renderShape(currentShape, -1, true)}
                                         {/* Render saved measurements */}
-                                        {measurements.map((measurement, idx) => 
+                                        {measurements.map((measurement, idx) =>
                                             renderMeasurement(measurement, idx, false)
                                         )}
                                         {/* Render current measurement */}

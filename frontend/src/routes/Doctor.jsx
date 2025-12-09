@@ -4,8 +4,10 @@ import { patientsData } from '../constants/patients';
 import { PatientCard } from '../components/custom/PatientCard';
 import { Pagination } from '../components/custom/Pagination';
 import { ITEMS_PER_PAGE } from '../constants/general';
+import { useTranslation } from 'react-i18next';
 
 export const Doctor = () => {
+    const { t } = useTranslation();
     const [searchQuery, setSearchQuery] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
 
@@ -43,10 +45,10 @@ export const Doctor = () => {
                         <div className="w-10 h-10 bg-teal-500/20 rounded-lg flex items-center justify-center">
                             <Users className="w-6 h-6 text-teal-500" />
                         </div>
-                        <h1 className="text-3xl md:text-4xl font-bold">Hồ Sơ Bệnh Nhân</h1>
+                        <h1 className="text-3xl md:text-4xl font-bold">{t('doctor.title')}</h1>
                     </div>
                     <p className="text-gray-400 ml-13">
-                        Quản lý và theo dõi hồ sơ bệnh án
+                        {t('doctor.searchPlaceholder')}
                     </p>
                 </div>
 
@@ -57,7 +59,7 @@ export const Doctor = () => {
                         <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                         <input
                             type="text"
-                            placeholder="Tìm kiếm theo tên bệnh nhân..."
+                            placeholder={t('doctor.searchPlaceholder')}
                             value={searchQuery}
                             onChange={handleSearch}
                             className="w-full bg-white/5 border border-white/10 rounded-lg pl-12 pr-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-teal-500 focus:bg-white/10 transition-all"
@@ -67,21 +69,21 @@ export const Doctor = () => {
                     {/* Filter Button */}
                     <button className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-teal-500/50 px-6 py-3 rounded-lg transition-all cursor-pointer">
                         <Filter className="w-5 h-5" />
-                        <span className="font-medium">Lọc</span>
+                        <span className="font-medium">{t('common.filter')}</span>
                     </button>
                 </div>
 
                 {/* Results Info */}
                 <div className="mb-6 flex items-center justify-between">
                     <p className="text-gray-400">
-                        Hiển thị <span className="text-white font-semibold">{startIndex + 1}-{Math.min(endIndex, filteredPatients.length)}</span> trong tổng số <span className="text-white font-semibold">{filteredPatients.length}</span> bệnh nhân
+                        {t('doctor.pagination.showing')} <span className="text-white font-semibold">{startIndex + 1}-{Math.min(endIndex, filteredPatients.length)}</span> {t('doctor.pagination.of')} <span className="text-white font-semibold">{filteredPatients.length}</span> {t('doctor.pagination.patients')}
                     </p>
                     {searchQuery && (
                         <button
                             onClick={() => setSearchQuery('')}
                             className="text-sm text-teal-400 hover:text-teal-300 transition-colors"
                         >
-                            Xóa tìm kiếm
+                            {t('common.clear')}
                         </button>
                     )}
                 </div>
@@ -109,9 +111,9 @@ export const Doctor = () => {
                         <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
                             <Search className="w-8 h-8 text-gray-400" />
                         </div>
-                        <h3 className="text-xl font-semibold mb-2">Không tìm thấy bệnh nhân</h3>
+                        <h3 className="text-xl font-semibold mb-2">{t('doctor.noResults')}</h3>
                         <p className="text-gray-400">
-                            Thử điều chỉnh từ khóa tìm kiếm
+                            {t('common.search')}
                         </p>
                     </div>
                 )}

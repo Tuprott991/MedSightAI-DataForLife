@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import PacsSettings from '../components/Settings/PacsSettings';
 import VnaSettings from '../components/Settings/VnaSettings';
 
@@ -7,6 +8,7 @@ import VnaSettings from '../components/Settings/VnaSettings';
  * Cho phép người dùng cấu hình kết nối đến PACS và VNA servers
  */
 export const PacsVnaSettings = () => {
+    const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState('pacs'); // 'pacs' hoặc 'vna'
 
     return (
@@ -14,7 +16,7 @@ export const PacsVnaSettings = () => {
             <div className="max-w-4xl mx-auto">
                 {/* Page Header */}
                 <div className="mb-6">
-                    <h1 className="text-3xl font-bold text-white mb-2">Cài đặt PACS/VNA</h1>
+                    <h1 className="text-3xl font-bold text-white mb-2">{t('settings.title')}</h1>
                     <p className="text-gray-400">
                         Cấu hình kết nối đến hệ thống lưu trữ hình ảnh y tế (PACS) và kho lưu trữ trung lập (VNA)
                     </p>

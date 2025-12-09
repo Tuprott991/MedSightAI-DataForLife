@@ -1,7 +1,9 @@
 import { useState, useRef } from 'react';
 import { ZoomIn, ZoomOut, Pencil, Trash2, Hand, Undo, Redo } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export const ImageInteractiveSection = ({ caseData, onAnnotationsChange }) => {
+    const { t } = useTranslation();
     const [zoom, setZoom] = useState(100);
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [isDrawing, setIsDrawing] = useState(false);
@@ -188,7 +190,7 @@ export const ImageInteractiveSection = ({ caseData, onAnnotationsChange }) => {
         e.preventDefault();
         const imageUrl = e.dataTransfer.getData('imageUrl');
         const imageLabel = e.dataTransfer.getData('imageLabel');
-        
+
         if (imageUrl) {
             setComparisonImage({ url: imageUrl, label: imageLabel });
             setShowComparison(true);
@@ -202,7 +204,7 @@ export const ImageInteractiveSection = ({ caseData, onAnnotationsChange }) => {
     if (!caseData?.imageUrl) {
         return (
             <div className="flex-1 min-h-0 bg-[#1a1a1a] border border-white/10 rounded-xl flex items-center justify-center">
-                <p className="text-gray-500">Không có hình ảnh</p>
+                <p className="text-gray-500">{t('doctor.noResults')}</p>
             </div>
         );
     }
@@ -217,7 +219,7 @@ export const ImageInteractiveSection = ({ caseData, onAnnotationsChange }) => {
                             onClick={handleReset}
                             className="px-2.5 py-1.5 text-xs text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors cursor-pointer"
                         >
-                            Đặt Lại
+                            {t('studentDetail.interactive.reset')}
                         </button>
 
                         <div className="w-px h-4 bg-white/10 mx-2"></div>
@@ -463,14 +465,14 @@ export const ImageInteractiveSection = ({ caseData, onAnnotationsChange }) => {
                 <div className="flex items-center justify-end text-xs">
                     <div className="flex items-center gap-3">
                         {boxes.length > 0 && (
-                            <span className="text-teal-400">{boxes.length} vùng</span>
+                            <span className="text-teal-400">{boxes.length} {t('studentDetail.interactive.regions')}</span>
                         )}
                         {comparisonImage && (
                             <button
                                 onClick={toggleComparison}
                                 className="px-2 py-1 bg-teal-500/20 hover:bg-teal-500/30 text-teal-400 rounded text-xs transition-colors"
                             >
-                                {showComparison ? 'Ẩn so sánh' : 'Hiện so sánh'}
+                                {showComparison ? t('common.hide') : t('studentDetail.interactive.toggleComparison')}
                             </button>
                         )}
                     </div>

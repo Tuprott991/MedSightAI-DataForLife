@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Database, Wifi, AlertCircle, CheckCircle, Loader2, Lock } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { mockVnaTest, mockSaveVnaConfig, loadVnaConfig } from '../../services/mockApi';
 import { Toast } from '../custom/Toast';
 
@@ -8,6 +9,7 @@ import { Toast } from '../custom/Toast';
  * Cho phép cấu hình và test kết nối đến VNA server thông qua DICOMweb
  */
 const VnaSettings = () => {
+    const { t } = useTranslation();
     // Form state
     const [config, setConfig] = useState({
         baseUrl: '',
@@ -81,7 +83,7 @@ const VnaSettings = () => {
         } catch (error) {
             setToast({
                 type: 'error',
-                message: 'Lỗi khi lưu cấu hình'
+                message: t('settings.error')
             });
         } finally {
             setIsSaving(false);

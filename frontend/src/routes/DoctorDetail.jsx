@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Sparkles, RefreshCw, Bot, FileText, Send, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { patientsData } from '../constants/patients';
 import { medicalImagesGroups, generateAnalysisData, getFindingImagePath, getPrototypeImagePath } from '../constants/medicalData';
 import { generatePatientReport } from '../constants/reportData';
@@ -13,6 +14,7 @@ import { ReportPDF } from '../components/DoctorDetail/ReportPDF';
 import { useSidebar } from '../components/layout';
 
 export const DoctorDetail = () => {
+    const { t } = useTranslation();
     const { id } = useParams();
     const patient = patientsData.find(p => p.id === parseInt(id));
     const { isLeftCollapsed } = useSidebar();
@@ -43,16 +45,16 @@ export const DoctorDetail = () => {
 
     const handleAIAnalyze = () => {
         setIsAnalyzing(true);
-        
+
         // Exit similar case mode and restore to original single image
         setIsSimilarCaseMode(false);
         setSimilarCaseData(null);
         setIsLoadingSimilarAnalysis(false);
         setSelectedImage(originalImage);
-        
+
         // Random delay từ 3-6 giây
         const randomDelay = Math.floor(Math.random() * (6000 - 3000 + 1)) + 3000;
-        
+
         setTimeout(() => {
             // Generate mock analysis data
             const data = patient ? generateAnalysisData(patient.diagnosis, patient.image) : null;
@@ -71,10 +73,10 @@ export const DoctorDetail = () => {
 
     const handleGenerateReport = () => {
         setIsGeneratingReport(true);
-        
+
         // Random delay từ 6-9 giây
         const randomDelay = Math.floor(Math.random() * (9000 - 6000 + 1)) + 6000;
-        
+
         setTimeout(() => {
             // Generate report data
             const report = generatePatientReport(patient);
@@ -128,7 +130,7 @@ export const DoctorDetail = () => {
     const handleFindingClick = (finding) => {
         // Set selected finding ID for highlighting
         setSelectedFindingId(finding.id);
-        
+
         // Get the image paths for this finding
         const findingImagePath = getFindingImagePath(finding.text, patient.image);
         const prototypeImagePath = getPrototypeImagePath(finding.text, patient.image);
@@ -193,8 +195,8 @@ export const DoctorDetail = () => {
             <div className="min-h-screen bg-[#0a0a0a] text-white">
                 <div className="container mx-auto px-6 py-8">
                     <div className="text-center py-20">
-                        <h1 className="text-2xl font-bold mb-4">Không Tìm Thấy Bệnh Nhân</h1>
-                        <p className="text-gray-400 text-sm">Hồ sơ bệnh nhân bạn tìm kiếm không tồn tại.</p>
+                        <h1 className="text-2xl font-bold mb-4">{t('doctor.noResults')}</h1>
+                        <p className="text-gray-400 text-sm">{t('doctor.noResults')}</p>
                     </div>
                 </div>
             </div>
@@ -237,7 +239,7 @@ export const DoctorDetail = () => {
                                     // Start loading for 6-7 seconds
                                     setIsLoadingSimilarAnalysis(true);
                                     const loadingDelay = Math.floor(Math.random() * (7000 - 6000 + 1)) + 6000;
-                                    
+
                                     setTimeout(() => {
                                         setIsLoadingSimilarAnalysis(false);
                                         setIsSimilarCaseMode(true);
@@ -259,34 +261,32 @@ export const DoctorDetail = () => {
                             {/* Header with Action Buttons */}
                             <div className="px-4 py-3 border-b border-white/10 bg-[#141414] flex items-center justify-between">
                                 <h3 className="text-base font-semibold text-white">Báo Cáo</h3>
-                                
+
                                 {/* Action Buttons */}
                                 <div className="flex items-center gap-2">
                                     {/* Chatbot Button */}
                                     <button
                                         onClick={handleChatbotToggle}
                                         disabled={isSimilarCaseMode}
-                                        className={`w-8 h-8 flex items-center justify-center rounded-full transition-all ${
-                                            isSimilarCaseMode
+                                        className={`w-8 h-8 flex items-center justify-center rounded-full transition-all ${isSimilarCaseMode
                                                 ? 'bg-teal-500/20 text-teal-400 border border-teal-500/30 cursor-not-allowed opacity-50'
-                                                : showChatbot 
-                                                    ? 'bg-teal-500 text-white' 
+                                                : showChatbot
+                                                    ? 'bg-teal-500 text-white'
                                                     : 'bg-teal-500/20 text-teal-400 border border-teal-500/30 hover:bg-teal-500 hover:text-white active:scale-95 cursor-pointer'
-                                        }`}
+                                            }`}
                                         title={isSimilarCaseMode ? "Không khả dụng khi so sánh ca bệnh" : "Chatbot AI"}
                                     >
                                         <Bot className="w-4 h-4" />
                                     </button>
-                                    
+
                                     {/* Generate Report Button */}
                                     <button
                                         onClick={handleGenerateReport}
                                         disabled={isGeneratingReport || isSimilarCaseMode}
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-all ${
-                                            isGeneratingReport || isSimilarCaseMode
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-all ${isGeneratingReport || isSimilarCaseMode
                                                 ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30 cursor-not-allowed opacity-50'
                                                 : 'bg-blue-500/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500 hover:text-white active:scale-95 cursor-pointer'
-                                        }`}
+                                            }`}
                                         title={isSimilarCaseMode ? "Không khả dụng khi so sánh ca bệnh" : "Sinh báo cáo"}
                                     >
                                         {isGeneratingReport ? (
@@ -301,16 +301,15 @@ export const DoctorDetail = () => {
                                             </>
                                         )}
                                     </button>
-                                    
+
                                     {/* AI Analyze Button */}
                                     <button
                                         onClick={handleAIAnalyze}
                                         disabled={isSimilarCaseMode}
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-all ${
-                                            isSimilarCaseMode
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-all ${isSimilarCaseMode
                                                 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30 cursor-not-allowed opacity-50'
                                                 : 'bg-amber-500 text-white shadow-lg shadow-amber-500/50 hover:bg-amber-600 active:scale-95 cursor-pointer'
-                                        }`}
+                                            }`}
                                         title={isSimilarCaseMode ? "Không khả dụng khi so sánh ca bệnh" : "Phân tích AI"}
                                     >
                                         <Sparkles className="w-3.5 h-3.5" />
@@ -338,12 +337,12 @@ export const DoctorDetail = () => {
                                                     ) : isSimilarCaseMode && similarCaseData ? (
                                                         <div className="text-sm text-gray-300 space-y-3">
                                                             <p className="font-semibold text-teal-400">Phân tích so sánh ca bệnh</p>
-                                                            
+
                                                             {(() => {
                                                                 // Get findings from both cases - auto-generate if not analyzed yet
                                                                 const currentFindings = analysisData?.findings || generateAnalysisData(patient.diagnosis, patient.image)?.findings || [];
                                                                 const similarFindings = generateAnalysisData(similarCaseData.diagnosis, similarCaseData.imageUrl)?.findings || [];
-                                                                
+
                                                                 // Find common and different findings
                                                                 const currentFindingTexts = currentFindings.map(f => f.text);
                                                                 const similarFindingTexts = similarFindings.map(f => f.text);
@@ -395,10 +394,10 @@ export const DoctorDetail = () => {
                                                                                     <span className="font-medium text-green-400">Điểm tương đồng:</span> Cả hai ca bệnh đều có cùng triệu chứng <span className="text-green-300 font-medium">{commonFindings.join(', ')}</span>. Các dấu hiệu hình ảnh học thể hiện mức độ tổn thương phổi tương tự, với vị trí và phân bố tổn thương có nhiều điểm chung. Điều này gợi ý tiến trình bệnh lý và cơ chế gây tổn thương có sự tương đồng giữa hai ca.
                                                                                 </p>
                                                                             )}
-                                                                            
+
                                                                             {(uniqueCurrentFindings.length > 0 || uniqueSimilarFindings.length > 0) && (
                                                                                 <p className="leading-relaxed">
-                                                                                    <span className="font-medium text-amber-400">Điểm khác biệt:</span> Tuy nhiên, ca bệnh hiện tại 
+                                                                                    <span className="font-medium text-amber-400">Điểm khác biệt:</span> Tuy nhiên, ca bệnh hiện tại
                                                                                     {uniqueCurrentFindings.length > 0 && (
                                                                                         <span> có thêm triệu chứng <span className="text-amber-300 font-medium">{uniqueCurrentFindings.join(', ')}</span></span>
                                                                                     )}
@@ -426,7 +425,7 @@ export const DoctorDetail = () => {
                                                 </div>
                                             </div>
                                         </div>
-                                        
+
                                         {/* Chatbot Input */}
                                         <div className="border-t border-white/10 pt-3">
                                             <div className="flex gap-2">
@@ -508,7 +507,7 @@ export const DoctorDetail = () => {
                                 <X className="w-6 h-6" />
                             </button>
                         </div>
-                        
+
                         {/* Modal Content - Scrollable PDF */}
                         <div className="flex-1 overflow-y-auto p-6">
                             <ReportPDF reportData={reportData} patient={patient} selectedImage={selectedImage} analysisData={analysisData} />

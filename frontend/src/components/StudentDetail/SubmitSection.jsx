@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { Send } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export const SubmitSection = ({ onSubmit, annotations = [], showToast }) => {
+    const { t } = useTranslation();
     const [diagnosis, setDiagnosis] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleSubmit = () => {
         if (!diagnosis.trim()) {
-            showToast?.('error', 'Vui lòng nhập chẩn đoán');
+            showToast?.('error', t('studentDetail.submit.error'));
             return;
         }
 
@@ -23,14 +25,14 @@ export const SubmitSection = ({ onSubmit, annotations = [], showToast }) => {
         try {
             const result = onSubmit?.(submissionData);
             if (result?.success !== false) {
-                showToast?.('success', 'Đã gửi chẩn đoán thành công!');
+                showToast?.('success', t('studentDetail.submit.success'));
                 // Không clear diagnosis và annotations để user có thể xem lại
                 // setDiagnosis('');
             } else {
-                showToast?.('error', 'Không thể gửi chẩn đoán. Vui lòng thử lại.');
+                showToast?.('error', t('studentDetail.submit.error'));
             }
         } catch (error) {
-            showToast?.('error', 'Không thể gửi chẩn đoán. Vui lòng thử lại.');
+            showToast?.('error', t('studentDetail.submit.error'));
         } finally {
             setTimeout(() => setIsSubmitting(false), 500);
         }
@@ -44,13 +46,13 @@ export const SubmitSection = ({ onSubmit, annotations = [], showToast }) => {
                     {/* Diagnosis Input */}
                     <div className="flex-1">
                         <label className="text-xs text-gray-400 mb-1 block">
-                            Chẩn Đoán <span className="text-red-400">*</span>
+                            {t('studentDetail.submit.diagnosis')} <span className="text-red-400">*</span>
                         </label>
                         <input
                             type="text"
                             value={diagnosis}
                             onChange={(e) => setDiagnosis(e.target.value)}
-                            placeholder="Ví dụ: Bệnh Động Mạch Vành"
+                            placeholder={t('studentDetail.submit.diagnosisPlaceholder')}
                             className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-teal-500 transition-colors"
                         />
                     </div>
@@ -62,7 +64,7 @@ export const SubmitSection = ({ onSubmit, annotations = [], showToast }) => {
                         className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all shrink-0 bg-teal-500 hover:bg-teal-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <Send className="w-4 h-4" />
-                        <span>{isSubmitting ? 'Đang gửi...' : 'Gửi'}</span>
+                        <span>{isSubmitting ? t('common.loading') : t('studentDetail.submit.submit')}</span>
                     </button>
                 </div>
             </div>

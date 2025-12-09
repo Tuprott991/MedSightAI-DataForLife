@@ -1,16 +1,17 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Loader2, MapPin, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 // Component để format markdown đơn giản
 const FormattedMessage = ({ text }) => {
     const formatText = (text) => {
         // Split by lines để giữ nguyên line breaks
         const lines = text.split('\n');
-        
+
         return lines.map((line, lineIdx) => {
             // Xử lý **bold**
             const parts = line.split(/(\*\*.*?\*\*)/g);
-            
+
             return (
                 <span key={lineIdx}>
                     {parts.map((part, partIdx) => {
@@ -24,16 +25,17 @@ const FormattedMessage = ({ text }) => {
             );
         });
     };
-    
+
     return <>{formatText(text)}</>;
 };
 
 export const ChatbotSection = ({ annotations = [], caseData = null, submissionData = null }) => {
+    const { t } = useTranslation();
     const [messages, setMessages] = useState([
         {
             id: 1,
             type: 'bot',
-            text: "Xin chào! Tôi là trợ lý AI y khoa của bạn. Tôi có thể giúp bạn hiểu rõ hơn về ca bệnh này. Hãy hỏi tôi bất cứ điều gì!",
+            text: t('studentDetail.chatbot.greeting'),
             timestamp: new Date()
         }
     ]);
@@ -100,7 +102,7 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
     // Phân tích submission của sinh viên
     const analyzeSubmission = (submission) => {
         setIsTyping(true);
-        
+
         // Delay 2 giây trước khi bắt đầu phản hồi
         setTimeout(() => {
             const analysis = analyzeAnnotationsAndDiagnosis(submission);
@@ -111,7 +113,7 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
     // Stream response từng chữ một
     const streamResponse = async (analysis) => {
         const { feedbackMessage, messageType, images } = analysis;
-        
+
         // Tạo message placeholder
         const messageId = Date.now();
         const newMessage = {
@@ -123,30 +125,30 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
             images: images,
             isStreaming: true
         };
-        
+
         setMessages(prev => [...prev, newMessage]);
         setIsTyping(false);
-        
+
         // Stream text
         let currentText = '';
         const words = feedbackMessage.split(' ');
-        
+
         for (let i = 0; i < words.length; i++) {
             currentText += (i > 0 ? ' ' : '') + words[i];
-            
-            setMessages(prev => prev.map(msg => 
-                msg.id === messageId 
+
+            setMessages(prev => prev.map(msg =>
+                msg.id === messageId
                     ? { ...msg, text: currentText }
                     : msg
             ));
-            
+
             // Random delay giữa 30-80ms cho mỗi từ
             await new Promise(resolve => setTimeout(resolve, Math.random() * 50 + 30));
         }
-        
+
         // Đánh dấu hoàn thành streaming
-        setMessages(prev => prev.map(msg => 
-            msg.id === messageId 
+        setMessages(prev => prev.map(msg =>
+            msg.id === messageId
                 ? { ...msg, isStreaming: false }
                 : msg
         ));
@@ -156,14 +158,14 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
     const analyzeAnnotationsAndDiagnosis = (submission) => {
         const { diagnosis, annotations } = submission;
         const correctDiagnosis = caseData?.diagnosis || 'Lao phổi';
-        
+
         let feedbackMessage = '';
         let messageType = 'info';
         let images = [];
-        
+
         // Kiểm tra số lượng annotations
         const hasAnnotations = annotations && annotations.length > 0;
-        
+
         if (!hasAnnotations) {
             messageType = 'warning';
             feedbackMessage = `Không phát hiện vùng đánh dấu tổn thương.\n\n`;
@@ -175,20 +177,20 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
             ];
             return { feedbackMessage, messageType, images };
         }
-        
+
         // Phân tích từng annotation
-        const annotationResults = annotations.map((ann, idx) => 
+        const annotationResults = annotations.map((ann, idx) =>
             checkAnnotationAccuracy(ann)
         );
-        
+
         const correctCount = annotationResults.filter(r => r.accuracy === 'correct').length;
         const partialCount = annotationResults.filter(r => r.accuracy === 'partial').length;
         const incorrectCount = annotationResults.filter(r => r.accuracy === 'incorrect').length;
-        
+
         // Kiểm tra chẩn đoán
         const diagnosisCorrect = diagnosis.toLowerCase().includes(correctDiagnosis.toLowerCase()) ||
-                                correctDiagnosis.toLowerCase().includes(diagnosis.toLowerCase());
-        
+            correctDiagnosis.toLowerCase().includes(diagnosis.toLowerCase());
+
         // Tạo phản hồi dựa trên kết quả
         if (correctCount === annotations.length && diagnosisCorrect) {
             // Trường hợp hoàn hảo: Cả chẩn đoán và vùng đều đúng
@@ -209,22 +211,22 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
             feedbackMessage = `Đánh giá: Chẩn đoán đúng nhưng định vị tổn thương sai\n\n`;
             feedbackMessage += `Chẩn đoán: ${diagnosis} - Chính xác\n`;
             feedbackMessage += `Vùng đánh dấu: ${incorrectCount} vùng sai vị trí\n\n`;
-            
+
             feedbackMessage += `Nhận xét:\n`;
             feedbackMessage += `Bạn đã xác định đúng bệnh lý nhưng chưa định vị chính xác vị trí tổn thương trên phim.\n\n`;
-            
+
             feedbackMessage += `Phân tích chi tiết:\n`;
             annotationResults.forEach((result, idx) => {
                 feedbackMessage += `Vùng ${idx + 1}: ${result.reason}\n`;
             });
-            
+
             feedbackMessage += `\nHướng dẫn định vị tổn thương ${correctDiagnosis}:\n`;
             feedbackMessage += `- Vị trí: ${groundTruth.regions[0].label} thường ở thùy trên hoặc giữa phổi\n`;
             feedbackMessage += `- Đặc điểm: Vùng mật độ tăng, đậm hơn nền phổi bình thường\n`;
             feedbackMessage += `- Ranh giới: Không đều, có thể lan tỏa hoặc khu trú\n`;
             feedbackMessage += `- Kích thước: Thường từ 1-3cm, có thể lớn hơn\n\n`;
             feedbackMessage += `Kéo ảnh dưới đây sang khung hiển thị để học cách định vị chính xác:`;
-            
+
             images = [
                 { type: 'ai_result', url: groundTruth.aiResultUrl, label: 'Kết quả thực tế' }
             ];
@@ -234,10 +236,10 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
             feedbackMessage = `Đánh giá: Chẩn đoán đúng nhưng cần cải thiện định vị\n\n`;
             feedbackMessage += `Chẩn đoán: ${diagnosis} - Chính xác\n`;
             feedbackMessage += `Kết quả đánh dấu: ${correctCount} chính xác, ${partialCount} gần đúng, ${incorrectCount} sai\n\n`;
-            
+
             feedbackMessage += `Nhận xét:\n`;
             feedbackMessage += `Bạn đã xác định đúng bệnh lý và một phần vị trí tổn thương. Cần cải thiện độ chính xác trong việc khoanh vùng.\n\n`;
-            
+
             feedbackMessage += `Phân tích từng vùng:\n`;
             annotationResults.forEach((result, idx) => {
                 if (result.accuracy === 'correct') {
@@ -248,12 +250,12 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
                     feedbackMessage += `Vùng ${idx + 1}: Sai vị trí - ${result.reason}\n`;
                 }
             });
-            
+
             feedbackMessage += `\nYêu cầu:\n`;
             feedbackMessage += `- Quan sát kỹ hơn ranh giới tổn thương\n`;
             feedbackMessage += `- Mở rộng hoặc thu nhỏ vùng cho chính xác\n`;
             feedbackMessage += `- So sánh với kết quả thực tế phía dưới`;
-            
+
             images = [
                 { type: 'ai_result', url: groundTruth.aiResultUrl, label: 'Kết quả phân tích thực tế' }
             ];
@@ -264,17 +266,17 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
             feedbackMessage += `Chẩn đoán gửi lên: ${diagnosis}\n`;
             feedbackMessage += `Chẩn đoán chuẩn: ${correctDiagnosis}\n`;
             feedbackMessage += `Vùng đánh dấu: ${correctCount}/${annotations.length} chính xác\n\n`;
-            
+
             feedbackMessage += `Nhận xét:\n`;
             feedbackMessage += `Bạn đã định vị chính xác vị trí tổn thương nhưng nhận định sai về bệnh lý.\n\n`;
-            
+
             feedbackMessage += `Phân tích:\n`;
             annotationResults.forEach((result, idx) => {
                 if (result.accuracy === 'correct') {
                     feedbackMessage += `Vùng ${idx + 1}: ${result.matchedRegion.label} - Overlap ${result.overlap}%\n`;
                 }
             });
-            
+
             feedbackMessage += `\nĐặc điểm phân biệt ${correctDiagnosis}:\n`;
             feedbackMessage += `${getClinicSignificance(groundTruth.regions[0].label)}\n\n`;
             feedbackMessage += `Yêu cầu xem xét lại tiền sử bệnh, triệu chứng lâm sàng và đặc điểm hình ảnh để đưa ra chẩn đoán chính xác.`;
@@ -287,7 +289,7 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
                 feedbackMessage += `Chẩn đoán chuẩn: ${correctDiagnosis}\n`;
             }
             feedbackMessage += `Kết quả đánh dấu: ${correctCount}/${annotations.length} chính xác\n\n`;
-            
+
             feedbackMessage += `Phân tích lỗi:\n`;
             annotationResults.forEach((result, idx) => {
                 if (result.accuracy === 'incorrect') {
@@ -296,18 +298,18 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
                     feedbackMessage += `Vùng ${idx + 1}: Gần đúng nhưng cần điều chỉnh\n`;
                 }
             });
-            
+
             feedbackMessage += `\nĐặc điểm ${groundTruth.regions[0].label} (${correctDiagnosis}):\n`;
             feedbackMessage += `- Vị trí: Thùy trên hoặc giữa phổi\n`;
             feedbackMessage += `- Hình ảnh: Mật độ tăng, vùng đậm hơn\n`;
             feedbackMessage += `- Ranh giới: Không đều, có thể kèm xơ hóa\n\n`;
             feedbackMessage += `Kéo ảnh dưới đây sang khung hiển thị để so sánh:`;
-            
+
             images = [
                 { type: 'ai_result', url: groundTruth.aiResultUrl, label: 'Kết quả thực tế' }
             ];
         }
-        
+
         return { feedbackMessage, messageType, images };
     };
 
@@ -341,7 +343,7 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
 
         // Kiểm tra vị trí chung
         const isInLungArea = y > 100 && y < 500 && x > 100 && x < 600;
-        
+
         if (!isInLungArea) {
             return {
                 accuracy: 'incorrect',
@@ -388,12 +390,12 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
 
     const generateMockResponse = (question) => {
         const lowerQuestion = question.toLowerCase();
-        
+
         // Hỏi về vị trí tổn thương
         if (lowerQuestion.includes('ở đâu') || lowerQuestion.includes('vị trí') || lowerQuestion.includes('nằm')) {
             return `📍 **Vị trí tổn thương:**\n\nTrong ca bệnh này, các tổn thương chính nằm ở:\n• **Thùy trên phổi phải** - Đám mờ rõ ràng\n• **Vùng quanh rốn phổi** - Xơ hóa nhẹ\n\nBạn có thể thử khoanh vùng các khu vực bạn cho là bất thường, tôi sẽ đánh giá xem có chính xác không! 🎯`;
         }
-        
+
         // Hỏi về heatmap hoặc AI
         if (lowerQuestion.includes('heatmap') || lowerQuestion.includes('ai phát hiện') || lowerQuestion.includes('máy nhận')) {
             return `🤖 **Phân tích AI:**\n\nAI đã phát hiện các vùng bất thường với độ tin cậy cao. Bạn muốn xem heatmap để so sánh với vùng bạn đã khoanh không?\n\nHeatmap sẽ hiển thị:\n🔴 Vùng đỏ: Bất thường mức cao\n🟡 Vùng vàng: Nghi ngờ\n🟢 Vùng xanh: Bình thường`;
@@ -434,8 +436,8 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
                         <Bot className="w-5 h-5 text-teal-500" />
                     </div>
                     <div>
-                        <h3 className="text-sm font-semibold text-white">Trợ Lý AI</h3>
-                        <p className="text-xs text-gray-400">Hỏi tôi bất cứ điều gì về ca bệnh này</p>
+                        <h3 className="text-sm font-semibold text-white">{t('studentDetail.chatbot.title')}</h3>
+                        <p className="text-xs text-gray-400">{t('studentDetail.chatbot.subtitle')}</p>
                     </div>
                 </div>
             </div>
@@ -460,16 +462,16 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
                         <div className={`flex-1 max-w-[80%] ${message.type === 'user' ? 'text-right' : ''}`}>
                             <div className={`inline-block px-4 py-2 rounded-lg text-sm ${message.type === 'bot'
                                 ? message.messageType === 'success' ? 'bg-green-500/10 text-green-200 border border-green-500/30'
-                                : message.messageType === 'warning' ? 'bg-yellow-500/10 text-yellow-200 border border-yellow-500/30'
-                                : message.messageType === 'error' ? 'bg-red-500/10 text-red-200 border border-red-500/30'
-                                : 'bg-white/5 text-gray-200 border border-white/10'
+                                    : message.messageType === 'warning' ? 'bg-yellow-500/10 text-yellow-200 border border-yellow-500/30'
+                                        : message.messageType === 'error' ? 'bg-red-500/10 text-red-200 border border-red-500/30'
+                                            : 'bg-white/5 text-gray-200 border border-white/10'
                                 : 'bg-teal-500 text-white'
                                 }`}>
                                 <div className="whitespace-pre-line">
                                     <FormattedMessage text={message.text} />
                                     {message.isStreaming && <span className="animate-pulse">▋</span>}
                                 </div>
-                                
+
                                 {/* Hiển thị hình ảnh nếu có */}
                                 {message.images && message.images.length > 0 && (
                                     <div className="mt-3 space-y-2">
@@ -480,8 +482,8 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
                                                         {img.label}
                                                     </div>
                                                 )}
-                                                <img 
-                                                    src={img.url} 
+                                                <img
+                                                    src={img.url}
                                                     alt={img.label || 'Kết quả thực tế'}
                                                     draggable="true"
                                                     onDragStart={(e) => {
@@ -529,7 +531,7 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
                         value={inputMessage}
                         onChange={(e) => setInputMessage(e.target.value)}
                         onKeyPress={handleKeyPress}
-                        placeholder="Hỏi về ca bệnh này..."
+                        placeholder={t('studentDetail.chatbot.placeholder')}
                         className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-teal-500 transition-colors"
                     />
                     <button

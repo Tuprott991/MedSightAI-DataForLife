@@ -4,6 +4,8 @@ import { Stethoscope, GraduationCap, Home as HomeIcon, ArrowLeft, Settings, Help
 import { patientsData } from "../../constants/patients";
 import { createContext, useContext, useState } from "react";
 import { useAuth } from "../authentication";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "../custom/LanguageSwitcher";
 
 // Create context for sidebar collapse state
 const SidebarContext = createContext();
@@ -16,6 +18,7 @@ export const Layout = () => {
     const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const { user, logout } = useAuth();
+    const { t } = useTranslation();
 
     const handleLogout = () => {
         setShowLogoutModal(true);
@@ -44,16 +47,16 @@ export const Layout = () => {
     // Get patient info if on detail page
     let patient = null;
     let backPath = '/';
-    let backLabel = 'Back';
+    let backLabel = t('nav.back');
 
     if (isDoctorDetail) {
         patient = patientsData.find(p => p.id === parseInt(params.id));
         backPath = '/doctor';
-        backLabel = 'Quay Lại Danh Sách Bệnh Nhân';
+        backLabel = t('nav.back');
     } else if (isStudentDetail) {
         patient = patientsData.find(p => p.id === parseInt(params.id));
         backPath = '/student';
-        backLabel = 'Quay Lại Danh Sách Bệnh Nhân';
+        backLabel = t('nav.back');
     }
 
     return (
@@ -77,7 +80,7 @@ export const Layout = () => {
                                     <div className="w-8 h-8 bg-teal-500 rounded-lg flex items-center justify-center">
                                         <span className="text-white font-bold text-sm">M</span>
                                     </div>
-                                    <h1 className="text-xl font-bold text-white">MedSightAI</h1>
+                                    <h1 className="text-xl font-bold text-white">{t('app.name')}</h1>
                                 </Link>
                             )}
 
@@ -104,7 +107,7 @@ export const Layout = () => {
                                                     }`}
                                             >
                                                 <HomeIcon className="w-4 h-4" />
-                                                <span className="font-medium">Trang Chủ</span>
+                                                <span className="font-medium">{t('nav.home')}</span>
                                             </Link>
                                             <Link
                                                 to="/doctor"
@@ -114,7 +117,7 @@ export const Layout = () => {
                                                     }`}
                                             >
                                                 <Stethoscope className="w-4 h-4" />
-                                                <span className="font-medium">Bác Sĩ</span>
+                                                <span className="font-medium">{t('nav.doctor')}</span>
                                             </Link>
                                         </>
                                     )}
@@ -126,7 +129,7 @@ export const Layout = () => {
                                             }`}
                                     >
                                         <GraduationCap className="w-4 h-4" />
-                                        <span className="font-medium">Sinh Viên</span>
+                                        <span className="font-medium">{t('nav.student')}</span>
                                     </Link>
                                     {user?.role === 'admin' && (
                                         <Link
@@ -137,32 +140,36 @@ export const Layout = () => {
                                                 }`}
                                         >
                                             <Database className="w-4 h-4" />
-                                            <span className="font-medium">Cài đặt PACs/VNA</span>
+                                            <span className="font-medium">{t('nav.pacsSettings')}</span>
                                         </Link>
                                     )}
+                                    <LanguageSwitcher />
                                     <button
                                         onClick={handleLogout}
                                         className="flex items-center gap-2 px-4 py-2 rounded-lg text-gray-300 hover:bg-red-500/10 hover:text-red-400 transition-all"
-                                        title="Đăng xuất"
+                                        title={t('nav.logout')}
                                     >
                                         <LogOut className="w-4 h-4" />
-                                        <span className="font-medium">Đăng xuất</span>
+                                        <span className="font-medium">{t('nav.logout')}</span>
                                     </button>
                                 </div>
                             ) : (
                                 <div className="flex items-center gap-3">
+                                    {/* Language Switcher */}
+                                    <LanguageSwitcher />
+
                                     {/* Settings */}
-                                    <button className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
+                                    <button className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors" title={t('nav.settings')}>
                                         <Settings className="w-5 h-5" />
                                     </button>
 
                                     {/* Help */}
-                                    <button className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
+                                    <button className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors" title={t('nav.help')}>
                                         <HelpCircle className="w-5 h-5" />
                                     </button>
 
                                     {/* Notifications */}
-                                    <button className="relative p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
+                                    <button className="relative p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors" title={t('nav.notifications')}>
                                         <Bell className="w-5 h-5" />
                                         {/* Notification Badge */}
                                         <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-xs flex items-center justify-center rounded-full border-2 border-[#1b1b1b]">
@@ -175,7 +182,7 @@ export const Layout = () => {
                                         <div className="text-right mr-2">
                                             <p className="text-sm font-medium text-white">{user?.name}</p>
                                             <p className="text-xs text-gray-400">
-                                                {user?.role === 'doctor' ? 'Bác sĩ' : user?.role === 'admin' ? 'Quản trị viên' : 'Sinh viên'}
+                                                {user?.role === 'doctor' ? t('auth.login.doctor') : user?.role === 'admin' ? t('auth.login.admin') : t('auth.login.student')}
                                             </p>
                                         </div>
                                         <div className="w-8 h-8 bg-teal-500 rounded-full flex items-center justify-center">
@@ -184,7 +191,7 @@ export const Layout = () => {
                                         <button
                                             onClick={handleLogout}
                                             className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-                                            title="Đăng xuất"
+                                            title={t('nav.logout')}
                                         >
                                             <LogOut className="w-5 h-5" />
                                         </button>
@@ -212,8 +219,8 @@ export const Layout = () => {
                                     <LogOut className="w-6 h-6 text-red-500" />
                                 </div>
                                 <div>
-                                    <h3 className="text-lg font-semibold text-white">Xác nhận đăng xuất</h3>
-                                    <p className="text-sm text-gray-400">Bạn có chắc chắn muốn đăng xuất?</p>
+                                    <h3 className="text-lg font-semibold text-white">{t('auth.logout.title')}</h3>
+                                    <p className="text-sm text-gray-400">{t('auth.logout.message')}</p>
                                 </div>
                             </div>
                             <div className="flex gap-3 mt-6">
@@ -221,13 +228,13 @@ export const Layout = () => {
                                     onClick={cancelLogout}
                                     className="flex-1 px-4 py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors font-medium"
                                 >
-                                    Hủy
+                                    {t('auth.logout.cancel')}
                                 </button>
                                 <button
                                     onClick={confirmLogout}
                                     className="flex-1 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors font-medium shadow-lg shadow-red-500/30"
                                 >
-                                    Đăng xuất
+                                    {t('auth.logout.confirm')}
                                 </button>
                             </div>
                         </div>

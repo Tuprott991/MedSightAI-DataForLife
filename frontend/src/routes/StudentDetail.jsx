@@ -8,8 +8,10 @@ import {
 } from '../components/StudentDetail';
 import { Toast } from '../components/custom/Toast';
 import { User, Calendar } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export const StudentDetail = () => {
+    const { t } = useTranslation();
     const { id } = useParams();
     const patient = patientsData.find(p => p.id === parseInt(id));
     const [caseData, setCaseData] = useState(null);
@@ -83,10 +85,10 @@ export const StudentDetail = () => {
     const handleSubmitDiagnosis = (submissionData) => {
         console.log('Student submitted diagnosis:', submissionData);
         console.log('Annotations:', submissionData.annotations);
-        
+
         // Lưu submission data để trigger chatbot analysis
         setSubmissionData(submissionData);
-        
+
         // TODO: Send to API
         return { success: true };
     };
@@ -99,8 +101,8 @@ export const StudentDetail = () => {
         return (
             <div className="h-screen bg-[#0a0a0a] text-white flex items-center justify-center">
                 <div className="text-center">
-                    <h1 className="text-2xl font-bold mb-2">Không Tìm Thấy Ca Bệnh</h1>
-                    <p className="text-gray-400">Ca bệnh bạn tìm kiếm không tồn tại.</p>
+                    <h1 className="text-2xl font-bold mb-2">{t('doctor.noResults')}</h1>
+                    <p className="text-gray-400">{t('common.error')}</p>
                 </div>
             </div>
         );
@@ -111,7 +113,7 @@ export const StudentDetail = () => {
             <div className="h-screen bg-[#0a0a0a] text-white flex items-center justify-center">
                 <div className="text-center">
                     <div className="w-12 h-12 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-gray-400">Đang tải ca bệnh...</p>
+                    <p className="text-gray-400">{t('common.loading')}</p>
                 </div>
             </div>
         );
@@ -151,7 +153,7 @@ export const StudentDetail = () => {
 
                         {/* Right Column - Chatbot (2/7) */}
                         <div className="lg:col-span-2 h-full min-h-0">
-                            <ChatbotSection 
+                            <ChatbotSection
                                 annotations={annotations}
                                 caseData={caseData}
                                 submissionData={submissionData}

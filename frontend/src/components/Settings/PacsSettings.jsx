@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Server, Wifi, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { mockPacsTest, mockSavePacsConfig, loadPacsConfig } from '../../services/mockApi';
 import { Toast } from '../custom/Toast';
 
@@ -8,6 +9,7 @@ import { Toast } from '../custom/Toast';
  * Cho phép cấu hình và test kết nối đến PACS server
  */
 const PacsSettings = () => {
+    const { t } = useTranslation();
     // Form state
     const [config, setConfig] = useState({
         host: '',
@@ -76,7 +78,7 @@ const PacsSettings = () => {
         } catch (error) {
             setToast({
                 type: 'error',
-                message: 'Lỗi khi lưu cấu hình'
+                message: t('settings.error')
             });
         } finally {
             setIsSaving(false);

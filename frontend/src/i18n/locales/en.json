@@ -1,0 +1,293 @@
+{
+  "app": {
+    "name": "MedSightAI",
+    "tagline": "AI-Powered Healthcare Platform"
+  },
+  "nav": {
+    "home": "Home",
+    "doctor": "For Doctors",
+    "student": "For Students",
+    "back": "Back",
+    "settings": "Settings",
+    "help": "Help",
+    "notifications": "Notifications",
+    "profile": "Profile",
+    "logout": "Logout",
+    "pacsSettings": "PACS/VNA Settings"
+  },
+  "home": {
+    "hero": {
+      "badge": "AI-Powered Healthcare Platform",
+      "title": "MedSightAI",
+      "description": "Revolutionize healthcare with <strong>artificial intelligence</strong>. Empower doctors and students with advanced diagnostic tools and medical insights.",
+      "doctorButton": "For Doctors",
+      "studentButton": "For Students",
+      "trustedBy": "Trusted by leading healthcare institutions worldwide • HIPAA Compliant • ISO 27001 Certified"
+    },
+    "features": {
+      "title": "Powerful Features",
+      "subtitle": "Comprehensive tools for modern healthcare",
+      "aiDiagnostics": {
+        "title": "AI Diagnostics",
+        "description": "Advanced machine learning algorithms analyze medical images with high accuracy"
+      },
+      "similarCases": {
+        "title": "Similar Cases",
+        "description": "Find and compare similar patient cases from our extensive database"
+      },
+      "interactiveLearning": {
+        "title": "Interactive Learning",
+        "description": "Hands-on educational tools for medical students and residents"
+      },
+      "reportGeneration": {
+        "title": "Report Generation",
+        "description": "Automated medical report generation with customizable templates"
+      },
+      "secureCloud": {
+        "title": "Secure Cloud",
+        "description": "HIPAA-compliant cloud storage for all patient data and medical records"
+      },
+      "realTimeCollab": {
+        "title": "Real-time Collaboration",
+        "description": "Collaborate with colleagues and specialists in real-time"
+      }
+    },
+    "cta": {
+      "title": "Ready to Transform Your Practice?",
+      "description": "Join thousands of healthcare professionals using MedSightAI to deliver better patient outcomes.",
+      "getStarted": "Get Started",
+      "learnMore": "Learn More"
+    },
+    "stats": {
+      "professionals": "Healthcare Professionals",
+      "casesAnalyzed": "Cases Analyzed",
+      "accuracy": "Diagnostic Accuracy",
+      "satisfaction": "User Satisfaction"
+    }
+  },
+  "doctor": {
+    "title": "Patient Management",
+    "searchPlaceholder": "Search patients...",
+    "filters": {
+      "all": "All",
+      "critical": "Critical",
+      "stable": "Stable",
+      "improving": "Improving"
+    },
+    "patientCard": {
+      "years": "years",
+      "images": "images",
+      "view": "View Details"
+    },
+    "noResults": "No patients found",
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next",
+      "showing": "Showing",
+      "to": "to",
+      "of": "of",
+      "patients": "patients"
+    }
+  },
+  "student": {
+    "title": "Training Cases",
+    "searchPlaceholder": "Search training cases...",
+    "filters": {
+      "all": "All Cases",
+      "tuberculosis": "Tuberculosis",
+      "pneumonia": "Pneumonia",
+      "noFinding": "No Finding",
+      "other": "Other"
+    }
+  },
+  "doctorDetail": {
+    "tabs": {
+      "overview": "Overview",
+      "images": "Images",
+      "analysis": "Analysis",
+      "report": "Report"
+    },
+    "patientInfo": {
+      "title": "Patient Information",
+      "name": "Patient Name",
+      "age": "Age",
+      "years": "years",
+      "gender": "Gender",
+      "male": "Male",
+      "female": "Female",
+      "id": "Patient ID",
+      "admissionDate": "Admission Date",
+      "department": "Department",
+      "physician": "Attending Physician",
+      "status": "Status",
+      "critical": "Critical",
+      "stable": "Stable",
+      "improving": "Improving"
+    },
+    "aiConfidence": {
+      "title": "AI Confidence",
+      "overallScore": "Overall Diagnostic Score",
+      "breakdown": "Confidence Breakdown",
+      "diseaseDetection": "Disease Detection",
+      "imageQuality": "Image Quality",
+      "anatomicalMatch": "Anatomical Match"
+    },
+    "keyFindings": {
+      "title": "Key Findings",
+      "noFindings": "No significant findings detected"
+    },
+    "recommendations": {
+      "title": "AI Recommendations",
+      "noRecommendations": "No recommendations available"
+    },
+    "suspectedDisease": {
+      "title": "Suspected Diseases",
+      "confidence": "Confidence",
+      "noDiseases": "No diseases suspected"
+    },
+    "similarCases": {
+      "title": "Similar Cases",
+      "findSimilar": "Find Similar Cases",
+      "modalTitle": "Similar Cases",
+      "close": "Close",
+      "viewCase": "View Case",
+      "noSimilarCases": "No similar cases found",
+      "searching": "Searching for similar cases..."
+    },
+    "imageGallery": {
+      "allImages": "All Images",
+      "groupedByType": "Grouped by Type",
+      "zoomIn": "Zoom In",
+      "zoomOut": "Zoom Out",
+      "resetZoom": "Reset Zoom",
+      "fitToScreen": "Fit to Screen",
+      "actualSize": "Actual Size"
+    },
+    "report": {
+      "generate": "Generate Report",
+      "download": "Download PDF",
+      "print": "Print",
+      "medicalReport": "Medical Report",
+      "date": "Date",
+      "clinicalFindings": "Clinical Findings",
+      "aiAnalysis": "AI Analysis",
+      "recommendations": "Recommendations"
+    }
+  },
+  "studentDetail": {
+    "tabs": {
+      "interactive": "Interactive",
+      "chatbot": "AI Tutor",
+      "submit": "Submit"
+    },
+    "interactive": {
+      "instructions": "Click on the image areas to learn about different anatomical structures and findings",
+      "learningMode": "Learning Mode Active",
+      "reset": "Reset",
+      "regions": "regions",
+      "toggleComparison": "Compare"
+    },
+    "chatbot": {
+      "title": "AI Assistant",
+      "subtitle": "Ask me anything about this case",
+      "greeting": "Hello! I'm your AI medical assistant. I can help you better understand this case. Feel free to ask me anything!",
+      "placeholder": "Type your question...",
+      "send": "Send",
+      "typing": "Typing..."
+    },
+    "submit": {
+      "diagnosis": "Diagnosis",
+      "diagnosisPlaceholder": "e.g., Coronary Artery Disease",
+      "submit": "Submit",
+      "success": "Diagnosis submitted successfully!",
+      "error": "Please enter a diagnosis"
+    }
+  },
+  "settings": {
+    "title": "PACS/VNA Settings",
+    "pacs": {
+      "title": "PACS Configuration",
+      "serverUrl": "PACS Server URL",
+      "serverUrlPlaceholder": "e.g., https://pacs.hospital.com",
+      "aeTitle": "AE Title",
+      "aeTitlePlaceholder": "e.g., MEDSIGHTAI",
+      "port": "Port",
+      "portPlaceholder": "e.g., 11112",
+      "testConnection": "Test Connection",
+      "save": "Save PACS Settings"
+    },
+    "vna": {
+      "title": "VNA Configuration",
+      "vendorUrl": "VNA Vendor URL",
+      "vendorUrlPlaceholder": "e.g., https://vna.vendor.com",
+      "apiKey": "API Key",
+      "apiKeyPlaceholder": "Enter your VNA API key",
+      "storageLocation": "Storage Location",
+      "storageLocationPlaceholder": "e.g., /medical-images",
+      "testConnection": "Test Connection",
+      "save": "Save VNA Settings"
+    },
+    "success": "Settings saved successfully!",
+    "error": "Failed to save settings",
+    "connectionSuccess": "Connection successful!",
+    "connectionError": "Connection failed"
+  },
+  "auth": {
+    "login": {
+      "title": "Welcome Back",
+      "subtitle": "Sign in to your account",
+      "email": "Email",
+      "emailPlaceholder": "Enter your email",
+      "password": "Password",
+      "passwordPlaceholder": "Enter your password",
+      "role": "Role",
+      "selectRole": "Select your role",
+      "doctor": "Doctor",
+      "student": "Student",
+      "admin": "Administrator",
+      "rememberMe": "Remember me",
+      "forgotPassword": "Forgot password?",
+      "signIn": "Sign In",
+      "noAccount": "Don't have an account?",
+      "signUp": "Sign up"
+    },
+    "logout": {
+      "title": "Confirm Logout",
+      "message": "Are you sure you want to logout?",
+      "confirm": "Yes, Logout",
+      "cancel": "Cancel"
+    }
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "search": "Search",
+    "filter": "Filter",
+    "clear": "Clear",
+    "apply": "Apply",
+    "upload": "Upload",
+    "download": "Download",
+    "print": "Print",
+    "share": "Share",
+    "export": "Export",
+    "import": "Import",
+    "hide": "Hide",
+    "show": "Show",
+    "refresh": "Refresh",
+    "view": "View",
+    "details": "Details",
+    "more": "More",
+    "less": "Less",
+    "all": "All",
+    "none": "None",
+    "yes": "Yes",
+    "no": "No"
+  }
+}

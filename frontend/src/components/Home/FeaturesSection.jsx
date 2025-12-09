@@ -1,43 +1,45 @@
 import { useState, useEffect, useRef } from 'react';
 import { Brain, Heart, Shield, GraduationCap, Activity, Stethoscope } from 'lucide-react';
 import { FeatureCard } from './FeatureCard';
-
-const features = [
-    {
-        icon: Brain,
-        title: 'Chẩn Đoán Bằng AI',
-        description: 'Tận dụng thuật toán học máy tiên tiến để chẩn đoán y khoa chính xác và đề xuất phương pháp điều trị.'
-    },
-    {
-        icon: Heart,
-        title: 'Quản Lý Chăm Sóc Bệnh Nhân',
-        description: 'Hồ sơ bệnh nhân toàn diện, lịch sử điều trị và đặt lịch hẹn trong một nền tảng thống nhất.'
-    },
-    {
-        icon: Shield,
-        title: 'Bảo Mật & Tuân Thủ',
-        description: 'Bảo mật cấp doanh nghiệp với sự tuân thủ đầy đủ các tiêu chuẩn bảo vệ dữ liệu y tế và quy định.'
-    },
-    {
-        icon: GraduationCap,
-        title: 'Giáo Dục Y Khoa',
-        description: 'Mô-đun học tập tương tác, mô phỏng ảo và tài nguyên y khoa đầy đủ cho sinh viên.'
-    },
-    {
-        icon: Activity,
-        title: 'Phân Tích Thời Gian Thực',
-        description: 'Giám sát dấu hiệu sinh tồn bệnh nhân, theo dõi tiến trình điều trị và phân tích xu hướng sức khỏe với trực quan hóa dữ liệu thời gian thực.'
-    },
-    {
-        icon: Stethoscope,
-        title: 'Hợp Tác Chuyên Gia',
-        description: 'Kết nối với các chuyên gia y tế trên toàn thế giới, chia sẻ kiến thức và hợp tác về các ca bệnh phức tạp.'
-    }
-];
+import { useTranslation } from 'react-i18next';
 
 export const FeaturesSection = () => {
+    const { t } = useTranslation();
     const [visibleCards, setVisibleCards] = useState([]);
     const sectionRef = useRef(null);
+
+    const features = [
+        {
+            icon: Brain,
+            title: t('home.features.aiDiagnostics.title'),
+            description: t('home.features.aiDiagnostics.description')
+        },
+        {
+            icon: Heart,
+            title: t('home.features.similarCases.title'),
+            description: t('home.features.similarCases.description')
+        },
+        {
+            icon: Shield,
+            title: t('home.features.secureCloud.title'),
+            description: t('home.features.secureCloud.description')
+        },
+        {
+            icon: GraduationCap,
+            title: t('home.features.interactiveLearning.title'),
+            description: t('home.features.interactiveLearning.description')
+        },
+        {
+            icon: Activity,
+            title: t('home.features.reportGeneration.title'),
+            description: t('home.features.reportGeneration.description')
+        },
+        {
+            icon: Stethoscope,
+            title: t('home.features.realTimeCollab.title'),
+            description: t('home.features.realTimeCollab.description')
+        }
+    ];
 
     useEffect(() => {
         const observer = new IntersectionObserver(
@@ -72,13 +74,13 @@ export const FeaturesSection = () => {
                 observer.unobserve(sectionRef.current);
             }
         };
-    }, []);
+    }, [features]);
 
     return (
         <div ref={sectionRef} className="container mx-auto px-6 py-20">
             <div className="text-center mb-16">
-                <h2 className="text-3xl md:text-4xl font-bold mb-4">Tại Sao Chọn MedSightAI?</h2>
-                <p className="text-gray-400 text-lg">Các tính năng tiên tiến được thiết kế cho chăm sóc sức khỏe hiện đại</p>
+                <h2 className="text-3xl md:text-4xl font-bold mb-4">{t('home.features.title')}</h2>
+                <p className="text-gray-400 text-lg">{t('home.features.subtitle')}</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
