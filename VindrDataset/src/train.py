@@ -241,16 +241,22 @@ def get_args():
     parser.add_argument("--save_path", type=str, default="./checkpoints")
     parser.add_argument("--max_samples", type=int, default=None)
     
-    # Epochs cho từng phase
-    parser.add_argument("--epochs_p1", type=int, default=5, help="Epochs for Concept Phase")
-    parser.add_argument("--epochs_p2", type=int, default=5, help="Epochs for Prototype Phase")
-    parser.add_argument("--epochs_p3", type=int, default=5, help="Epochs for Task Phase")
+    parser.add_argument("--epochs_p1", type=int, default=5)
+    parser.add_argument("--epochs_p2", type=int, default=5)
+    parser.add_argument("--epochs_p3", type=int, default=5)
     
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--lr", type=float, default=1e-4)
-    parser.add_argument("--num_prototypes", type=int, default=5, help="Số prototypes mỗi class")
+    parser.add_argument("--num_prototypes", type=int, default=5)
     parser.add_argument("--img_size", type=int, default=384)
     parser.add_argument("--num_classes", type=int, default=14)
+    
+    # ===== THÊM MỚI =====
+    parser.add_argument("--backbone_type", type=str, default="resnet",
+                        choices=["resnet", "medmae"])
+    parser.add_argument("--model_name", type=str, default="resnet50")
+    parser.add_argument("--pretrained_weights", type=str, default=None)
+    
     return parser.parse_args()
 
 def main():
@@ -336,10 +342,26 @@ def main():
 
     # --- 2. SETUP MODEL & OPTIMIZER ---
     print("-> Initializing CSRModel...")
+    print(f"   Backbone: {args.backbone_type}, Image size: {args.img_size}")
+    
+    # Xử lý model_name cho MedMAE
+    if args.backbone_type == 'medmae':
+        if args.pretrained_weights:
+            model_name_to_use = args.pretrained_weights
+        elif args.model_name.endswith('.pth'):
+            model_name_to_use = args.model_name
+        else:
+            model_name_to_use = args.model_name
+        print(f"   Using weights: {model_name_to_use}")
+    else:
+        model_name_to_use = args.model_name
+    
     model = CSRModel(
         num_classes=args.num_classes, 
         num_prototypes=args.num_prototypes, 
-        model_name="resnet50"
+        model_name=model_name_to_use,
+        backbone_type=args.backbone_type,
+        img_size=args.img_size  # ⚠️ Truyền img_size
     )
     model.to(device)
 

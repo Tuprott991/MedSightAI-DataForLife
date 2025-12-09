@@ -2,18 +2,37 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import timm
+from medmae import MedMAEBackbone
 
 class CSRModel(nn.Module):
-    def __init__(self, num_classes=14, num_prototypes=5, model_name="resnet50", pretrained=True):
+    def __init__(self, num_classes=14, num_prototypes=5, model_name="resnet50", 
+                 pretrained=True, backbone_type='resnet', img_size=384):
+        """
+        Args:
+            img_size: Kích thước ảnh input (384 cho ResNet, 224 hoặc 384 cho MedMAE)
+        """
         super().__init__()
         
+        self.backbone_type = backbone_type
+        self.img_size = img_size
+        
         # --- PHẦN 1: CONCEPT MODEL (Giai đoạn 1) ---
-        # F: Feature Extractor
-        self.backbone = timm.create_model(
-            model_name, pretrained=pretrained, features_only=True, out_indices=(4,)
-        )
-        feature_info = self.backbone.feature_info.get_dicts()[-1]
-        self.feature_dim = feature_info["num_chs"]
+        if backbone_type == 'medmae':
+            pretrained_weights = model_name if model_name.endswith('.pth') else None
+            hf_model = 'facebook/vit-mae-base'
+            
+            self.backbone = MedMAEBackbone(
+                model_name=hf_model,
+                pretrained_weights=pretrained_weights,
+                img_size=img_size  # ⚠️ Truyền img_size vào
+            )
+            self.feature_dim = self.backbone.out_channels  # 768
+        else:
+            self.backbone = timm.create_model(
+                model_name, pretrained=pretrained, features_only=True, out_indices=(4,)
+            )
+            feature_info = self.backbone.feature_info.get_dicts()[-1]
+            self.feature_dim = feature_info["num_chs"]
 
         # C: Concept Head (Tạo CAMs)
         self.concept_head = nn.Conv2d(self.feature_dim, num_classes, kernel_size=1)
@@ -41,8 +60,13 @@ class CSRModel(nn.Module):
     def get_features_and_cam(self, x):
         """Dùng cho Giai đoạn 1"""
         if x.size(1) == 1: x = x.repeat(1, 3, 1, 1)
-        features = self.backbone(x)[0]       # f
-        attn_logits = self.concept_head(features) # cam
+        
+        if self.backbone_type == 'medmae':
+            features = self.backbone(x)
+        else:
+            features = self.backbone(x)[0]
+        
+        attn_logits = self.concept_head(features)
         return features, attn_logits
 
     def get_projected_vectors(self, features, attn_logits):
