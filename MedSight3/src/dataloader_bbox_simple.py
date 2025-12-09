@@ -157,9 +157,9 @@ class CSRDatasetWithBBoxSimple(Dataset):
         if self.transform:
             image = self.transform(image)
         
-        # Get labels
-        concepts = torch.tensor(row[self.concept_cols].values, dtype=torch.float32)
-        targets = torch.tensor(row[self.target_cols].values, dtype=torch.float32)
+        # Get labels - ensure numeric conversion
+        concepts = torch.tensor(row[self.concept_cols].values.astype(float), dtype=torch.float32)
+        targets = torch.tensor(row[self.target_cols].values.astype(float), dtype=torch.float32)
         
         return {
             'image': image,
