@@ -12,8 +12,9 @@ from pathlib import Path
 from multiprocessing import Pool, cpu_count
 from tqdm import tqdm
 import pandas as pd
-from utils import dicom_to_image
-from PIL import Image
+import pydicom
+import numpy as np
+import cv2
 
 def process_single_dicom(args):
     """
@@ -27,11 +28,24 @@ def process_single_dicom(args):
         if os.path.exists(output_path):
             return True, None
         
-        # Đọc và xử lý DICOM với target size
-        img = dicom_to_image(dicom_path, size=target_size)
+        # Đọc DICOM file
+        dicom = pydicom.dcmread(dicom_path)
+        pixel_array = dicom.pixel_array
         
-        # Lưu thành PNG (hoặc JPG nếu muốn tiết kiệm dung lượng)
-        img.save(output_path, 'PNG', optimize=True)
+        # Photometric Interpretation handling (quan trọng cho X-Ray)
+        if dicom.PhotometricInterpretation == "MONOCHROME1":
+            pixel_array = np.max(pixel_array) - pixel_array
+            
+        # Normalize về 0-255
+        pixel_array = pixel_array.astype(np.float32)
+        pixel_array = (pixel_array - pixel_array.min()) / (pixel_array.max() - pixel_array.min()) * 255.0
+        pixel_array = pixel_array.astype(np.uint8)
+        
+        # Resize
+        img = cv2.resize(pixel_array, target_size)
+        
+        # Save PNG
+        cv2.imwrite(output_path, img)
         
         return True, None
     except Exception as e:
