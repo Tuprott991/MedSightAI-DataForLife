@@ -24,7 +24,8 @@ class S3Service:
         self,
         file: UploadFile,
         prefix: str = "",
-        custom_name: Optional[str] = None
+        custom_name: Optional[str] = None,
+        make_public: bool = True
     ) -> str:
         """
         Upload a file to S3
@@ -33,9 +34,10 @@ class S3Service:
             file: UploadFile object from FastAPI
             prefix: S3 prefix/folder (e.g., 'original/', 'processed/')
             custom_name: Custom filename (optional)
+            make_public: Make file publicly accessible (default: True)
         
         Returns:
-            S3 file path
+            Full S3 public URL (e.g., https://bucket.s3.region.amazonaws.com/key)
         """
         try:
             # Generate unique filename
@@ -48,15 +50,24 @@ class S3Service:
             # Construct S3 key
             s3_key = f"{prefix}{filename}"
             
+            # Prepare extra args
+            extra_args = {
+                'ContentType': file.content_type or 'application/octet-stream'
+            }
+            
+            # Note: Not using ACL - bucket policy will handle public access
+            # If ACL is needed, enable ACLs in S3 bucket settings first
+            
             # Upload to S3
             self.client.upload_fileobj(
                 file.file,
                 self.bucket_name,
                 s3_key,
-                ExtraArgs={'ContentType': file.content_type or 'application/octet-stream'}
+                ExtraArgs=extra_args
             )
             
-            return s3_key
+            # Return full public URL
+            return self.get_public_url(s3_key)
         
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to upload file to S3: {str(e)}")
@@ -66,7 +77,8 @@ class S3Service:
         file_bytes: bytes,
         filename: str,
         prefix: str = "",
-        content_type: str = "image/jpeg"
+        content_type: str = "image/jpeg",
+        make_public: bool = True
     ) -> str:
         """
         Upload bytes data to S3
@@ -76,21 +88,28 @@ class S3Service:
             filename: Filename
             prefix: S3 prefix/folder
             content_type: Content type
+            make_public: Make file publicly accessible (default: True)
         
         Returns:
-            S3 file path
+            Full S3 public URL
         """
         try:
             s3_key = f"{prefix}{filename}"
             
-            self.client.put_object(
-                Bucket=self.bucket_name,
-                Key=s3_key,
-                Body=file_bytes,
-                ContentType=content_type
-            )
+            put_args = {
+                'Bucket': self.bucket_name,
+                'Key': s3_key,
+                'Body': file_bytes,
+                'ContentType': content_type
+            }
             
-            return s3_key
+            # Note: Not using ACL - bucket policy will handle public access
+            # If ACL is needed, enable ACLs in S3 bucket settings first
+            
+            self.client.put_object(**put_args)
+            
+            # Return full public URL
+            return self.get_public_url(s3_key)
         
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to upload bytes to S3: {str(e)}")
@@ -148,9 +167,32 @@ class S3Service:
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to delete file from S3: {str(e)}")
     
+    def get_public_url(self, s3_key: str) -> str:
+        """
+        Get the public URL for an S3 object (no expiration)
+        
+        Args:
+            s3_key: S3 object key (e.g., 'cases/patient-id/original/image.jpg')
+        
+        Returns:
+            Public URL (e.g., https://bucket.s3.region.amazonaws.com/key)
+        """
+        # Get region from settings
+        region = settings.AWS_REGION
+        
+        # Construct public URL
+        if region == 'us-east-1':
+            # us-east-1 uses different URL format
+            url = f"https://{self.bucket_name}.s3.amazonaws.com/{s3_key}"
+        else:
+            url = f"https://{self.bucket_name}.s3.{region}.amazonaws.com/{s3_key}"
+        
+        return url
+    
     def get_presigned_url(self, s3_key: str, expiration: int = 3600) -> str:
         """
         Generate a presigned URL for temporary file access
+        (Use get_public_url() instead for permanent access)
         
         Args:
             s3_key: S3 object key
