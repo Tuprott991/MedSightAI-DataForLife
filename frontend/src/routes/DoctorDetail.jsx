@@ -151,7 +151,7 @@ export const DoctorDetail = () => {
                 const rightImage = {
                     id: `similar-${similarCaseData.patientName}`,
                     url: similarCaseData.imageUrl,
-                    type: `Ca tương tự: ${similarCaseData.patientName}`,
+                    type: `${t('similarCase.similarCase')}: ${similarCaseData.patientName}`,
                     imageCode: `SIMILAR-CASE`,
                     modality: "Comparison"
                 };
@@ -392,21 +392,21 @@ export const DoctorDetail = () => {
                                                                         <div className="pt-2 border-t border-white/10 space-y-2.5">
                                                                             {commonFindings.length > 0 && (
                                                                                 <p className="leading-relaxed">
-                                                                                    <span className="font-medium text-green-400">{t('report.similarities')}:</span> {t('report.similarities') === 'Similarities' ? 'Both cases share the same symptoms' : 'Cả hai ca bệnh đều có cùng triệu chứng'} <span className="text-green-300 font-medium">{commonFindings.join(', ')}</span>. {t('report.similarities') === 'Similarities' ? 'The imaging findings show similar patterns of lung involvement, with comparable locations and distributions of lesions. This suggests similar pathological processes and mechanisms of injury between the two cases.' : 'Các dấu hiệu hình ảnh học thể hiện mức độ tổn thương phổi tương tự, với vị trí và phân bố tổn thương có nhiều điểm chung. Điều này gợi ý tiến trình bệnh lý và cơ chế gây tổn thương có sự tương đồng giữa hai ca.'}
+                                                                                    <span className="font-medium text-green-400">{t('report.similarities')}:</span> {i18n.language === 'en' ? 'Both cases share the same symptoms' : 'Cả hai ca bệnh đều có cùng triệu chứng'} <span className="text-green-300 font-medium">{commonFindings.join(', ')}</span>. {i18n.language === 'en' ? 'The imaging findings show similar patterns of lung involvement, with comparable locations and distributions of lesions. This suggests similar pathological processes and mechanisms of injury between the two cases.' : 'Các dấu hiệu hình ảnh học thể hiện mức độ tổn thương phổi tương tự, với vị trí và phân bố tổn thương có nhiều điểm chung. Điều này gợi ý tiến trình bệnh lý và cơ chế gây tổn thương có sự tương đồng giữa hai ca.'}
                                                                                 </p>
                                                                             )}
 
                                                                             {(uniqueCurrentFindings.length > 0 || uniqueSimilarFindings.length > 0) && (
                                                                                 <p className="leading-relaxed">
-                                                                                    <span className="font-medium text-amber-400">{t('report.differences')}:</span> {t('report.differences') === 'Differences' ? 'However, the current case' : 'Tuy nhiên, ca bệnh hiện tại'}
+                                                                                    <span className="font-medium text-amber-400">{t('report.differences')}:</span> {i18n.language === 'en' ? 'However, the current case' : 'Tuy nhiên, ca bệnh hiện tại'}
                                                                                     {uniqueCurrentFindings.length > 0 && (
-                                                                                        <span> {t('report.differences') === 'Differences' ? 'has additional symptoms' : 'có thêm triệu chứng'} <span className="text-amber-300 font-medium">{uniqueCurrentFindings.join(', ')}</span></span>
+                                                                                        <span> {i18n.language === 'en' ? 'has additional symptoms' : 'có thêm triệu chứng'} <span className="text-amber-300 font-medium">{uniqueCurrentFindings.join(', ')}</span></span>
                                                                                     )}
-                                                                                    {uniqueCurrentFindings.length > 0 && uniqueSimilarFindings.length > 0 && (t('report.differences') === 'Differences' ? ', while' : ', trong khi')}
+                                                                                    {uniqueCurrentFindings.length > 0 && uniqueSimilarFindings.length > 0 && (i18n.language === 'en' ? ', while' : ', trong khi')}
                                                                                     {uniqueSimilarFindings.length > 0 && (
-                                                                                        <span> {t('report.differences') === 'Differences' ? 'the similar case has' : 'ca tương tự có'} <span className="text-gray-300 font-medium">{uniqueSimilarFindings.join(', ')}</span></span>
+                                                                                        <span> {i18n.language === 'en' ? 'the similar case has' : 'ca tương tự có'} <span className="text-gray-300 font-medium">{uniqueSimilarFindings.join(', ')}</span></span>
                                                                                     )}
-                                                                                    . {t('report.differences') === 'Differences' ? 'These differences should be considered in the overall clinical context, underlying medical history, and specific risk factors of each patient.' : 'Sự khác biệt này cần được xem xét trong bối cảnh lâm sàng tổng thể, tiền sử bệnh lý nền và các yếu tố nguy cơ đặc thù của từng bệnh nhân.'}
+                                                                                    . {i18n.language === 'en' ? 'These differences should be considered in the overall clinical context, underlying medical history, and specific risk factors of each patient.' : 'Sự khác biệt này cần được xem xét trong bối cảnh lâm sàng tổng thể, tiền sử bệnh lý nền và các yếu tố nguy cơ đặc thù của từng bệnh nhân.'}
                                                                                 </p>
                                                                             )}
 

@@ -5,11 +5,29 @@ import { getTranslatedDiagnosis } from '../../../utils/diagnosisHelper';
 import { SimilarCaseCard } from './SimilarCaseCard';
 
 export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo, onCompareImages }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [similarCases, setSimilarCases] = useState([]);
     const [selectedCase, setSelectedCase] = useState(null);
+
+    // Helper function to translate status
+    const getTranslatedStatus = (status) => {
+        const statusMap = {
+            'Resolved': t('similarCase.resolved'),
+            'Stable': t('similarCase.stable'),
+            'Under Treatment': t('similarCase.underTreatment'),
+            'Critical': t('similarCase.critical')
+        };
+        return statusMap[status] || status;
+    };
+
+    // Helper function to translate gender
+    const getTranslatedGender = (gender) => {
+        if (gender === 'M') return i18n.language === 'vi' ? 'Nam' : 'Male';
+        if (gender === 'F') return i18n.language === 'vi' ? 'Nữ' : 'Female';
+        return gender;
+    };
 
     // Reset selected case when modal opens
     useEffect(() => {
@@ -62,67 +80,67 @@ export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo, 
                         id: 1,
                         patientName: "Nguyễn Văn An",
                         age: 52,
-                        gender: "Nam",
+                        gender: "M",
                         diagnosis: diseaseCategory,
                         imageUrl: "/src/mock_data/similar/85f4441055a2d9fc80b3.jpg",
                         similarity: 94,
                         date: "2025-10-15",
-                        status: "Đã khỏi"
+                        status: "Resolved"
                     },
                     {
                         id: 2,
                         patientName: "Trần Thị Bình",
                         age: 48,
-                        gender: "Nữ",
+                        gender: "F",
                         diagnosis: diseaseCategory,
                         imageUrl: "/src/mock_data/similar/1cea1c080dba81e4d8ab.jpg",
                         similarity: 89,
                         date: "2025-09-22",
-                        status: "Ổn định"
+                        status: "Stable"
                     },
                     {
                         id: 3,
                         patientName: "Lê Văn Cường",
                         age: 55,
-                        gender: "Nam",
+                        gender: "M",
                         diagnosis: diseaseCategory,
                         imageUrl: "/src/mock_data/similar/5c5f83be920c1e52471d.jpg",
                         similarity: 87,
                         date: "2025-08-10",
-                        status: "Đang điều trị"
+                        status: "Under Treatment"
                     },
                     {
                         id: 4,
                         patientName: "Nguyễn Văn Dũng",
                         age: 46,
-                        gender: "Nữ",
+                        gender: "F",
                         diagnosis: diseaseCategory,
                         imageUrl: "/src/mock_data/similar/56b2d159c0eb4cb515fa.jpg",
                         similarity: 85,
                         date: "2025-11-12",
-                        status: "Nguy kịch"
+                        status: "Critical"
                     },
                     {
                         id: 5,
                         patientName: "Hoàng Văn Em",
                         age: 60,
-                        gender: "Nam",
+                        gender: "M",
                         diagnosis: diseaseCategory,
                         imageUrl: "/src/mock_data/similar/50399ed98f6b03355a7a.jpg",
                         similarity: 83,
                         date: "2025-07-18",
-                        status: "Đã khỏi"
+                        status: "Resolved"
                     },
                     {
                         id: 6,
                         patientName: "Đỗ Thị Phương",
                         age: 51,
-                        gender: "Nữ",
+                        gender: "F",
                         diagnosis: diseaseCategory,
                         imageUrl: "/src/mock_data/similar/c83f2fdc3e6eb230eb7f.jpg",
                         similarity: 81,
                         date: "2025-06-25",
-                        status: "Ổn định"
+                        status: "Stable"
                     }
                 ];
 
@@ -273,7 +291,7 @@ export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo, 
                                             </div>
                                             <div>
                                                 <p className="text-xs text-gray-500">{t('similarCase.ageGender')}</p>
-                                                <p className="text-sm text-white">{selectedCase.age} {t('similarCase.yearsOld')}, {selectedCase.gender === 'M' ? t('patientInfo.male') : t('patientInfo.female')}</p>
+                                                <p className="text-sm text-white">{selectedCase.age} {t('similarCase.yearsOld')}, {getTranslatedGender(selectedCase.gender)}</p>
                                             </div>
                                             <div>
                                                 <p className="text-xs text-gray-500">{t('similarCase.diagnosis')}</p>
@@ -281,11 +299,11 @@ export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo, 
                                             </div>
                                             <div>
                                                 <p className="text-xs text-gray-500">{t('similarCase.examinationDate')}</p>
-                                                <p className="text-sm text-white">{new Date(selectedCase.date).toLocaleDateString('vi-VN')}</p>
+                                                <p className="text-sm text-white">{new Date(selectedCase.date).toLocaleDateString(i18n.language === 'vi' ? 'vi-VN' : 'en-US')}</p>
                                             </div>
                                             <div>
                                                 <p className="text-xs text-gray-500">{t('similarCase.status')}</p>
-                                                <p className="text-sm text-white">{selectedCase.status === 'Resolved' ? t('similarCase.resolved') : selectedCase.status === 'Stable' ? t('similarCase.stable') : selectedCase.status === 'Under Treatment' ? t('similarCase.underTreatment') : selectedCase.status === 'Critical' ? t('similarCase.critical') : selectedCase.status}</p>
+                                                <p className="text-sm text-white">{getTranslatedStatus(selectedCase.status)}</p>
                                             </div>
                                             <div>
                                                 <p className="text-xs text-gray-500">{t('similarCase.similarity')}</p>

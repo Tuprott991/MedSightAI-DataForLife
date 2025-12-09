@@ -1,14 +1,20 @@
 /**
- * Map diagnosis Vietnamese text to translation key
- * @param {string} diagnosis - Vietnamese diagnosis text
+ * Map diagnosis text (Vietnamese or English) to translation key
+ * @param {string} diagnosis - Diagnosis text in Vietnamese or English
  * @returns {string} Translation key
  */
 export const getDiagnosisKey = (diagnosis) => {
   const diagnosisMap = {
+    // Vietnamese
     "Lao phổi": "diagnosis.tuberculosis",
     "Viêm phổi": "diagnosis.pneumonia",
     "Bệnh phổi khác": "diagnosis.otherLungDisease",
     "Chưa phát hiện": "diagnosis.noFinding",
+    // English
+    Tuberculosis: "diagnosis.tuberculosis",
+    Pneumonia: "diagnosis.pneumonia",
+    "Other Lung Disease": "diagnosis.otherLungDisease",
+    "No Finding": "diagnosis.noFinding",
   };
 
   return diagnosisMap[diagnosis] || diagnosis;
