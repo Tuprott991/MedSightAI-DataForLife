@@ -35,6 +35,8 @@ class CSRModel(nn.Module):
         # H: Task Head (Dự đoán bệnh từ điểm tương đồng)
         # Input là vector similarity score có kích thước [Num_Classes * Num_Prototypes]
         self.task_head = nn.Linear(num_classes * num_prototypes, num_classes)
+        self.num_classes = num_classes
+        self.num_prototypes = num_prototypes
 
     def get_features_and_cam(self, x):
         """Dùng cho Giai đoạn 1"""
@@ -90,7 +92,7 @@ class CSRModel(nn.Module):
         sim_scores = torch.einsum('bkc,kmc->bkm', projected_vectors, prototypes_norm)
         
         # Flatten thành vector s [B, K*M]
-        s_vector = sim_scores.view(x.size(0), -1)
+        s_vector = sim_scores.reshape(x.size(0), -1)
         
         # 3. Predict y từ s [cite: 128]
         logits = self.task_head(s_vector)

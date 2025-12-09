@@ -10,9 +10,9 @@ from tqdm import tqdm
 
 # --- IMPORTS TỪ SOURCE CỦA BẠN ---
 # Đảm bảo model.py đã được cập nhật Class CSRModel như hướng dẫn trước
-from src.dataset import VINDRCXRDataset
-from src.model import CSRModel 
-from src.loss import CSRContrastiveLoss
+from dataset import VINDRCXRDataset
+from model import CSRModel 
+from loss import CSRContrastiveLoss
 
 # ==========================================
 # 1. CÁC HÀM TIỆN ÍCH (UTILS)
@@ -98,13 +98,16 @@ def train_phase_1(model, loader, optimizer, device):
     model.train()
     running_loss = 0.0
     criterion = nn.BCEWithLogitsLoss()
-    
+    seg_criterion = nn.BCEWithLogitsLoss()
+    w_seg = 10.0
+
     pbar = tqdm(loader, desc="Phase 1 (Concept)")
     for batch in pbar:
         if batch is None: continue
-        images, cls_labels, _, _ = batch
+        images, cls_labels, attn_maps_gt, _ = batch
         images, cls_labels = images.to(device), cls_labels.to(device)
-        
+        attn_maps_gt = attn_maps_gt.to(device)
+
         optimizer.zero_grad()
         
         # Chỉ chạy phần lấy features và CAM
@@ -112,8 +115,21 @@ def train_phase_1(model, loader, optimizer, device):
         
         # Global Average Pooling lên CAM để ra logits phân loại: [B, K, H, W] -> [B, K]
         concept_preds = F.adaptive_avg_pool2d(attn_logits, (1, 1)).view(images.size(0), -1)
+        loss_cls = criterion(concept_preds, cls_labels)
+
+        if attn_logits.shape[-2:] != attn_maps_gt.shape[-2:]:
+            attn_logits_up = F.interpolate(
+                attn_logits,
+                size=attn_maps_gt.shape[-2:],
+                mode="bilinear",
+                align_corners=False,
+            )
+        else:
+            attn_logits_up = attn_logits
+
+        loss_seg = seg_criterion(attn_logits_up, attn_maps_gt)
+        loss = loss_cls + w_seg * loss_seg
         
-        loss = criterion(concept_preds, cls_labels)
         loss.backward()
         optimizer.step()
         
@@ -136,6 +152,7 @@ def train_phase_2(model, loader, optimizer, device):
     criterion = CSRContrastiveLoss().to(device)
     
     running_loss = 0.0
+    valid_batches = 0
     
     pbar = tqdm(loader, desc="Phase 2 (Proto)")
     for batch in pbar:
@@ -154,14 +171,22 @@ def train_phase_2(model, loader, optimizer, device):
         
         # 3. Tính Loss
         loss = criterion(projected_vecs, model.prototypes, cls_labels)
-        
-        loss.backward()
-        optimizer.step()
-        
-        running_loss += loss.item()
-        pbar.set_postfix({"ConLoss": f"{loss.item():.4f}"})
-        
-    return running_loss / len(loader)
+
+        if loss.requires_grad:
+            loss.backward()
+            optimizer.step()
+            
+            running_loss += loss.item()
+            valid_batches += 1
+            pbar.set_postfix({"ConLoss": f"{loss.item():.4f}"})
+        else:
+            # Skip batch này vì không có dữ liệu để học
+            pbar.set_postfix({"ConLoss": "Skipped (No Pos)"})
+    
+    if valid_batches == 0:
+        return 0.0
+
+    return running_loss / valid_batches
 
 def train_phase_3(model, loader, optimizer, device):
     """
@@ -171,9 +196,17 @@ def train_phase_3(model, loader, optimizer, device):
     Loss: BCE trên Final Prediction
     """
     model.train()
-    # Freeze logic đã xử lý ở main, chỉ cần gọi forward
     running_loss = 0.0
-    criterion = nn.BCEWithLogitsLoss()
+    
+    # ⚠️ THAY ĐỔI: Khởi tạo pos_weight >= 20.0
+    # Đặt pos_weight_value (ví dụ 25.0)
+    pos_weight_value = 12.0
+    
+    # Tạo tensor pos_weight và chuyển sang device
+    pos_weight = torch.tensor([pos_weight_value] * model.num_classes).to(device)
+    
+    # Khởi tạo Criterion với pos_weight
+    criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
     
     pbar = tqdm(loader, desc="Phase 3 (Task)")
     for batch in pbar:
@@ -187,6 +220,7 @@ def train_phase_3(model, loader, optimizer, device):
         outputs = model(images)
         logits = outputs["logits"] # [B, K]
         
+        # Loss sử dụng pos_weight
         loss = criterion(logits, cls_labels)
         loss.backward()
         optimizer.step()
@@ -231,26 +265,77 @@ def main():
         image_dir=args.image_path,
         num_classes=args.num_classes,
         target_size=args.img_size,
-        map_size=args.img_size // 32, # Ví dụ 384/32 = 12
+        map_size=args.img_size // 32,
     )
     
+    # Xử lý QUICK TRAIN (Subset)
     if args.max_samples:
         indices = np.random.choice(len(full_dataset), args.max_samples, replace=False)
         dataset = Subset(full_dataset, indices)
     else:
         dataset = full_dataset
+    
+    # Sử dụng dataset hiện tại làm tập train chính
+    train_set = dataset 
 
+    # 1.1 Khởi tạo TRAIN LOADER (Dùng cho Phase 1 và Phase 3 - Chứa cả 'No Finding')
     train_loader = DataLoader(
-        dataset, 
+        train_set, 
         batch_size=args.batch_size, 
         shuffle=True, 
         num_workers=2,
-        collate_fn=collate_fn_ignore_none # QUAN TRỌNG
+        pin_memory=True,
+        collate_fn=collate_fn_ignore_none
     )
     
-    # --- 2. MODEL SETUP ---
+    # -----------------------------------------------------
+    # ⚠️ [SỬA LỖI] LỌC DỮ LIỆU CÓ BỆNH CHO PHASE 2
+    # -----------------------------------------------------
+    print("-> Lọc ảnh Positive Samples cho Phase 2...")
+    
+    # 1. Xác định Dataset gốc và danh sách Indices cần duyệt
+    # Kiểm tra xem train_set là Subset hay Dataset gốc
+    if isinstance(train_set, Subset):
+        base_dataset = train_set.dataset  # Lấy dataset gốc từ Subset
+        indices_to_check = train_set.indices
+    else:
+        base_dataset = train_set          # train_set chính là dataset gốc
+        indices_to_check = range(len(train_set)) # Duyệt qua tất cả index
+
+    phase2_indices = []
+
+    # 2. Duyệt và lọc
+    for local_idx in tqdm(indices_to_check, desc="Filtering positive data"):
+        # Lấy mẫu (Chỉ cần label để kiểm tra)
+        # dataset[idx] trả về (image, cls_label, attn_maps, image_id)
+        # item[1] là cls_label
+        item = base_dataset[local_idx]
+        if item is None: continue # Bỏ qua lỗi đọc ảnh
+        
+        label = item[1] 
+        
+        # Kiểm tra xem mẫu đó có ít nhất một nhãn dương tính không
+        if label is not None and label.sum() > 0: 
+            phase2_indices.append(local_idx)
+
+    print(f"-> Tổng số mẫu Positive cho Phase 2: {len(phase2_indices)}/{len(train_set)}")
+    
+    # 3. Tạo Phase 2 Subset và DataLoader
+    # Lưu ý: Luôn tạo Subset từ base_dataset bằng indices đã lọc
+    phase2_set = Subset(base_dataset, phase2_indices)
+    
+    phase2_loader = DataLoader(
+        phase2_set,
+        batch_size=args.batch_size,
+        shuffle=True, 
+        num_workers=2,
+        pin_memory=True,
+        collate_fn=collate_fn_ignore_none
+    )
+    # -----------------------------------------------------
+
+    # --- 2. SETUP MODEL & OPTIMIZER ---
     print("-> Initializing CSRModel...")
-    # Khởi tạo model với số prototypes
     model = CSRModel(
         num_classes=args.num_classes, 
         num_prototypes=args.num_prototypes, 
@@ -264,10 +349,10 @@ def main():
     print("\n[PHASE 1] Starting Concept Learning...")
     
     # Unfreeze Backbone & Head
-    for param in model.parameters(): param.requires_grad = True # Mở hết (hoặc đóng backbone tùy ý)
+    for param in model.parameters(): param.requires_grad = True
     
     optimizer_p1 = torch.optim.AdamW([
-        {'params': model.backbone.parameters(), 'lr': args.lr * 0.1}, # Backbone học chậm
+        {'params': model.backbone.parameters(), 'lr': args.lr * 0.1}, 
         {'params': model.concept_head.parameters(), 'lr': args.lr}
     ])
     
@@ -296,7 +381,8 @@ def main():
     ], lr=args.lr)
     
     for epoch in range(args.epochs_p2):
-        loss = train_phase_2(model, train_loader, optimizer_p2, device)
+        # Dùng phase2_loader đã lọc
+        loss = train_phase_2(model, phase2_loader, optimizer_p2, device) 
         print(f"Phase 2 - Epoch {epoch+1}/{args.epochs_p2} - Loss: {loss:.4f}")
         
     torch.save(model.state_dict(), os.path.join(args.save_path, "csr_phase2.pth"))
@@ -314,6 +400,7 @@ def main():
     optimizer_p3 = torch.optim.AdamW(model.task_head.parameters(), lr=args.lr)
     
     for epoch in range(args.epochs_p3):
+        # Dùng train_loader đầy đủ (cả No finding) cho phase cuối
         loss = train_phase_3(model, train_loader, optimizer_p3, device)
         print(f"Phase 3 - Epoch {epoch+1}/{args.epochs_p3} - Loss: {loss:.4f}")
         
