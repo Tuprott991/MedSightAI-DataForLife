@@ -55,6 +55,8 @@ class CSR(nn.Module):
         # 2. Concept Head (C) [cite: 141]
         # ---------------------------------------------------------
         # 1x1 Conv mapping features (f) -> Concept Activation Maps (CAMs)
+        # Note: No activation here - raw scores for BCEWithLogitsLoss
+        # For visualization, apply sigmoid/softmax afterwards
         self.concept_head = nn.Conv2d(feature_dim, num_concepts, kernel_size=1)
         
         # ---------------------------------------------------------
@@ -98,18 +100,56 @@ class CSR(nn.Module):
         """
         # Spatial Softmax trên CAMs [cite: 144]
         B, K, H, W = cams.size()
+        C_feat = f.size(1)
+        
         cams_flat = cams.view(B, K, -1)
         attn_weights = F.softmax(cams_flat, dim=-1).view(B, K, H, W)
         
         # Weighted Sum: Tổng hợp feature f dựa trên trọng số của CAM
-        # f: (B, C_feat, H, W) -> mở rộng thành (B, 1, C_feat, H, W)
-        # attn: (B, K, H, W) -> mở rộng thành (B, K, 1, H, W)
-        f_expanded = f.unsqueeze(1) 
-        attn_expanded = attn_weights.unsqueeze(2)
+        # f: (B, C_feat, H, W) -> reshape to (B, C_feat, H*W)
+        # attn: (B, K, H, W) -> reshape to (B, K, H*W)
+        # Goal: For each concept k, compute weighted sum of features across spatial locations
         
-        # Sum over spatial dimensions (H, W) -> (B, K, C_feat)
-        local_vectors = (f_expanded * attn_expanded).sum(dim=(-1, -2))
-        return local_vectors
+        f_flat = f.view(B, C_feat, -1)  # (B, C_feat, H*W)
+        attn_flat = attn_weights.view(B, K, -1)  # (B, K, H*W)
+        
+        # Einstein summation: batch-wise weighted sum
+        # For each batch b and concept k: sum over spatial locations i
+        # local_vectors[b, k, c] = sum_i(f[b, c, i] * attn[b, k, i])
+        local_vectors = torch.einsum('bci,bki->bkc', f_flat, attn_flat)
+        
+        return local_vectors  # (B, K, C_feat)
+
+    def get_concept_heatmaps(self, x, concept_indices=None, apply_sigmoid=True):
+        """
+        Generate visualization-ready heatmaps for specific concepts.
+        
+        Args:
+            x: Input image (B, 3, H, W)
+            concept_indices: List of concept indices to visualize (default: all)
+            apply_sigmoid: Whether to apply sigmoid activation for [0,1] range
+        
+        Returns:
+            heatmaps: (B, K_selected, H_input, W_input) upsampled to input size
+        """
+        with torch.no_grad():
+            # Forward pass
+            f = self.backbone(x)
+            cams = self.concept_head(f)  # (B, K, H_feat, W_feat)
+            
+            # Select specific concepts if requested
+            if concept_indices is not None:
+                cams = cams[:, concept_indices]  # (B, K_selected, H_feat, W_feat)
+            
+            # Apply sigmoid to normalize to [0, 1] for visualization
+            if apply_sigmoid:
+                cams = torch.sigmoid(cams)
+            
+            # Upsample to input image size for overlay
+            H, W = x.shape[2:]
+            heatmaps = F.interpolate(cams, size=(H, W), mode='bilinear', align_corners=False)
+            
+            return heatmaps
 
     def forward(self, x, importance_map=None):
         """
