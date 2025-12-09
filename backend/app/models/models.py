@@ -17,8 +17,11 @@ class Patient(Base):
     name = Column(Text, nullable=False)
     age = Column(Integer)
     gender = Column(Text)
-    history = Column(JSONB)  # Stores symptoms, medical history, test results
+    history = Column(JSONB)  # Stores medical history with dates {"date": {"diagnosis": ..., "findings": ...}}
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    blood_type = Column(Text)  # e.g., A+, B-, O+, AB+
+    status = Column(Text)  # stable, improving, critical
+    underlying_condition = Column(JSONB)  # JSON object for chronic conditions
     
     # Relationships
     cases = relationship("Case", back_populates="patient", cascade="all, delete-orphan")
@@ -35,6 +38,8 @@ class Case(Base):
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
     similar_cases = Column(JSON)  # Array of similar case IDs
     similarity_scores = Column(JSON)  # Array of similarity scores
+    diagnosis = Column(Text)  # The disease diagnosis (e.g., Pneumonia, TB, etc.)
+    findings = Column(Text)  # Extended notes and findings
     
     # Relationships
     patient = relationship("Patient", back_populates="cases")

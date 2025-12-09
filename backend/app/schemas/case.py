@@ -18,6 +18,8 @@ class CaseCreate(CaseBase):
     processed_img_path: Optional[str] = Field(None, description="Path to processed image in S3")
     similar_cases: Optional[List[str]] = Field(None, description="List of similar case IDs")
     similarity_scores: Optional[List[float]] = Field(None, description="Similarity scores for similar cases")
+    diagnosis: Optional[str] = Field(None, description="Disease diagnosis (e.g., Pneumonia, TB)")
+    findings: Optional[str] = Field(None, description="Extended notes and findings")
     
     class Config:
         json_schema_extra = {
@@ -36,6 +38,8 @@ class CaseUpdate(BaseModel):
     processed_img_path: Optional[str] = None
     similar_cases: Optional[List[str]] = None
     similarity_scores: Optional[List[float]] = None
+    diagnosis: Optional[str] = None
+    findings: Optional[str] = None
 
 
 class CaseResponse(CaseBase):
@@ -46,6 +50,8 @@ class CaseResponse(CaseBase):
     timestamp: datetime
     similar_cases: Optional[List[str]]
     similarity_scores: Optional[List[float]]
+    diagnosis: Optional[str]
+    findings: Optional[str]
     
     class Config:
         from_attributes = True

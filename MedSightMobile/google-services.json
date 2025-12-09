@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1044083966032",
+    "project_id": "medsightmobile",
+    "storage_bucket": "medsightmobile.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1044083966032:android:758996eb9b68b7ec729155",
+        "android_client_info": {
+          "package_name": "com.medsightmobile.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAmn7xk4mWdq2I-N5umQk94CjcnS5fZNto"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

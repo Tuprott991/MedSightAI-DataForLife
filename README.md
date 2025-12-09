@@ -148,7 +148,7 @@ Without explainable AI, doctors struggle to assess causes, severity, and lesion 
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                      USER INTERFACE (React)                      │
+│                      USER INTERFACE (React)                     │
 │  ┌──────────────────┐              ┌──────────────────┐         │
 │  │  Doctor Mode     │              │  Education Mode  │         │
 │  │  - Upload Image  │              │  - Practice      │         │
@@ -158,38 +158,38 @@ Without explainable AI, doctors struggle to assess causes, severity, and lesion 
 └────────────────────────────┬────────────────────────────────────┘
                              │ REST API
 ┌────────────────────────────▼────────────────────────────────────┐
-│                   BACKEND (FastAPI)                              │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │  API Layer   │  │   Services   │  │   Database   │          │
-│  │  - Cases     │  │  - AI Model  │  │  - PostgreSQL│          │
-│  │  - Analysis  │  │  - S3 Storage│  │  - Zilliz    │          │
-│  │  - Education │  │  - Embeddings│  │  - Vector DB │          │
-│  └──────┬───────┘  └──────┬───────┘  └──────────────┘          │
-└─────────┼──────────────────┼─────────────────────────────────────┘
+│                   BACKEND (FastAPI)                             │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐           │
+│  │  API Layer   │  │   Services   │  │   Database   │           │
+│  │  - Cases     │  │  - AI Model  │  │  - PostgreSQL│           │
+│  │  - Analysis  │  │  - S3 Storage│  │  - Zilliz    │           │
+│  │  - Education │  │  - Embeddings│  │  - Vector DB │           │
+│  └──────┬───────┘  └──────┬───────┘  └──────────────┘           │
+└─────────┼──────────────────┼────────────────────────────────────┘
           │                  │
 ┌─────────▼──────────────────▼─────────────────────────────────────┐
-│                    AI PROCESSING LAYER                            │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │  Image       │  │  Explainable │  │  Medical LLM │          │
-│  │  Preprocessing│  │  AI (xAI)   │  │  (MedGemma)  │          │
-│  │              │  │  - Grad-CAM  │  │  + Knowledge │          │
-│  │  - Normalize │  │  - Concepts  │  │    Graph     │          │
-│  │  - Denoise   │  │  - Prototype │  │              │          │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘          │
-│         │                  │                  │                   │
+│                    AI PROCESSING LAYER                           │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐            │
+│  │  Image       │  │  Explainable │  │  Medical LLM │            │
+│  │  Preprocessing│  │  AI (xAI)   │  │  (MedGemma)  │            │
+│  │              │  │  - Grad-CAM  │  │  + Knowledge │            │
+│  │  - Normalize │  │  - Concepts  │  │    Graph     │            │
+│  │  - Denoise   │  │  - Prototype │  │              │            │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘            │
+│         │                  │                  │                  │
 │  ┌──────▼──────────────────▼──────────────────▼───────┐          │
 │  │         CNN/ViT Backbone (DenseNet121)             │          │
 │  │         - Feature Extraction                       │          │
 │  │         - Lesion Detection & Classification        │          │
 │  └────────────────────────────────────────────────────┘          │
-└───────────────────────────────────────────────────────────────────┘
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ### Component Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    SYSTEM COMPONENTS                         │
+│                    SYSTEM COMPONENTS                        │
 ├─────────────────────────────────────────────────────────────┤
 │ 1. Image Preprocessing Module                               │
 │    - Normalization, brightness adjustment, noise filtering  │

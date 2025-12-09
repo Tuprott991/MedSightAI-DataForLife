@@ -3,7 +3,8 @@ Pydantic schemas module
 """
 from app.schemas.patient import (
     PatientBase, PatientCreate, PatientUpdate, 
-    PatientResponse, PatientListResponse
+    PatientResponse, PatientListResponse,
+    PatientInforResponse, LatestCaseInfo
 )
 from app.schemas.case import (
     CaseBase, CaseCreate, CaseUpdate, 
@@ -31,6 +32,7 @@ __all__ = [
     # Patient
     "PatientBase", "PatientCreate", "PatientUpdate",
     "PatientResponse", "PatientListResponse",
+    "PatientInforResponse", "LatestCaseInfo",
     # Case
     "CaseBase", "CaseCreate", "CaseUpdate",
     "CaseResponse", "CaseWithPatientResponse", "CaseListResponse",

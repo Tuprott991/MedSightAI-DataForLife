@@ -28,6 +28,8 @@ async def create_case(
     
     Stores case information including image paths and similarity data.
     Images should already be uploaded to S3 before creating the case.
+    
+    Auto-updates patient history with diagnosis and findings from this case.
     """
     # Verify patient exists
     patient = crud_patient.get(db, case_in.patient_id)
@@ -36,6 +38,27 @@ async def create_case(
     
     # Create case with all provided data
     case = crud_case.create(db, obj_in=case_in.model_dump())
+    
+    # Auto-update patient history if diagnosis or findings provided
+    if case_in.diagnosis or case_in.findings:
+        from datetime import datetime
+        
+        # Get current history or initialize empty dict
+        current_history = patient.history if patient.history else {}
+        
+        # Use today's date as key
+        date_key = datetime.now().strftime("%m-%d-%Y")
+        
+        # Add new entry to history
+        current_history[date_key] = {
+            "diagnosis": case_in.diagnosis or "",
+            "findings": case_in.findings or ""
+        }
+        
+        # Update patient with new history
+        patient.history = current_history
+        db.commit()
+        db.refresh(patient)
     
     return case
 
