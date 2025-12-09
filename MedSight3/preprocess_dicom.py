@@ -51,16 +51,25 @@ def process_single_dicom(args):
         # Photometric Interpretation handling (quan trọng cho X-Ray)
         if dicom.PhotometricInterpretation == "MONOCHROME1":
             pixel_array = np.max(pixel_array) - pixel_array
-            
-        # Normalize về 0-255
+        
+        # Convert to float32 for precision during processing
         pixel_array = pixel_array.astype(np.float32)
-        pixel_array = (pixel_array - pixel_array.min()) / (pixel_array.max() - pixel_array.min()) * 255.0
-        pixel_array = pixel_array.astype(np.uint8)
         
-        # Resize
-        img = cv2.resize(pixel_array, target_size)
+        # Normalize to 0-1 range first (preserve full dynamic range)
+        pixel_min = pixel_array.min()
+        pixel_max = pixel_array.max()
+        if pixel_max > pixel_min:
+            pixel_array = (pixel_array - pixel_min) / (pixel_max - pixel_min)
+        else:
+            pixel_array = np.zeros_like(pixel_array)
         
-        # Save PNG
+        # Resize while in normalized float32 (better interpolation quality)
+        img = cv2.resize(pixel_array, target_size, interpolation=cv2.INTER_AREA)
+        
+        # Scale to 16-bit range (0-65535) to match original DICOM depth
+        img = (img * 65535.0).astype(np.uint16)
+        
+        # Save as 16-bit PNG (stores 16-bit data with no loss)
         cv2.imwrite(output_path, img)
         
         # Calculate resize factors
