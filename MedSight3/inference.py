@@ -532,7 +532,7 @@ def main():
     
     # Load model
     print(f"Loading model from {args.checkpoint}")
-    model = CSR(num_concepts=args.K, num_prototypes_per_concept=args.M, num_classes=args.num_classes)
+    model = CSR(num_concepts=args.K, num_prototypes_per_concept=args.M, num_classes=args.num_classes, model_name=args.backbone_name)
     
     checkpoint = torch.load(args.checkpoint, map_location=device)
     if 'model_state_dict' in checkpoint:
