@@ -18,7 +18,14 @@ from utils import dicom_to_image
 class CSRDatasetWithBBoxSimple(Dataset):
     """Dataset with bounding box annotations that are already in 224x224 space."""
     
-    def __init__(self, csv_file, bbox_csv_file, root_dir, phase='train', transform=None):
+    # Classes with < 100 training samples - can't learn from them
+    RARE_CLASSES = [
+        'Edema', 'Clavicle fracture', 'Lung cyst', 'Lung cavity',
+        'Emphysema', 'Rib fracture', 'COPD'
+    ]
+    
+    def __init__(self, csv_file, bbox_csv_file, root_dir, phase='train', transform=None, 
+                 filter_rare=True, balance_no_finding=False, no_finding_ratio=0.4):
         """
         Args:
             csv_file: Path to labels CSV (image-level annotations)
@@ -28,10 +35,14 @@ class CSRDatasetWithBBoxSimple(Dataset):
             root_dir: Folder containing images (already 224x224)
             phase: 'train' or 'test'
             transform: Image transforms
+            filter_rare: Whether to remove rare classes (< 100 samples)
+            balance_no_finding: Whether to downsample "No finding" class
+            no_finding_ratio: Target ratio for "No finding" (default 0.4 = 40%)
         """
         self.root_dir = root_dir
         self.transform = transform
         self.phase = phase
+        self.filter_rare = filter_rare
         
         # 1. Load image-level labels
         df = pd.read_csv(csv_file)
@@ -53,17 +64,48 @@ class CSRDatasetWithBBoxSimple(Dataset):
         
         concept_cols = [c for c in df.columns if c not in target_cols + meta_cols]
         
+        # FILTER RARE CLASSES
+        if filter_rare:
+            rare_to_remove = [c for c in self.RARE_CLASSES if c in concept_cols or c in target_cols]
+            if rare_to_remove:
+                print(f"  🔧 Filtering {len(rare_to_remove)} rare classes: {rare_to_remove}")
+                concept_cols = [c for c in concept_cols if c not in rare_to_remove]
+                target_cols = [c for c in target_cols if c not in rare_to_remove]
+        
+        concept_cols = [c for c in concept_cols if c in df.columns]
+        
         # Aggregate by image_id (max across radiologists)
         self.data = df.groupby('image_id')[concept_cols + target_cols].max().reset_index()
         
         self.concept_cols = concept_cols
         self.target_cols = target_cols
         
+        # BALANCE "NO FINDING" CLASS (optional, only for training)
+        if balance_no_finding and phase == 'train' and 'No finding' in self.data.columns:
+            no_finding_mask = self.data['No finding'] == 1
+            abnormal_mask = ~no_finding_mask
+            
+            no_finding_samples = self.data[no_finding_mask]
+            abnormal_samples = self.data[abnormal_mask]
+            
+            # Downsample "No finding" to target ratio
+            target_no_finding = int(len(abnormal_samples) * no_finding_ratio / (1 - no_finding_ratio))
+            if target_no_finding < len(no_finding_samples):
+                no_finding_samples = no_finding_samples.sample(n=target_no_finding, random_state=42)
+                self.data = pd.concat([abnormal_samples, no_finding_samples]).sample(frac=1, random_state=42).reset_index(drop=True)
+                print(f"  ⚖️  Balanced 'No finding': {len(no_finding_samples)} samples (was {no_finding_mask.sum()})")
+        
         # Create concept name to index mapping
         self.concept_name_to_idx = {name: idx for idx, name in enumerate(concept_cols)}
         
         # 2. Load bounding box annotations (ALREADY in 224x224 space)
         self.bbox_df = pd.read_csv(bbox_csv_file)
+        
+        # Filter rare classes from bbox annotations too
+        if filter_rare:
+            rare_to_remove = [c for c in self.RARE_CLASSES if c in self.bbox_df['class_name'].values]
+            if rare_to_remove:
+                self.bbox_df = self.bbox_df[~self.bbox_df['class_name'].isin(rare_to_remove)]
         
         print(f"📊 Dataset '{phase}' with BBox (Simple) loaded:")
         print(f"  - Images: {len(self.data)}")
@@ -109,17 +151,17 @@ class CSRDatasetWithBBoxSimple(Dataset):
             concept_idx = self.concept_name_to_idx[class_name]
             
             # Bbox coordinates are ALREADY in 224x224 pixel space
-            # Just normalize to [0, 1]
-            x_min = float(row['x_min']) / 224.0
-            y_min = float(row['y_min']) / 224.0
-            x_max = float(row['x_max']) / 224.0
-            y_max = float(row['y_max']) / 224.0
+            # FIRST clamp to valid pixel range [0, 224], THEN normalize to [0, 1]
+            x_min_px = max(0.0, min(float(row['x_min']), 224.0))
+            y_min_px = max(0.0, min(float(row['y_min']), 224.0))
+            x_max_px = max(0.0, min(float(row['x_max']), 224.0))
+            y_max_px = max(0.0, min(float(row['y_max']), 224.0))
             
-            # Clamp to [0, 1]
-            x_min = max(0.0, min(x_min, 1.0))
-            x_max = max(0.0, min(x_max, 1.0))
-            y_min = max(0.0, min(y_min, 1.0))
-            y_max = max(0.0, min(y_max, 1.0))
+            # Now normalize to [0, 1]
+            x_min = x_min_px / 224.0
+            y_min = y_min_px / 224.0
+            x_max = x_max_px / 224.0
+            y_max = y_max_px / 224.0
             
             # Skip invalid boxes
             if x_max <= x_min or y_max <= y_min:
@@ -188,7 +230,8 @@ def custom_collate_fn(batch):
 
 
 def get_dataloaders_with_bbox_simple(train_csv, test_csv, train_bbox_csv, test_bbox_csv, 
-                                      train_dir, test_dir, batch_size=16, rank=-1, world_size=1, val_split=0.1):
+                                      train_dir, test_dir, batch_size=16, rank=-1, world_size=1, 
+                                      val_split=0.1, filter_rare=True, balance_no_finding=True):
     """
     Create dataloaders with bounding box support (simple version).
     Use this when bbox annotations are ALREADY in 224x224 space.
@@ -204,6 +247,8 @@ def get_dataloaders_with_bbox_simple(train_csv, test_csv, train_bbox_csv, test_b
         rank: GPU rank for DDP
         world_size: Total number of GPUs
         val_split: Validation split ratio
+        filter_rare: Whether to filter rare classes (< 100 samples)
+        balance_no_finding: Whether to balance "No finding" class (downsample to 40%)
     
     Returns:
         train_loader, val_loader, test_loader, num_concepts, num_classes, train_sampler
@@ -229,10 +274,16 @@ def get_dataloaders_with_bbox_simple(train_csv, test_csv, train_bbox_csv, test_b
     ])
     
     # Load datasets
-    full_train_dataset = CSRDatasetWithBBoxSimple(train_csv, train_bbox_csv, train_dir, 
-                                                   phase='train', transform=train_transform)
-    test_dataset = CSRDatasetWithBBoxSimple(test_csv, test_bbox_csv, test_dir,
-                                            phase='test', transform=val_transform)
+    full_train_dataset = CSRDatasetWithBBoxSimple(
+        train_csv, train_bbox_csv, train_dir, 
+        phase='train', transform=train_transform,
+        filter_rare=filter_rare, balance_no_finding=balance_no_finding
+    )
+    test_dataset = CSRDatasetWithBBoxSimple(
+        test_csv, test_bbox_csv, test_dir,
+        phase='test', transform=val_transform,
+        filter_rare=filter_rare, balance_no_finding=False  # Don't balance test set
+    )
     
     # Split train into train + val
     train_size = int((1 - val_split) * len(full_train_dataset))

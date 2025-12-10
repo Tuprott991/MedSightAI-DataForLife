@@ -14,6 +14,7 @@ from src.model import CSR
 from src.dataloader import get_dataloaders
 from utils import PrototypeContrastiveLoss
 from utils_bbox import BBoxGuidedConceptLoss
+from focal_loss import FocalLoss, ClassBalancedLoss
 import pandas as pd
 import numpy as np
 
@@ -555,9 +556,31 @@ def main():
     for param in model.module.projector.parameters(): param.requires_grad = False
     model.module.prototypes.requires_grad = False
     
+    # Compute class distribution for balanced loss (only on rank 0)
+    if rank == 0:
+        print("Computing class distribution for Focal Loss...")
+        # Get target distribution from aggregated data
+        target_values = torch.tensor(df_agg[target_cols].values, dtype=torch.float32)
+        samples_per_class = target_values.sum(dim=0)
+        print(f"Samples per disease class: {samples_per_class.tolist()}")
+        
+        # Compute class weights (inverse frequency, clamped)
+        class_weights = len(df_agg) / (samples_per_class * num_classes).clamp(min=1)
+        class_weights = class_weights.clamp(max=10.0)  # Limit max weight to 10x
+        print(f"Class weights: {class_weights.tolist()}")
+    else:
+        samples_per_class = torch.ones(num_classes)
+        class_weights = torch.ones(num_classes)
+    
     # Chỉ train Task Head
     optimizer = optim.AdamW(model.module.task_head.parameters(), lr=args.lr)
-    criterion_s3 = torch.nn.BCEWithLogitsLoss() # Nếu target là multi-label
+    
+    # Use Focal Loss for severe class imbalance (better than BCE for medical data)
+    # alpha=0.25, gamma=2.0 are standard values that work well
+    criterion_s3 = FocalLoss(alpha=0.25, gamma=2.0)
+    
+    if rank == 0:
+        print(f"Using Focal Loss (alpha=0.25, gamma=2.0) for class imbalance handling")
     
     for epoch in range(args.epochs_stage3):
         # Set epoch for proper shuffling
