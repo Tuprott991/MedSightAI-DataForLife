@@ -249,7 +249,7 @@ def test_model_forward(batch, num_concepts, num_classes, device='cpu'):
         num_classes=num_classes,
         num_prototypes_per_concept=5,
         backbone_type='medmae',
-        model_name='facebook/vit-mae-base'
+        model_name='/kaggle/input/medmae-weight/weights/chestx-medmae_finetune.pth'
     ).to(device)
     
     print(f"✅ Model created successfully")
@@ -330,12 +330,12 @@ def main():
     print(f"{'='*80}")
     
     # Configuration (adjust these paths to match your setup)
-    train_csv = 'labels_train.csv'
-    test_csv = 'labels_test.csv'
-    train_bbox_csv = 'train_bbox_224.csv'  # Adjust if different
-    test_bbox_csv = 'test_bbox_224.csv'    # Adjust if different
-    train_dir = 'train/'
-    test_dir = 'test/'
+    train_csv = '/kaggle/input/vindr-cxr-physionet/image_labels_train.csv'
+    test_csv = '/kaggle/input/vindr-cxr-physionet/image_labels_test.csv'
+    train_bbox_csv = '/kaggle/input/vindr-cxr-physionet/annotations_train_resized.csv'  # Adjust if different
+    test_bbox_csv = '/kaggle/input/vindr-cxr-physionet/annotations_test_resized.csv'    # Adjust if different
+    train_dir = '/kaggle/input/vindr-cxr-physionet/train_data/train'
+    test_dir = '/kaggle/input/vindr-cxr-physionet/test_data/test'
     batch_size = 8
     
     # Step 1: Check CSV labels
