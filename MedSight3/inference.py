@@ -512,6 +512,7 @@ def main():
     parser.add_argument('--image', type=str, required=True, help='Path to input image (DICOM or PNG/JPG)')
     parser.add_argument('--checkpoint', type=str, required=True, help='Path to model checkpoint')
     parser.add_argument('--labels_csv', type=str, required=True, help='Path to training labels CSV (to get concept/disease names)')
+    parser.add_argument('--backbone_name', type=str, default='medmae-base-224', help='Backbone model name or path')
     parser.add_argument('--mode', type=str, default='full', 
                        choices=['full', 'cams_only', 'prototypes_only'],
                        help='Inference mode (default: full)')
