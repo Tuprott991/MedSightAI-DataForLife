@@ -18,6 +18,15 @@ def debug_training(train_csv, test_csv, train_dir, test_dir,
     print("🐛 DEBUGGING TRAINING")
     print("="*80)
     
+    # Print paths for debugging
+    print("\nPaths:")
+    print(f"  train_csv: {train_csv}")
+    print(f"  test_csv: {test_csv}")
+    print(f"  train_dir: {train_dir}")
+    print(f"  test_dir: {test_dir}")
+    print(f"  train_bbox_csv: {train_bbox_csv}")
+    print(f"  test_bbox_csv: {test_bbox_csv}")
+    
     # 1. Load data
     print("\n1️⃣ Loading data...")
     train_loader, val_loader, test_loader, num_concepts, num_classes, _ = \
