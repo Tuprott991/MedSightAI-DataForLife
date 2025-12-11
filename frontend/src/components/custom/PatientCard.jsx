@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getTranslatedDiagnosis, getTranslatedGender, getTranslatedStatus, getStatusColor } from '../../utils/diagnosisHelper';
 import { DicomImage } from './DicomImage';
+import { getProxiedImageUrl } from '../../services/patientApi';
 
 export const PatientCard = ({ patient, isStudentView = false }) => {
     const { t, i18n } = useTranslation();
@@ -10,7 +11,13 @@ export const PatientCard = ({ patient, isStudentView = false }) => {
     const isStudentPage = location.pathname.includes('/student') || isStudentView;
 
     // Get image URL - either from patient.image or latest_case
-    const imageUrl = patient.image || patient.latest_case?.image_path || patient.latest_case?.processed_img_path;
+    const rawImageUrl = patient.image || patient.latest_case?.image_path || patient.latest_case?.processed_img_path;
+    
+    // Use proxy with backend caching (24h TTL) for better performance
+    const imageUrl = getProxiedImageUrl(rawImageUrl);
+    
+    // Alternative: Load directly from S3 (requires CORS configured on S3)
+    // const imageUrl = rawImageUrl;
 
     return (
         <div className="group bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden transition-all duration-300 hover:border-teal-500/30 hover:shadow-lg hover:shadow-teal-500/10">

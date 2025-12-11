@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Loader2, Image as ImageIcon } from 'lucide-react';
 
 /**
- * Component to display medical images from URL
+ * Component to display medical images (PNG/JPG) from S3 URL
  */
 export const DicomImage = ({ src, alt, className, onLoad, onError }) => {
     const [isLoading, setIsLoading] = useState(true);
@@ -11,12 +11,14 @@ export const DicomImage = ({ src, alt, className, onLoad, onError }) => {
     const handleLoad = () => {
         setIsLoading(false);
         setError(false);
+        console.log('✅ Image loaded successfully:', src);
         if (onLoad) onLoad();
     };
 
     const handleError = (e) => {
         setIsLoading(false);
         setError(true);
+        console.error('❌ Image failed to load:', src, e);
         if (onError) onError(e);
     };
 
@@ -31,6 +33,8 @@ export const DicomImage = ({ src, alt, className, onLoad, onError }) => {
         );
     }
 
+    console.log('🖼️  Loading image from:', src);
+
     return (
         <div className={`relative ${className || ''}`}>
             {isLoading && (
@@ -44,6 +48,7 @@ export const DicomImage = ({ src, alt, className, onLoad, onError }) => {
                     <div className="text-center">
                         <ImageIcon className="w-12 h-12 text-red-600 mx-auto mb-2" />
                         <p className="text-red-400 text-sm">Failed to load image</p>
+                        <p className="text-red-300 text-xs mt-1 px-2 break-all">{src}</p>
                     </div>
                 </div>
             )}
@@ -51,9 +56,12 @@ export const DicomImage = ({ src, alt, className, onLoad, onError }) => {
             <img
                 src={src}
                 alt={alt || 'Medical Image'}
+                loading="lazy"
+                decoding="async"
                 className={`${className || ''} ${isLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}
                 onLoad={handleLoad}
                 onError={handleError}
+                crossOrigin="anonymous"
                 style={{ display: error ? 'none' : 'block' }}
             />
         </div>
