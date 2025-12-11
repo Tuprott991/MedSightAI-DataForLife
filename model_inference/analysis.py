@@ -12,12 +12,12 @@ router = APIRouter()
 CHECKPOINT_PATH = "/home/aaronpham5504/Coding/SoftAI---DataForLife---MedSightAI/model_inference/csr_phase1.pth"  # Sửa lại đường dẫn checkpoint
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# CLASS_NAMES = [
-#     'Aortic enlargement', 'Atelectasis', 'Calcification', 'Cardiomegaly',
-#     'Consolidation', 'ILD', 'Infiltration', 'Lung Opacity',
-#     'Nodule/Mass', 'Other lesion', 'Pleural effusion', 'Pleural thickening',
-#     'Pneumothorax', 'Pulmonary fibrosis'
-# ]
+CLASS_NAMES = [
+    'Aortic enlargement', 'Atelectasis', 'Calcification', 'Cardiomegaly',
+    'Consolidation', 'ILD', 'Infiltration', 'Lung Opacity',
+    'Nodule/Mass', 'Other lesion', 'Pleural effusion', 'Pleural thickening',
+    'Pneumothorax', 'Pulmonary fibrosis'
+]
 
 model = load_csr_model(CHECKPOINT_PATH, DEVICE)
 
@@ -52,7 +52,7 @@ async def cam_inference(file: UploadFile = File(...), threshold: float = 0.5):
 
     # Trả về các class, CAMs và bbox vượt threshold
     results =  {
-        "top_classes": [{"class_idx": item["class_idx"], "prob": item["prob"]} for item in filtered],
+        "top_classes": [{"class_idx": item["class_idx"], "prob": item["prob"], "concepts": CLASS_NAMES[item["class_idx"]]} for item in filtered],
         "cams": [item["cam"] for item in filtered],
     }
 
