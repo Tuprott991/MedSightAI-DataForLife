@@ -66,13 +66,19 @@ async def create_case(
 @router.post("/upload", response_model=CaseResponse, status_code=201)
 async def create_case_with_file_upload(
     patient_id: UUID = Query(..., description="Patient ID"),
-    file: UploadFile = File(..., description="X-ray image file"),
+    file: UploadFile = File(..., description="X-ray image file (DICOM or PNG)"),
     db: Session = Depends(get_db)
 ):
     """
     Create a new case with file upload (multipart/form-data)
     
-    Alternative endpoint for direct file upload instead of JSON with base64
+    If DICOM file is uploaded:
+    - Stores DICOM at: s3://bucket/cases/{patient_id}/image.dicom
+    - Converts and stores PNG at: s3://bucket/cases/{patient_id}.png
+    - Returns PNG path in image_path field
+    
+    If PNG/JPG file is uploaded:
+    - Stores at: s3://bucket/cases/{patient_id}.png
     """
     # Verify patient exists
     patient = crud_patient.get(db, patient_id)
@@ -84,16 +90,34 @@ async def create_case_with_file_upload(
     if file.content_type not in allowed_types:
         raise HTTPException(status_code=400, detail="Invalid image format. Only JPEG, PNG, and DICOM allowed")
     
-    # Upload to S3 using new path structure
-    image_path = s3_service.upload_file(
-        file=file,
-        prefix=f"{settings.S3_CASES_PREFIX}{patient_id}/{settings.S3_ORIGINAL_IMAGES_PREFIX}"
-    )
+    # Check if DICOM file
+    is_dicom = file.content_type == "application/dicom" or file.filename.lower().endswith('.dcm') or file.filename.lower().endswith('.dicom')
+    
+    if is_dicom:
+        # Upload DICOM and convert to PNG
+        dicom_url, png_url = s3_service.upload_dicom_and_convert(
+            file=file,
+            patient_id=str(patient_id)
+        )
+        # Store PNG URL as the main image_path (for queries)
+        image_path = png_url
+        # Optionally store DICOM path in processed_img_path or a new field
+        processed_img_path = dicom_url
+    else:
+        # Upload regular image (PNG/JPG) with standardized naming
+        image_path = s3_service.upload_bytes(
+            file_bytes=file.file.read(),
+            filename=f"{patient_id}.png",
+            prefix="cases/",
+            content_type="image/png"
+        )
+        processed_img_path = None
     
     # Create case
     case_data = {
         "patient_id": patient_id,
-        "image_path": image_path
+        "image_path": image_path,  # Always PNG path
+        "processed_img_path": processed_img_path  # DICOM path if uploaded
     }
     case = crud_case.create(db, obj_in=case_data)
     

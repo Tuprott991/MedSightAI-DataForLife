@@ -11,6 +11,9 @@ from fastapi import UploadFile, HTTPException
 from app.config.s3 import get_s3_client
 from app.config.settings import settings
 from app.utils.s3_paths import S3PathBuilder
+import pydicom
+from PIL import Image
+import numpy as np
 
 
 class S3Service:
@@ -19,6 +22,95 @@ class S3Service:
     def __init__(self):
         self.client = get_s3_client()
         self.bucket_name = settings.S3_BUCKET_NAME
+    
+    def dicom_to_png_bytes(self, dicom_bytes: bytes) -> bytes:
+        """
+        Convert DICOM bytes to PNG bytes
+        
+        Args:
+            dicom_bytes: Raw DICOM file bytes
+        
+        Returns:
+            PNG image bytes
+        """
+        try:
+            # Load DICOM from bytes
+            dicom_file = pydicom.dcmread(io.BytesIO(dicom_bytes))
+            
+            # Get pixel array
+            pixel_array = dicom_file.pixel_array
+            
+            # Normalize to 0-255 range
+            pixel_array = pixel_array.astype(float)
+            pixel_array = (pixel_array - pixel_array.min()) / (pixel_array.max() - pixel_array.min()) * 255.0
+            pixel_array = pixel_array.astype(np.uint8)
+            
+            # Convert to PIL Image
+            image = Image.fromarray(pixel_array)
+            
+            # Convert to RGB if grayscale
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
+            
+            # Save to bytes buffer
+            buffer = io.BytesIO()
+            image.save(buffer, format='PNG')
+            buffer.seek(0)
+            
+            return buffer.read()
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to convert DICOM to PNG: {str(e)}")
+    
+    def upload_dicom_and_convert(
+        self,
+        file: UploadFile,
+        patient_id: str
+    ) -> tuple[str, str]:
+        """
+        Upload DICOM file and automatically convert to PNG
+        Stores both files with standardized naming:
+        - DICOM: s3://bucket/cases/{patient_id}/image.dicom
+        - PNG: s3://bucket/cases/{patient_id}.png
+        
+        Args:
+            file: UploadFile object (DICOM file)
+            patient_id: Patient UUID as string
+        
+        Returns:
+            Tuple of (dicom_url, png_url)
+        """
+        try:
+            # Read file bytes
+            file_bytes = file.file.read()
+            file.file.seek(0)  # Reset file pointer
+            
+            # Upload DICOM file
+            dicom_key = f"cases/{patient_id}/image.dicom"
+            self.client.put_object(
+                Bucket=self.bucket_name,
+                Key=dicom_key,
+                Body=file_bytes,
+                ContentType="application/dicom"
+            )
+            dicom_url = self.get_public_url(dicom_key)
+            
+            # Convert DICOM to PNG
+            png_bytes = self.dicom_to_png_bytes(file_bytes)
+            
+            # Upload PNG file
+            png_key = f"cases/{patient_id}.png"
+            self.client.put_object(
+                Bucket=self.bucket_name,
+                Key=png_key,
+                Body=png_bytes,
+                ContentType="image/png"
+            )
+            png_url = self.get_public_url(png_key)
+            
+            return dicom_url, png_url
+            
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to upload and convert DICOM: {str(e)}")
     
     def upload_file(
         self,
