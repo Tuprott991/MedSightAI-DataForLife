@@ -9,7 +9,7 @@ from service import load_csr_model, preprocess_image, infer_cams
 
 router = APIRouter()
 
-CHECKPOINT_PATH = "/home/aaronpham5504/Coding/SoftAI---DataForLife---MedSightAI/model_inference/csr_phase1.pth"  # Sửa lại đường dẫn checkpoint
+CHECKPOINT_PATH = "D:\\github\\Nammoadidaphat\\SoftAI---DataForLife---MedSightAI\\csr_phase1.pth"  # Sửa lại đường dẫn checkpoint
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # CLASS_NAMES = [
