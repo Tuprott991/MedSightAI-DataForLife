@@ -75,6 +75,9 @@ class Settings(BaseSettings):
     MEDGEMMA_PATH: str = "../medgemma"
     VINDR_DATASET_PATH: str = "../VindrDataset"
     
+    # Model Inference Service
+    MODEL_INFERENCE_URL: str = "http://localhost:8001"  # URL of model_inference FastAPI service
+    
     # File Upload
     MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10MB
     ALLOWED_IMAGE_EXTENSIONS: set = {".jpg", ".jpeg", ".png", ".dcm"}

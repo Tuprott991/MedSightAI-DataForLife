@@ -71,7 +71,7 @@ class Report(Base):
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     case_id = Column(UUID(as_uuid=True), ForeignKey("cases.id", ondelete="CASCADE"), nullable=False)
-    model_report = Column(Text)  # AI-generated report from MedGemma
+    model_report = Column(JSONB)  # AI-generated report from MedGemma (structured JSON)
     doctor_report = Column(Text)  # Doctor's report/corrections
     feedback_note = Column(Text)  # Feedback for model improvement
     created_at = Column(DateTime(timezone=True), server_default=func.now())

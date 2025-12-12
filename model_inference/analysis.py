@@ -1,11 +1,16 @@
-from fastapi import APIRouter, UploadFile, File
+from fastapi import APIRouter, UploadFile, File, HTTPException
 import tempfile
 import torch
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
+import logging
 
 from service import load_csr_model, preprocess_image, infer_cams
+
+# Configure logger
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -23,44 +28,65 @@ model = load_csr_model(CHECKPOINT_PATH, DEVICE)
 
 @router.post("/cam-inference/")
 async def cam_inference(file: UploadFile = File(...), threshold: float = 0.5):
-    # Lưu file tạm
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
-        tmp.write(await file.read())
-        tmp_path = tmp.name
-
-    # Tiền xử lý ảnh
-    image_tensor = preprocess_image(tmp_path)
-    # Inference
-    probs, cams = infer_cams(model, image_tensor, DEVICE)
+    logger.info(f"[MODEL-INFERENCE] Received request with threshold={threshold}, file={file.filename}")
     
+    try:
+        # Lưu file tạm
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
+            content = await file.read()
+            tmp.write(content)
+            tmp_path = tmp.name
+            logger.info(f"[MODEL-INFERENCE] Saved {len(content)} bytes to temp file: {tmp_path}")
 
-    # Lọc các class có prob >= threshold và lấy bbox từ attention map (CAM)
-    top_indices = probs.argsort()[::-1][:14]
-    filtered = []
-    for idx in top_indices:
-        if probs[idx] >= threshold:
-            cam_np = np.array(cams[idx])
-            filtered.append({
-                "class_idx": int(idx),
-                "prob": float(probs[idx]),
-                "cam": cam_np.tolist(),
-            })
+        # Tiền xử lý ảnh
+        logger.info(f"[MODEL-INFERENCE] Preprocessing image...")
+        image_tensor = preprocess_image(tmp_path)
+        
+        # Inference
+        logger.info(f"[MODEL-INFERENCE] Running inference...")
+        probs, cams = infer_cams(model, image_tensor, DEVICE)
+        logger.info(f"[MODEL-INFERENCE] Inference complete. Max probability: {probs.max():.4f}")
+        
 
-    # Nếu không có class nào vượt threshold, trả về rỗng
-    if not filtered:
-        return {"top_classes": [], "cams": [], "bboxes": []}
+        # Lọc các class có prob >= threshold và lấy bbox từ attention map (CAM)
+        top_indices = probs.argsort()[::-1][:14]
+        filtered = []
+        for idx in top_indices:
+            if probs[idx] >= threshold:
+                cam_np = np.array(cams[idx])
+                filtered.append({
+                    "class_idx": int(idx),
+                    "prob": float(probs[idx]),
+                    "cam": cam_np.tolist(),
+                })
 
-    # Trả về các class, CAMs và bbox vượt threshold
-    results =  {
-        "top_classes": [{"class_idx": item["class_idx"], "prob": item["prob"], "concepts": CLASS_NAMES[item["class_idx"]]} for item in filtered],
-        "cams": [item["cam"] for item in filtered],
-    }
+        logger.info(f"[MODEL-INFERENCE] Filtered {len(filtered)} detections above threshold {threshold}")
 
-    bboxes = visualize_attention_weights_on_image(tmp_path, results["cams"], threshold=0.8)
-    results["bboxes"] = bboxes
-    import os; os.remove(tmp_path)
+        # Nếu không có class nào vượt threshold, trả về rỗng
+        if not filtered:
+            logger.warning(f"[MODEL-INFERENCE] No abnormalities detected above threshold {threshold}")
+            return {"top_classes": [], "cams": [], "bboxes": []}
 
-    return results
+        # Trả về các class, CAMs và bbox vượt threshold
+        results =  {
+            "top_classes": [{"class_idx": item["class_idx"], "prob": item["prob"], "concepts": CLASS_NAMES[item["class_idx"]]} for item in filtered],
+            "cams": [item["cam"] for item in filtered],
+        }
+
+        logger.info(f"[MODEL-INFERENCE] Generating bounding boxes...")
+        bboxes = visualize_attention_weights_on_image(tmp_path, results["cams"], threshold=0.8)
+        results["bboxes"] = bboxes
+        logger.info(f"[MODEL-INFERENCE] Generated {len(bboxes)} bounding boxes")
+        
+        import os
+        os.remove(tmp_path)
+        logger.info(f"[MODEL-INFERENCE] Success! Returning {len(results['top_classes'])} detections")
+        
+        return results
+    
+    except Exception as e:
+        logger.error(f"[MODEL-INFERENCE] Error during inference: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Model inference error: {str(e)}")
 
 def visualize_attention_weights_on_image(image_path, cams, alpha=0.4, threshold=0.9):
     img = cv2.imread(image_path)

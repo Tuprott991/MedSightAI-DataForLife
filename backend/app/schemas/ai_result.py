@@ -22,7 +22,14 @@ class AIResultBase(BaseModel):
     case_id: UUID = Field(..., description="Case ID")
     predicted_diagnosis: Optional[str] = None
     confident_score: Optional[float] = Field(None, ge=0.0, le=1.0)
-    bounding_box: Optional[Dict[str, Any]] = Field(None, description="Bounding box data with lesion locations")
+    bounding_box: Optional[Dict[str, Any]] = Field(
+        None, 
+        description="Bounding box data: {detections: [{bbox, concept, class_idx, probability}]}"
+    )
+    concepts: Optional[Dict[str, Any]] = Field(
+        None, 
+        description="Concepts data: {top_classes: [{prob, concepts, class_idx}], detected_concepts: [...]}"
+    )
 
 
 class AIResultCreate(AIResultBase):
@@ -35,12 +42,14 @@ class AIResultUpdate(BaseModel):
     predicted_diagnosis: Optional[str] = None
     confident_score: Optional[float] = None
     bounding_box: Optional[Dict[str, Any]] = None
+    concepts: Optional[Dict[str, Any]] = None
 
 
 class AIResultResponse(AIResultBase):
     """Schema for AI result response"""
     id: UUID
     created_at: datetime
+    concepts: Optional[Dict[str, Any]] = None
     
     class Config:
         from_attributes = True
