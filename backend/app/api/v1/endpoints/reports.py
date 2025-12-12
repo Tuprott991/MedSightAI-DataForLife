@@ -12,7 +12,7 @@ from app.config.database import get_db
 from app.core import report as crud_report, case as crud_case, patient as crud_patient, ai_result as crud_ai_result
 from app.schemas import (
     ReportCreate, ReportUpdate, ReportResponse,
-    ReportGenerationRequest, MessageResponse
+    ReportGenerationRequest, MessageResponse, PatientFullReportResponse
 )
 from app.services import medgemma_service
 
@@ -246,3 +246,88 @@ def delete_report(
     
     crud_report.delete(db, id=report_id)
     return {"message": "Report deleted successfully"}
+
+
+@router.get("/full/{case_id}", response_model=PatientFullReportResponse)
+def get_full_patient_report(
+    case_id: UUID,
+    db: Session = Depends(get_db)
+):
+    """
+    Get comprehensive patient information with report
+    
+    This endpoint returns:
+    - Patient information (name, age, gender, blood type, status, underlying conditions, etc.)
+    - Case details (image paths, diagnosis, findings, timestamp)
+    - AI analysis results (predicted diagnosis, bounding boxes, concepts)
+    - Generated medical report (model report, doctor report, feedback)
+    
+    Args:
+        case_id: UUID of the case
+        db: Database session
+    
+    Returns:
+        PatientFullReportResponse with all patient and case information
+    """
+    logger.info(f"[FULL-REPORT] Fetching full patient report for case_id: {case_id}")
+    
+    # Get case
+    case = crud_case.get(db, case_id)
+    if not case:
+        logger.error(f"[FULL-REPORT] Case not found: {case_id}")
+        raise HTTPException(status_code=404, detail="Case not found")
+    
+    # Get patient
+    patient = crud_patient.get(db, case.patient_id)
+    if not patient:
+        logger.error(f"[FULL-REPORT] Patient not found: {case.patient_id}")
+        raise HTTPException(status_code=404, detail="Patient not found")
+    
+    # Get AI result (optional - may not exist yet)
+    ai_result = crud_ai_result.get_by_case(db, case_id=case_id)
+    
+    # Get report (optional - may not exist yet)
+    report = crud_report.get_by_case(db, case_id=case_id)
+    
+    logger.info(f"[FULL-REPORT] Found: Patient={patient.name}, Case={case_id}, AI Result={ai_result is not None}, Report={report is not None}")
+    
+    # Build comprehensive response
+    response_data = {
+        # Patient Information
+        "patient_id": patient.id,
+        "patient_name": patient.name,
+        "patient_age": patient.age,
+        "patient_gender": patient.gender,
+        "blood_type": patient.blood_type,
+        "status": patient.status,
+        "underlying_condition": patient.underlying_condition,
+        "phone_number": patient.phone_number,
+        "patient_created_at": patient.created_at,
+        
+        # Case Information
+        "case_id": case.id,
+        "image_path": case.image_path,
+        "processed_img_path": case.processed_img_path,
+        "case_timestamp": case.timestamp,
+        "diagnosis": case.diagnosis,
+        "findings": case.findings,
+        
+        # AI Result Information (if exists)
+        "ai_result_id": ai_result.id if ai_result else None,
+        "predicted_diagnosis": ai_result.predicted_diagnosis if ai_result else None,
+        "confident_score": ai_result.confident_score if ai_result else None,
+        "bounding_box": ai_result.bounding_box if ai_result else None,
+        "concepts": ai_result.concepts if ai_result else None,
+        "ai_result_created_at": ai_result.created_at if ai_result else None,
+        
+        # Report Information (if exists)
+        "report_id": report.id if report else None,
+        "model_report": report.model_report if report else None,
+        "doctor_report": report.doctor_report if report else None,
+        "feedback_note": report.feedback_note if report else None,
+        "report_created_at": report.created_at if report else None,
+    }
+    
+    logger.info(f"[FULL-REPORT] Successfully compiled full report for case {case_id}")
+    
+    return response_data

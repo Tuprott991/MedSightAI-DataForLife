@@ -16,7 +16,7 @@ from app.schemas.ai_result import (
 )
 from app.schemas.report import (
     ReportBase, ReportCreate, ReportUpdate, 
-    ReportResponse, ReportGenerationRequest
+    ReportResponse, ReportGenerationRequest, PatientFullReportResponse
 )
 from app.schemas.chat import (
     ChatSessionCreate, ChatSessionResponse,
@@ -41,7 +41,7 @@ __all__ = [
     "AIResultResponse", "AIAnalysisRequest", "AIAnalysisResponse",
     # Report
     "ReportBase", "ReportCreate", "ReportUpdate",
-    "ReportResponse", "ReportGenerationRequest",
+    "ReportResponse", "ReportGenerationRequest", "PatientFullReportResponse",
     # Chat
     "ChatSessionCreate", "ChatSessionResponse",
     "ChatMessageCreate", "ChatMessageResponse",
