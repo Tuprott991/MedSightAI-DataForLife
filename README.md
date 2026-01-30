@@ -16,6 +16,14 @@
 
 ---
 
+## 🎥 Demo Video
+
+[![MedSight AI Demo](https://img.youtube.com/vi/JH4Do-rQ58w/0.jpg)](https://youtu.be/JH4Do-rQ58w)
+
+**[Watch the full demo on YouTube →](https://youtu.be/JH4Do-rQ58w)**
+
+---
+
 ## 📋 Table of Contents
 
 - [Overview](#-overview)
