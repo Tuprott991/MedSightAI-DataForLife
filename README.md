@@ -812,11 +812,11 @@ This project is licensed under the MIT License. See `LICENSE` file for details.
 
 **SoftAI Development Team**
 
-- **Project Lead**: [Team Lead Name]
-- **Backend Developer**: [Backend Dev Name]
-- **Frontend Developer**: NhanPhamThanh-IT
-- **AI/ML Engineer**: [ML Engineer Name]
-- **Medical Advisor**: [Medical Expert Name]
+- **Project Lead**: Nguyen Van Tu
+- **Backend Developer**: Pham Gia Bao, Duong Trung Nghia
+- **Frontend Developer**: Pham Thanh Nhan
+- **AI/ML Engineer**: Nguyen Van Tu, Long Pham, Ta Minh Thu, Pham Gia Bao, Duong Trung Nghia
+- **Medical Advisor**: Dr. Le Thai An
 
 ---
 
