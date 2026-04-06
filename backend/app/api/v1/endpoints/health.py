@@ -7,6 +7,7 @@ from sqlalchemy import text
 
 from app.config.database import get_db
 from app.config.settings import settings
+from app.config.zilliz import get_zilliz_headers
 from app.schemas import HealthResponse, MessageResponse
 from app.services import s3_service, zilliz_service
 
@@ -31,15 +32,11 @@ async def health_check(db: Session = Depends(get_db)):
     except Exception as e:
         s3_status = f"unhealthy: {str(e)}"
     
-    # Check Zilliz Cloud
+    # Check Zilliz Cloud / Milvus
     try:
         import requests
         url = f"{settings.ZILLIZ_CLOUD_URI}/v2/vectordb/collections/list"
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {settings.ZILLIZ_CLOUD_API_KEY}"
-        }
-        response = requests.post(url, headers=headers, json={}, timeout=5)
+        response = requests.post(url, headers=get_zilliz_headers(), json={}, timeout=5)
         if response.status_code == 200 and response.json().get("code") == 0:
             zilliz_status = "healthy"
         else:

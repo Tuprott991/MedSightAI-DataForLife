@@ -108,13 +108,39 @@ cp .env.example .env
 # - ZILLIZ_CLOUD_API_KEY: Your Zilliz API key
 ```
 
+7. **Initialize Neon PostgreSQL schema**
+```bash
+python scripts/init_neon_schema.py
+```
+
+8. **Create Zilliz collection (`med_vector`)**
+```bash
+python scripts/create_zilliz_collection.py
+```
+
+### One-command datastore bootstrap
+
+If you want a quick setup that matches the target schema for PostgreSQL and Zilliz Cloud, use:
+
+```bash
+python scripts/bootstrap_datastores.py
+```
+
+This script:
+
+- creates PostgreSQL enums, tables, indexes, and the `report.updated_at` trigger
+- creates the Zilliz Cloud `med_vector` collection if it does not already exist
+- only requires datastore variables from `.env`
+
+See [`scripts/SETUP_GUIDE.md`](/mnt/c/Users/HP/Coding/MedSightAI-DataForLife/backend/scripts/SETUP_GUIDE.md) for the exact schema assumptions and the manual Neon/Zilliz console steps.
+
 ### Configuration
 
 Edit `.env` file with your credentials:
 
 ```env
 # Database
-DATABASE_URL=postgresql://user:pass@your-neon-host/medsight_db
+DATABASE_URL=postgresql+psycopg2://user:pass@your-neon-host:5432/medsight_db?sslmode=require
 
 # AWS S3
 AWS_ACCESS_KEY_ID=your_key
@@ -125,7 +151,18 @@ S3_BUCKET_NAME=your-bucket
 ZILLIZ_CLOUD_URI=https://your-cluster.cloud.zilliz.com
 ZILLIZ_CLOUD_API_KEY=your_api_key_here
 ZILLIZ_COLLECTION_NAME=med_vector
+ZILLIZ_TXT_DIMENSION=1152
+ZILLIZ_IMG_DIMENSION=1152
 ```
+
+### Datastore Setup Notes
+
+- Neon table schema is created from SQLAlchemy models in `app/models/models.py`.
+- The backend startup (`main.py`) also runs table creation, but running `scripts/init_neon_schema.py` first gives you an explicit setup step.
+- Zilliz collection expected by this project:
+	- `primary_key` (`Int64`, primary key, no auto-id)
+	- `txt_emb` (`FloatVector`, 1152)
+	- `img_emb` (`FloatVector`, 1152)
 
 ### Running the Application
 

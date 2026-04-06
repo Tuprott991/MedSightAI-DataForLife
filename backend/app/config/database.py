@@ -38,4 +38,6 @@ def init_db():
     """
     Initialize database tables
     """
+    # Import models so SQLAlchemy metadata includes all tables before create_all.
+    from app.models import models  # noqa: F401
     Base.metadata.create_all(bind=engine)

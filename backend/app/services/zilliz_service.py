@@ -8,6 +8,7 @@ from uuid import UUID
 import hashlib
 from fastapi import HTTPException
 from app.config.settings import settings
+from app.config.zilliz import get_zilliz_headers
 
 
 class ZillizService:
@@ -21,10 +22,7 @@ class ZillizService:
         self.img_dimension = settings.ZILLIZ_IMG_DIMENSION
         
         # Request headers
-        self.headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.api_key}"
-        }
+        self.headers = get_zilliz_headers()
     
     def _uuid_to_int(self, uuid_str: str) -> int:
         """

@@ -1,2 +1,3 @@
 train.csv
 __pycache__/
+.env

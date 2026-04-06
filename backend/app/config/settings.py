@@ -57,7 +57,7 @@ class Settings(BaseSettings):
     
     # Zilliz Cloud Vector Database
     ZILLIZ_CLOUD_URI: str
-    ZILLIZ_CLOUD_API_KEY: str
+    ZILLIZ_CLOUD_API_KEY: Optional[str] = None
     ZILLIZ_COLLECTION_NAME: str = "med_vector"
     ZILLIZ_TXT_DIMENSION: int = 1152
     ZILLIZ_IMG_DIMENSION: int = 1152
