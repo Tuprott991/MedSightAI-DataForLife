@@ -13,11 +13,8 @@ export const PatientCard = ({ patient, isStudentView = false }) => {
     // Get image URL - either from patient.image or latest_case
     const rawImageUrl = patient.image || patient.latest_case?.image_path || patient.latest_case?.processed_img_path;
     
-    // Use proxy with backend caching (24h TTL) for better performance
+    // Use the S3 URL exactly as it is stored in the database.
     const imageUrl = getProxiedImageUrl(rawImageUrl);
-    
-    // Alternative: Load directly from S3 (requires CORS configured on S3)
-    // const imageUrl = rawImageUrl;
 
     return (
         <div className="group bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden transition-all duration-300 hover:border-teal-500/30 hover:shadow-lg hover:shadow-teal-500/10">

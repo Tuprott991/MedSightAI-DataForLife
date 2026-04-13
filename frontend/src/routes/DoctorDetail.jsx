@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { Sparkles, RefreshCw, Bot, FileText, Send, X, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { getPatientDetail } from '../services/patientApi';
-import { medicalImagesGroups, generateAnalysisData, getFindingImagePath, getPrototypeImagePath } from '../constants/medicalData';
+import { generateAnalysisData, getFindingImagePath, getPrototypeImagePath } from '../constants/medicalData';
 import { generatePatientReport } from '../constants/reportData';
 import { getTranslatedDiagnosis } from '../utils/diagnosisHelper';
 import {
@@ -13,6 +13,40 @@ import {
 import { AnalysisTab, RecommendationsTab } from '../components/DoctorDetail/AnalysisTab';
 import { ReportPDF } from '../components/DoctorDetail/ReportPDF';
 import { useSidebar } from '../components/layout';
+
+const buildLatestCaseImage = (patient) => {
+    const latestCase = patient?.latest_case;
+    const imageUrl = latestCase?.image_path || latestCase?.processed_img_path;
+
+    if (!imageUrl) {
+        return null;
+    }
+
+    return {
+        id: `case-${patient.id}`,
+        url: imageUrl,
+        type: latestCase?.diagnosis || "Main X-ray image",
+        imageCode: `CASE-${String(patient.id).slice(0, 8)}`,
+        modality: "X-Ray"
+    };
+};
+
+const buildPatientImageGroups = (patient) => {
+    const latestCaseImage = buildLatestCaseImage(patient);
+
+    if (!latestCaseImage) {
+        return [];
+    }
+
+    return [
+        {
+            id: `latest-case-${patient.id}`,
+            examDate: patient.latest_case?.timestamp || patient.created_at || new Date().toISOString(),
+            examType: patient.latest_case?.diagnosis || "Latest Case",
+            images: [latestCaseImage]
+        }
+    ];
+};
 
 export const DoctorDetail = () => {
     const { t } = useTranslation();
@@ -32,15 +66,8 @@ export const DoctorDetail = () => {
                 setPatient(data);
                 
                 // Set default image after patient data is loaded
-                if (data?.latest_case?.image_path || data?.latest_case?.processed_img_path) {
-                    const imageUrl = data.latest_case.processed_img_path || data.latest_case.image_path;
-                    const defaultImage = {
-                        id: 0,
-                        url: imageUrl,
-                        type: "Ảnh X-quang chính",
-                        imageCode: `IMG-${data.id}-MAIN`,
-                        modality: "X-Ray"
-                    };
+                const defaultImage = buildLatestCaseImage(data);
+                if (defaultImage) {
                     setSelectedImage(defaultImage);
                     setOriginalImage(defaultImage);
                 }
@@ -72,6 +99,7 @@ export const DoctorDetail = () => {
     const [isSimilarCaseMode, setIsSimilarCaseMode] = useState(false);
     const [similarCaseData, setSimilarCaseData] = useState(null);
     const [isLoadingSimilarAnalysis, setIsLoadingSimilarAnalysis] = useState(false);
+    const imageGroups = buildPatientImageGroups(patient);
 
     const handleAIAnalyze = () => {
         if (!patient) return;
@@ -89,7 +117,7 @@ export const DoctorDetail = () => {
 
         setTimeout(() => {
             // Generate mock analysis data using diagnosis from API if available
-            const imageUrl = patient.latest_case?.processed_img_path || patient.latest_case?.image_path;
+            const imageUrl = patient.latest_case?.image_path || patient.latest_case?.processed_img_path;
             const diagnosis = patient.latest_case?.diagnosis || patient.diagnosis;
             const data = generateAnalysisData(diagnosis, imageUrl);
             setAnalysisData(data);
@@ -168,7 +196,7 @@ export const DoctorDetail = () => {
         setSelectedFindingId(finding.id);
 
         // Get the image paths for this finding
-        const imageUrl = patient.latest_case?.processed_img_path || patient.latest_case?.image_path;
+        const imageUrl = patient.latest_case?.image_path || patient.latest_case?.processed_img_path;
         const findingImagePath = getFindingImagePath(finding.text, imageUrl);
         const prototypeImagePath = getPrototypeImagePath(finding.text, imageUrl);
 
@@ -265,7 +293,7 @@ export const DoctorDetail = () => {
                     {!isLeftCollapsed && (
                         <div className="lg:col-span-2">
                             <ImageListGrouped
-                                imageGroups={medicalImagesGroups}
+                                imageGroups={imageGroups}
                                 selectedImage={selectedImage}
                                 onImageSelect={handleImageSelect}
                                 patient={patient}

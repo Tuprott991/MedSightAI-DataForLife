@@ -6,11 +6,13 @@ export const ReportPDF = ({ reportData, patient, selectedImage, analysisData }) 
     const { t } = useTranslation();
     if (!reportData || !patient) return null;
 
+    const originalImage = patient.latest_case?.image_path || patient.latest_case?.processed_img_path || patient.image;
+
     // Get all xAI images for all findings
     const allXaiImages = [];
     if (analysisData?.findings) {
         analysisData.findings.forEach(finding => {
-            const imagePath = getFindingImagePath(finding.text, patient.image);
+            const imagePath = getFindingImagePath(finding.text, originalImage);
             if (imagePath) {
                 allXaiImages.push({
                     url: imagePath,
@@ -20,8 +22,6 @@ export const ReportPDF = ({ reportData, patient, selectedImage, analysisData }) 
             }
         });
     }
-
-    const originalImage = patient.image;
 
     const handlePrint = () => {
         window.print();

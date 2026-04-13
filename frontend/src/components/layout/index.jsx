@@ -1,11 +1,11 @@
 import { Outlet, Link, useLocation, useParams, useNavigate } from "react-router-dom";
 import { FloatingDirection } from "./FloatingDirection";
 import { Stethoscope, GraduationCap, Home as HomeIcon, ArrowLeft, Settings, HelpCircle, Bell, User, PanelLeft, PanelLeftClose, LogOut, Database } from "lucide-react";
-import { patientsData } from "../../constants/patients";
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { useAuth } from "../authentication";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "../custom/LanguageSwitcher";
+import { getPatientDetail } from "../../services/patientApi";
 
 // Create context for sidebar collapse state
 const SidebarContext = createContext();
@@ -17,6 +17,7 @@ export const Layout = () => {
     const navigate = useNavigate();
     const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
+    const [detailPatient, setDetailPatient] = useState(null);
     const { user, logout } = useAuth();
     const { t } = useTranslation();
 
@@ -44,17 +45,45 @@ export const Layout = () => {
     const isDoctorDetail = location.pathname.startsWith('/doctor/') && params.id;
     const isStudentDetail = location.pathname.startsWith('/student/') && params.id;
 
+    useEffect(() => {
+        let isMounted = true;
+
+        const fetchDetailPatient = async () => {
+            if (!isDetailPage || !params.id) {
+                setDetailPatient(null);
+                return;
+            }
+
+            try {
+                const data = await getPatientDetail(params.id);
+                if (isMounted) {
+                    setDetailPatient(data);
+                }
+            } catch (error) {
+                console.error('Error fetching layout patient detail:', error);
+                if (isMounted) {
+                    setDetailPatient(null);
+                }
+            }
+        };
+
+        fetchDetailPatient();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [isDetailPage, params.id]);
+
     // Get patient info if on detail page
-    let patient = null;
+    const patient = detailPatient;
+    const diagnosis = patient?.latest_case?.diagnosis || patient?.diagnosis;
     let backPath = '/';
     let backLabel = t('nav.back');
 
     if (isDoctorDetail) {
-        patient = patientsData.find(p => p.id === parseInt(params.id));
         backPath = '/doctor';
         backLabel = t('nav.back');
     } else if (isStudentDetail) {
-        patient = patientsData.find(p => p.id === parseInt(params.id));
         backPath = '/student';
         backLabel = t('nav.back');
     }
@@ -88,8 +117,8 @@ export const Layout = () => {
                             {isDetailPage && patient && isDoctorDetail && !isStudentDetail && (
                                 <div className="absolute left-1/2 transform -translate-x-1/2 text-center">
                                     <h2 className="text-lg font-semibold text-white">{patient.name}</h2>
-                                    {patient.status !== 'Admitted' && (
-                                        <p className="text-xs text-gray-400">{patient.diagnosis}</p>
+                                    {diagnosis && (
+                                        <p className="text-xs text-gray-400">{diagnosis}</p>
                                     )}
                                 </div>
                             )}

@@ -84,7 +84,11 @@ export const ImageListGrouped = ({ imageGroups, selectedImage, onImageSelect, pa
                 {viewMode === 'images' ? (
                     /* Medical Images View */
                     <div className="space-y-3">
-                        {imageGroups.map((group) => (
+                        {imageGroups.length === 0 ? (
+                            <div className="bg-[#0f0f0f] border border-white/5 rounded-lg p-4 text-center">
+                                <p className="text-sm text-gray-400">No case images available</p>
+                            </div>
+                        ) : imageGroups.map((group) => (
                             <div key={group.id} className="bg-[#0f0f0f] border border-white/5 rounded-lg overflow-hidden">
                                 {/* Group Header */}
                                 <button

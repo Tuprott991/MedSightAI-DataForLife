@@ -1,0 +1,101 @@
+<mxfile host="app.diagrams.net" modified="2026-04-07T00:00:00.000Z" agent="GPT-5.4 Thinking" version="24.7.17">
+  <diagram id="ldrnet" name="LDR-Net">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="2" value="Chest X-ray Input&#xa;(DICOM/JPG)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="40" y="250" width="160" height="70" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="3" value="Preprocessing&#xa;- DICOM normalization&#xa;- MONOCHROME1 fix&#xa;- Resize / crop&#xa;- Optional lung mask" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="230" y="230" width="190" height="110" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="4" value="Shared CXR Encoder&#xa;(CheXFound / CXR Foundation / chest-specific ViT-CNN hybrid)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="470" y="235" width="250" height="100" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="5" value="Multi-scale Feature Pyramid&#xa;(FPN / pyramid features)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="770" y="235" width="180" height="100" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="6" value="Lesion Query Decoder&#xa;(DETR-style)&#xa;Outputs K lesion candidates" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="120" width="220" height="100" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="7" value="Anatomy Prior Branch&#xa;(Chest ImaGenome / anatomy tokens / coarse region head)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="260" width="220" height="100" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="8" value="Global Image Token" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d9ead3;strokeColor=#6aa84f;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="400" width="220" height="60" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="9" value="Lesion Token Constructor&#xa;[ROI/local feat | bbox | lesion logits | anatomy emb | uncertainty]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f4cccc;strokeColor=#cc0000;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="120" width="250" height="110" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="10" value="Hierarchical Prototype Memory&#xa;(lesion prototypes / visual concepts)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ead1dc;strokeColor=#c27ba0;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="270" width="250" height="90" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="11" value="Disease Reasoner&#xa;(Transformer / Graph Transformer)&#xa;Inputs: lesion tokens + anatomy tokens + global token + prototypes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#cfe2f3;strokeColor=#3d85c6;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="1590" y="190" width="290" height="140" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="12" value="Disease Head&#xa;(multi-label disease prediction)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b6d7a8;strokeColor=#38761d;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="1940" y="160" width="220" height="80" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="13" value="Explainability Outputs&#xa;- lesion boxes&#xa;- supporting lesions per disease&#xa;- attention / prototype evidence" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe599;strokeColor=#bf9000;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="1940" y="280" width="220" height="100" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="14" edge="1" parent="1" source="2" target="3" style="endArrow=block;html=1;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="15" edge="1" parent="1" source="3" target="4" style="endArrow=block;html=1;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="16" edge="1" parent="1" source="4" target="5" style="endArrow=block;html=1;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="17" edge="1" parent="1" source="5" target="6" style="endArrow=block;html=1;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="18" edge="1" parent="1" source="5" target="7" style="endArrow=block;html=1;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="19" edge="1" parent="1" source="5" target="8" style="endArrow=block;html=1;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="20" edge="1" parent="1" source="6" target="9" style="endArrow=block;html=1;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="21" edge="1" parent="1" source="7" target="9" style="endArrow=block;html=1;strokeWidth=2;dashed=1;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="22" edge="1" parent="1" source="9" target="11" style="endArrow=block;html=1;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="23" edge="1" parent="1" source="10" target="11" style="endArrow=block;html=1;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="24" edge="1" parent="1" source="8" target="11" style="endArrow=block;html=1;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="25" edge="1" parent="1" source="7" target="11" style="endArrow=block;html=1;strokeWidth=2;dashed=1;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="26" edge="1" parent="1" source="11" target="12" style="endArrow=block;html=1;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="27" edge="1" parent="1" source="11" target="13" style="endArrow=block;html=1;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -49,20 +49,13 @@ export const getPatientDetail = async (patientId) => {
 };
 
 /**
- * Convert S3 image URL to proxied URL to avoid CORS
+ * Keep the image URL exactly as stored in the database.
  * @param {string} s3Url - Original S3 URL
- * @returns {string} - Proxied URL through backend
+ * @returns {string} - Displayable image URL
  */
 export const getProxiedImageUrl = (s3Url) => {
     if (!s3Url) return null;
-    
-    // If it's already a local URL, return as is
-    if (s3Url.startsWith('http://localhost') || s3Url.startsWith('/api/')) {
-        return s3Url;
-    }
-    
-    // Proxy through backend to avoid CORS
-    return `${API_BASE_URL}/api/v1/patients/image/proxy?url=${encodeURIComponent(s3Url)}`;
+    return s3Url;
 };
 
 /**

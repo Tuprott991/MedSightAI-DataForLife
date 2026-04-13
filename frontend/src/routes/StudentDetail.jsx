@@ -66,7 +66,7 @@ export const StudentDetail = () => {
                     age: null, // Hide age
                     gender: null, // Hide gender
                     diagnosis: null, // Hide diagnosis
-                    imageUrl: data.latest_case?.processed_img_path || data.latest_case?.image_path || '',
+                    imageUrl: data.latest_case?.image_path || data.latest_case?.processed_img_path || '',
                     description: 'Medical imaging case for educational purposes',
                     difficulty: 'Intermediate',
                     status: data.status
