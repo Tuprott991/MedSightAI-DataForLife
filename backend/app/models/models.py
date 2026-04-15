@@ -1,7 +1,7 @@
 """
 SQLAlchemy database models
 """
-from sqlalchemy import Column, String, Integer, DateTime, Float, Text, ForeignKey, JSON
+from sqlalchemy import Column, String, Integer, DateTime, Float, Text, ForeignKey, JSON, Enum
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -85,11 +85,19 @@ class ChatSession(Base):
     __tablename__ = "chat_session"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True))  # Student user ID
-    image_path = Column(Text)  # Sample image for learning
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    user_id = Column(UUID(as_uuid=True), nullable=False)  # Student/user ID
+    case_id = Column(UUID(as_uuid=True), ForeignKey("cases.id", ondelete="SET NULL"))
+    session_type = Column(
+        Enum("practice", "tutoring", name="chat_session_type_enum", create_type=False),
+        nullable=False,
+        default="tutoring",
+    )
+    score = Column(Float)
+    started_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    ended_at = Column(DateTime(timezone=True))
     
     # Relationships
+    case = relationship("Case")
     messages = relationship("ChatMessage", back_populates="session", cascade="all, delete-orphan")
 
 
@@ -99,10 +107,12 @@ class ChatMessage(Base):
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     session_id = Column(UUID(as_uuid=True), ForeignKey("chat_session.id", ondelete="CASCADE"), nullable=False)
-    from_role = Column(Text, nullable=False)  # 'assistant' or 'user'
-    message = Column(Text)
-    submitted_image = Column(Text)  # Image with student's bounding box annotations
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    sender = Column(
+        Enum("user", "ai", name="chat_sender_enum", create_type=False),
+        nullable=False,
+    )
+    message = Column(Text, nullable=False)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     
     # Relationships
     session = relationship("ChatSession", back_populates="messages")

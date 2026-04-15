@@ -70,3 +70,39 @@ class AIAnalysisResponse(BaseModel):
     concepts: Optional[List[Dict[str, Any]]] = None
     similar_cases: Optional[List[str]] = None
     similarity_scores: Optional[List[float]] = None
+
+
+# ---------------------------------------------------------------------------
+# YOLO Localization Schemas
+# ---------------------------------------------------------------------------
+
+class DetectionItem(BaseModel):
+    """A single lesion detection from YOLO inference."""
+    class_id: int
+    class_name_en: str = Field(..., description="English class name (drawn on image)")
+    class_name_vi: str = Field(..., description="Vietnamese class name (shown in UI)")
+    confidence: float = Field(..., ge=0.0, le=1.0)
+    x1: int
+    y1: int
+    x2: int
+    y2: int
+
+
+class LocalizeResponse(BaseModel):
+    """
+    Response for POST /analysis/localize/{case_id}.
+
+    Fresh inference:  annotated_image_b64 is populated, annotated_image_url is None.
+    Cached result:    annotated_image_url is populated (S3 URL), annotated_image_b64 is None.
+    """
+    case_id: UUID
+    detections: List[DetectionItem]
+    annotated_image_url: Optional[str] = Field(
+        None, description="S3 public URL of annotated image (available after background persist)"
+    )
+    annotated_image_b64: Optional[str] = Field(
+        None, description="Base64-encoded JPEG of annotated image (fresh inference only)"
+    )
+    from_cache: bool = Field(False, description="True when served from DB + S3 cache")
+    total_lesions: int = Field(0, description="Number of detected lesions")
+

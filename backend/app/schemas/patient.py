@@ -62,6 +62,7 @@ class PatientListResponse(BaseModel):
 
 class LatestCaseInfo(BaseModel):
     """Schema for latest case information"""
+    id: Optional[UUID] = None
     image_path: Optional[str] = None
     processed_img_path: Optional[str] = None
     timestamp: Optional[datetime] = None

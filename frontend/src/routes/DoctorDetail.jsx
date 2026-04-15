@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { Sparkles, RefreshCw, Bot, FileText, Send, X, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { getPatientDetail, resolveChatSession, sendMedGemmaChatMessage } from '../services/patientApi';
+import { getPatientDetail, resolveChatSession, sendMedGemmaChatMessage, analyzeCase } from '../services/patientApi';
 import { generateAnalysisData, getFindingImagePath, getPrototypeImagePath } from '../constants/medicalData';
 import { generatePatientReport } from '../constants/reportData';
 import { getTranslatedDiagnosis } from '../utils/diagnosisHelper';
@@ -93,6 +93,7 @@ export const DoctorDetail = () => {
     const [selectedFindingIds, setSelectedFindingIds] = useState([]);
     const [selectedFindingId, setSelectedFindingId] = useState(null);
     const [showChatbot, setShowChatbot] = useState(false);
+    const [analysisError, setAnalysisError] = useState(null);
     const [chatInput, setChatInput] = useState('');
     const [chatMessages, setChatMessages] = useState([
         {
@@ -208,28 +209,87 @@ export const DoctorDetail = () => {
         }
     };
 
-    const handleAIAnalyze = () => {
-        if (!patient) return;
-        
-        setIsAnalyzing(true);
+    const handleAIAnalyze = async () => {
+        if (!patient?.latest_case?.id || isAnalyzing) return;
 
-        // Exit similar case mode and restore to original single image
+        setIsAnalyzing(true);
+        setAnalysisError(null);
+
+        // Exit similar case mode and restore to the original single image
         setIsSimilarCaseMode(false);
         setSimilarCaseData(null);
         setIsLoadingSimilarAnalysis(false);
         setSelectedImage(originalImage);
+        setSelectedFindingId(null);
 
-        // Random delay từ 3-6 giây
-        const randomDelay = Math.floor(Math.random() * (6000 - 3000 + 1)) + 3000;
+        try {
+            const result = await analyzeCase(patient.latest_case.id);
 
-        setTimeout(() => {
-            // Generate mock analysis data using diagnosis from API if available
-            const imageUrl = patient.latest_case?.image_path || patient.latest_case?.processed_img_path;
-            const diagnosis = patient.latest_case?.diagnosis || patient.diagnosis;
-            const data = generateAnalysisData(diagnosis, imageUrl);
-            setAnalysisData(data);
+            // Resolve the annotated image URL:
+            //   cache hit  → result.annotated_image_url (S3 URL)
+            //   fresh run  → data URI built from result.annotated_image_b64
+            const annotatedImageUrl = result.annotated_image_url
+                || (result.annotated_image_b64
+                    ? `data:image/jpeg;base64,${result.annotated_image_b64}`
+                    : null);
+
+            // Build findings list from YOLO detections — Vietnamese names for UI
+            const findings = result.detections.map((d, i) => ({
+                id: i,
+                text: d.class_name_vi,
+                confidenceRaw: d.confidence,
+                confidence: Math.round(d.confidence * 100),
+                bbox: { x1: d.x1, y1: d.y1, x2: d.x2, y2: d.y2 },
+                classNameEn: d.class_name_en,
+                annotatedImageUrl,   // every finding points to the same annotated image
+            }));
+
+            // Derive suspected diseases: top-3 unique lesion classes by confidence
+            const seen = new Set();
+            const suspectedDiseases = [];
+            for (const d of result.detections) {
+                if (!seen.has(d.class_id)) {
+                    seen.add(d.class_id);
+                    suspectedDiseases.push({
+                        name: d.class_name_vi,
+                        confidence: Math.round(d.confidence * 100),
+                    });
+                    if (suspectedDiseases.length >= 3) break;
+                }
+            }
+
+            setAnalysisData({
+                findings,
+                suspectedDiseases,
+                recommendations: [],
+                fromCache: result.from_cache,
+                annotatedImageUrl,
+            });
+
+            // Immediately show the annotated image in the viewer
+            if (annotatedImageUrl) {
+                const annotatedImg = {
+                    ...(originalImage || {}),
+                    id: `annotated-${patient.latest_case.id}`,
+                    url: annotatedImageUrl,
+                    type: 'AI Annotated',
+                    imageCode: 'YOLO-ANNOTATED',
+                    modality: 'AI-Enhanced',
+                };
+                setSelectedImage(annotatedImg);
+            }
+
+            // Auto-highlight first finding
+            if (findings.length > 0) {
+                setSelectedFindingId(0);
+            }
+
+        } catch (err) {
+            console.error('[Analyze] Error:', err);
+            setAnalysisError(err.message || 'Phân tích thất bại. Vui lòng thử lại.');
+        } finally {
             setIsAnalyzing(false);
-        }, randomDelay);
+        }
     };
 
     const handleFindingSelectionChange = (selectedIds) => {
@@ -298,49 +358,68 @@ export const DoctorDetail = () => {
 
     const handleFindingClick = (finding) => {
         if (!patient) return;
-        
-        // Set selected finding ID for highlighting
+
+        // Highlight the clicked finding in the sidebar
         setSelectedFindingId(finding.id);
 
-        // Get the image paths for this finding
+        // If the finding already carries an annotated image URL (from real inference),
+        // show it directly without any extra image manipulation.
+        if (finding.annotatedImageUrl) {
+            const annotatedImg = {
+                ...(originalImage || {}),
+                id: `annotated-${finding.id}`,
+                url: finding.annotatedImageUrl,
+                type: `AI: ${finding.text}`,
+                imageCode: `YOLO-${finding.id}`,
+                modality: 'AI-Enhanced',
+            };
+
+            if (isSimilarCaseMode && similarCaseData) {
+                // Keep the similar-case comparison layout
+                const rightImage = {
+                    id: `similar-${similarCaseData.patientName}`,
+                    url: similarCaseData.imageUrl,
+                    type: `${t('similarCase.similarCase')}: ${similarCaseData.patientName}`,
+                    imageCode: 'SIMILAR-CASE',
+                    modality: 'Comparison',
+                };
+                setSelectedImage([annotatedImg, rightImage]);
+            } else {
+                setSelectedImage(annotatedImg);
+            }
+            return;
+        }
+
+        // ── Fallback: mock path for cases that still use generateAnalysisData ──
         const imageUrl = patient.latest_case?.image_path || patient.latest_case?.processed_img_path;
         const findingImagePath = getFindingImagePath(finding.text, imageUrl);
         const prototypeImagePath = getPrototypeImagePath(finding.text, imageUrl);
 
         if (findingImagePath) {
-            // Create xAI image (left side) - AI-enhanced image with finding highlighted
             const xaiImage = {
                 id: `xai-${finding.id}`,
                 url: findingImagePath,
                 type: `xAI: ${finding.text}`,
                 imageCode: `XAI-${finding.id}`,
-                modality: "AI-Enhanced"
+                modality: 'AI-Enhanced',
             };
 
-            // If in similar case mode, recreate right image from similarCaseData to use latest imageUrl
             if (isSimilarCaseMode && similarCaseData) {
                 const rightImage = {
                     id: `similar-${similarCaseData.patientName}`,
                     url: similarCaseData.imageUrl,
                     type: `${t('similarCase.similarCase')}: ${similarCaseData.patientName}`,
-                    imageCode: `SIMILAR-CASE`,
-                    modality: "Comparison"
+                    imageCode: 'SIMILAR-CASE',
+                    modality: 'Comparison',
                 };
                 setSelectedImage([xaiImage, rightImage]);
             } else {
-                // Normal mode: create right side image data with both original and prototype
                 const rightImage = {
                     id: `right-${finding.id}`,
-                    original: {
-                        url: imageUrl,
-                        type: `Original: Ảnh gốc`,
-                    },
-                    prototype: {
-                        url: prototypeImagePath,
-                        type: `Prototype: ${finding.text}`,
-                    },
+                    original: { url: imageUrl, type: 'Original: Ảnh gốc' },
+                    prototype: { url: prototypeImagePath, type: `Prototype: ${finding.text}` },
                     imageCode: `RIGHT-${finding.id}`,
-                    modality: "Comparison"
+                    modality: 'Comparison',
                 };
                 setSelectedImage([xaiImage, rightImage]);
             }

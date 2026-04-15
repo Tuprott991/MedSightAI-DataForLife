@@ -142,3 +142,53 @@ export const sendMedGemmaChatMessage = async ({ sessionId, message, imageUrl, mo
 
     return response.json();
 };
+
+/**
+ * Run YOLOv5 chest-lesion localization on a case's X-ray image.
+ *
+ * On first call (cold cache):
+ *   - Returns annotated_image_b64 (base64 JPEG) + detections immediately.
+ *   - Background task persists to S3 + DB.
+ *
+ * On subsequent calls (cache hit):
+ *   - Returns annotated_image_url (S3 URL) + detections from DB.
+ *   - from_cache = true
+ *
+ * @param {string} caseId - Case UUID
+ * @param {Object} options
+ * @param {boolean} [options.forceRerun=false] - Force re-run even if cached
+ * @param {number}  [options.confThres=0.25]   - YOLO confidence threshold
+ * @param {number}  [options.iouThres=0.45]    - NMS IoU threshold
+ * @returns {Promise<{
+ *   case_id: string,
+ *   detections: Array<{class_id, class_name_en, class_name_vi, confidence, x1, y1, x2, y2}>,
+ *   annotated_image_url: string|null,
+ *   annotated_image_b64: string|null,
+ *   from_cache: boolean,
+ *   total_lesions: number
+ * }>}
+ */
+export const analyzeCase = async (caseId, { forceRerun = false, confThres = 0.25, iouThres = 0.45 } = {}) => {
+    const params = new URLSearchParams({
+        force_rerun: forceRerun,
+        conf_thres: confThres,
+        iou_thres: iouThres,
+    });
+
+    const response = await fetch(
+        `${API_BASE_URL}/api/v1/analysis/localize/${caseId}?${params}`,
+        { method: 'POST' }
+    );
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        let detail = errorText;
+        try {
+            const parsed = JSON.parse(errorText);
+            detail = parsed.detail || errorText;
+        } catch (_) { /* ignore */ }
+        throw new Error(`Analyze failed: ${response.status} — ${detail}`);
+    }
+
+    return response.json();
+};

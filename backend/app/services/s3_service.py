@@ -433,8 +433,8 @@ class S3Service:
         content_type: str = "image/jpeg"
     ) -> str:
         """Upload processed/normalized image"""
-        s3_key = S3PathBuilder.case_processed_image(case_id, filename)
-        return self.upload_bytes(image_bytes, "", prefix=s3_key, content_type=content_type)
+        prefix = f"{settings.S3_CASES_PREFIX}{case_id}/{settings.S3_PROCESSED_IMAGES_PREFIX}"
+        return self.upload_bytes(image_bytes, filename, prefix=prefix, content_type=content_type)
     
     def upload_case_annotated_image(
         self,
@@ -444,8 +444,8 @@ class S3Service:
         content_type: str = "image/jpeg"
     ) -> str:
         """Upload annotated image (Grad-CAM, bounding boxes)"""
-        s3_key = S3PathBuilder.case_annotated_image(case_id, filename)
-        return self.upload_bytes(image_bytes, "", prefix=s3_key, content_type=content_type)
+        prefix = f"{settings.S3_CASES_PREFIX}{case_id}/{settings.S3_ANNOTATED_IMAGES_PREFIX}"
+        return self.upload_bytes(image_bytes, filename, prefix=prefix, content_type=content_type)
     
     def upload_case_report(
         self,
@@ -454,8 +454,8 @@ class S3Service:
         filename: str
     ) -> str:
         """Upload case report PDF"""
-        s3_key = S3PathBuilder.case_report(case_id, filename)
-        return self.upload_bytes(report_bytes, "", prefix=s3_key, content_type="application/pdf")
+        prefix = f"{settings.S3_CASES_PREFIX}{case_id}/{settings.S3_REPORTS_PREFIX}"
+        return self.upload_bytes(report_bytes, filename, prefix=prefix, content_type="application/pdf")
     
     def get_case_images(self, case_id: UUID, image_type: str = "original") -> List[dict]:
         """Get all images of a specific type for a case"""

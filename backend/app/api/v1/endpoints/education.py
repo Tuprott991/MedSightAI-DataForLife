@@ -2,16 +2,23 @@
 Education Mode API endpoints
 """
 from uuid import UUID
+from uuid import uuid4
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 
 from app.config.database import get_db
-from app.core import chat_session as crud_chat_session, chat_message as crud_chat_message
+from app.core import (
+    case as crud_case,
+    chat_session as crud_chat_session,
+    chat_message as crud_chat_message,
+)
 from app.schemas import (
     ChatSessionCreate, ChatSessionResponse,
     ChatMessageCreate, ChatMessageResponse,
-    ChatHistoryResponse, StudentSubmission, StudentScoreResponse,
+    ChatHistoryResponse, ChatMessageRequest, ChatTurnResponse,
+    ChatSessionResolveRequest, StudentSubmission, StudentScoreResponse,
     MessageResponse
 )
 from app.services import medgemma_service, ai_model_service
@@ -91,7 +98,37 @@ async def create_chat_session(
 ):
     """Create a new chat session for student learning"""
     session_data = session_in.model_dump()
+    session_data["user_id"] = session_data["user_id"] or uuid4()
     session = crud_chat_session.create(db, obj_in=session_data)
+    return session
+
+
+@router.post("/sessions/resolve", response_model=ChatSessionResponse)
+async def resolve_chat_session(
+    session_in: ChatSessionResolveRequest,
+    db: Session = Depends(get_db)
+):
+    """Find or create an active chat session for a user and case."""
+    user_id = session_in.user_id or uuid4()
+
+    if session_in.case_id:
+        existing_session = crud_chat_session.get_active_by_user_and_case(
+            db,
+            user_id=user_id,
+            case_id=session_in.case_id,
+            session_type=session_in.session_type,
+        )
+        if existing_session:
+            return existing_session
+
+    session = crud_chat_session.create(
+        db,
+        obj_in={
+            "user_id": user_id,
+            "case_id": session_in.case_id,
+            "session_type": session_in.session_type,
+        },
+    )
     return session
 
 
@@ -126,48 +163,64 @@ async def get_chat_history(
     }
 
 
-@router.post("/sessions/{session_id}/messages", response_model=ChatMessageResponse)
+@router.post("/sessions/{session_id}/messages", response_model=ChatTurnResponse)
 async def send_message(
     session_id: UUID,
-    message: str,
+    message_in: ChatMessageRequest,
     db: Session = Depends(get_db)
 ):
-    """
-    Send a message in chat session and get AI response
-    
-    TODO: Call medgemma_service.generate_chat_response()
-    """
+    """Send a persisted chat message and get a MedGemma image-grounded response."""
     session = crud_chat_session.get(db, session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
+
+    image_url = message_in.image_url
+    if not image_url and session.case_id:
+        case = crud_case.get(db, session.case_id)
+        if case:
+            image_url = case.image_path or case.processed_img_path
+
+    if not image_url:
+        raise HTTPException(status_code=400, detail="image_url is required for MedGemma chat")
     
     # Save user message
     user_message_data = {
         "session_id": session_id,
-        "from_role": "user",
-        "message": message
+        "sender": "user",
+        "message": message_in.message
     }
     user_message = crud_chat_message.create(db, obj_in=user_message_data)
     
-    # TODO: Get conversation history
-    # history = crud_chat_message.get_by_session(db, session_id=session_id)
+    history = crud_chat_message.get_by_session(db, session_id=session_id)
     
-    # TODO: Generate AI response
-    # ai_response = medgemma_service.generate_chat_response(
-    #     conversation_history=history,
-    #     student_query=message,
-    #     image_context={"image_path": session.image_path}
-    # )
+    try:
+        ai_response = await run_in_threadpool(
+            medgemma_service.generate_chat_response,
+            conversation_history=history,
+            student_query=message_in.message,
+            image_url=image_url,
+            mode=message_in.mode,
+            patient_context=message_in.patient_context,
+            current_annotations=message_in.current_annotations,
+            submitted_diagnosis=message_in.submitted_diagnosis,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"MedGemma chat failed: {exc}") from exc
     
-    # Save AI message
-    # ai_message_data = {
-    #     "session_id": session_id,
-    #     "from_role": "assistant",
-    #     "message": ai_response
-    # }
-    # ai_message = crud_chat_message.create(db, obj_in=ai_message_data)
-    
-    raise NotImplementedError("Connect to MedGemma chat service")
+    ai_message = crud_chat_message.create(
+        db,
+        obj_in={
+            "session_id": session_id,
+            "sender": "ai",
+            "message": ai_response,
+        },
+    )
+
+    return {
+        "session": session,
+        "user_message": user_message,
+        "assistant_message": ai_message,
+    }
 
 
 @router.delete("/sessions/{session_id}", response_model=MessageResponse)

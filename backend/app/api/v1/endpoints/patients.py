@@ -95,6 +95,7 @@ def list_patients_with_infor(
         # Add latest case info if exists
         if latest_case:
             patient_data["latest_case"] = LatestCaseInfo(
+                id=latest_case.id,
                 image_path=latest_case.image_path,
                 processed_img_path=latest_case.processed_img_path,
                 timestamp=latest_case.timestamp,
@@ -177,6 +178,7 @@ def get_patient_infor(
     # Add latest case info if exists
     if latest_case:
         response_data["latest_case"] = LatestCaseInfo(
+            id=latest_case.id,
             image_path=latest_case.image_path,
             processed_img_path=latest_case.processed_img_path,
             timestamp=latest_case.timestamp,

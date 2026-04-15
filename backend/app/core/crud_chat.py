@@ -1,7 +1,7 @@
 """
 CRUD operations for Chat models
 """
-from typing import List
+from typing import List, Optional
 from sqlalchemy.orm import Session
 from uuid import UUID
 from app.core.crud import CRUDBase
@@ -23,10 +23,31 @@ class CRUDChatSession(CRUDBase[ChatSession]):
         return (
             db.query(ChatSession)
             .filter(ChatSession.user_id == user_id)
-            .order_by(ChatSession.created_at.desc())
+            .order_by(ChatSession.started_at.desc())
             .offset(skip)
             .limit(limit)
             .all()
+        )
+
+    def get_active_by_user_and_case(
+        self,
+        db: Session,
+        *,
+        user_id: UUID,
+        case_id: UUID,
+        session_type: str = "tutoring",
+    ) -> Optional[ChatSession]:
+        """Get the latest active chat session for a user and case."""
+        return (
+            db.query(ChatSession)
+            .filter(
+                ChatSession.user_id == user_id,
+                ChatSession.case_id == case_id,
+                ChatSession.session_type == session_type,
+                ChatSession.ended_at.is_(None),
+            )
+            .order_by(ChatSession.started_at.desc())
+            .first()
         )
 
 
@@ -43,7 +64,7 @@ class CRUDChatMessage(CRUDBase[ChatMessage]):
         return (
             db.query(ChatMessage)
             .filter(ChatMessage.session_id == session_id)
-            .order_by(ChatMessage.created_at.asc())
+            .order_by(ChatMessage.timestamp.asc())
             .all()
         )
 

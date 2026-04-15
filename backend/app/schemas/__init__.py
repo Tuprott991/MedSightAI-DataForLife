@@ -12,7 +12,8 @@ from app.schemas.case import (
 )
 from app.schemas.ai_result import (
     BoundingBox, AIResultBase, AIResultCreate, AIResultUpdate,
-    AIResultResponse, AIAnalysisRequest, AIAnalysisResponse
+    AIResultResponse, AIAnalysisRequest, AIAnalysisResponse,
+    DetectionItem, LocalizeResponse
 )
 from app.schemas.report import (
     ReportBase, ReportCreate, ReportUpdate, 
@@ -21,7 +22,8 @@ from app.schemas.report import (
 from app.schemas.chat import (
     ChatSessionCreate, ChatSessionResponse,
     ChatMessageCreate, ChatMessageResponse,
-    ChatHistoryResponse, StudentSubmission, StudentScoreResponse
+    ChatHistoryResponse, ChatMessageRequest, ChatTurnResponse,
+    ChatSessionResolveRequest, StudentSubmission, StudentScoreResponse
 )
 from app.schemas.common import (
     MessageResponse, HealthResponse, PaginationParams,
@@ -39,13 +41,15 @@ __all__ = [
     # AI Result
     "BoundingBox", "AIResultBase", "AIResultCreate", "AIResultUpdate",
     "AIResultResponse", "AIAnalysisRequest", "AIAnalysisResponse",
+    "DetectionItem", "LocalizeResponse",
     # Report
     "ReportBase", "ReportCreate", "ReportUpdate",
     "ReportResponse", "ReportGenerationRequest", "PatientFullReportResponse",
     # Chat
     "ChatSessionCreate", "ChatSessionResponse",
     "ChatMessageCreate", "ChatMessageResponse",
-    "ChatHistoryResponse", "StudentSubmission", "StudentScoreResponse",
+    "ChatHistoryResponse", "ChatMessageRequest", "ChatTurnResponse",
+    "ChatSessionResolveRequest", "StudentSubmission", "StudentScoreResponse",
     # Common
     "MessageResponse", "HealthResponse", "PaginationParams",
     "ImageUploadResponse", "SimilaritySearchRequest", "SimilaritySearchResponse"

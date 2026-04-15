@@ -2,7 +2,12 @@
 Application settings and configuration management
 """
 from pydantic_settings import BaseSettings
+from pydantic import field_validator
+from pathlib import Path
 from typing import Optional
+
+BACKEND_DIR = Path(__file__).resolve().parents[2]
+ENV_FILE = BACKEND_DIR / ".env"
 
 
 class Settings(BaseSettings):
@@ -74,6 +79,10 @@ class Settings(BaseSettings):
     MODEL_INFERENCE_PATH: str = "../MedSightAI"
     MEDGEMMA_PATH: str = "../medgemma"
     VINDR_DATASET_PATH: str = "../VindrDataset"
+    MEDGEMMA_MODEL_ID: str = "unsloth/medgemma-1.5-4b-it-bnb-4bit"
+    MEDGEMMA_DEVICE: str = "cuda"
+    MEDGEMMA_MAX_NEW_TOKENS: int = 900
+    HF_TOKEN: Optional[str] = None
     
     # Model Inference Service
     MODEL_INFERENCE_URL: str = "http://localhost:8001"  # URL of model_inference FastAPI service
@@ -81,9 +90,20 @@ class Settings(BaseSettings):
     # File Upload
     MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10MB
     ALLOWED_IMAGE_EXTENSIONS: set = {".jpg", ".jpeg", ".png", ".dcm"}
+
+    @field_validator("DEBUG", mode="before")
+    @classmethod
+    def parse_debug(cls, value):
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"release", "production", "prod", "false", "0", "no", "off"}:
+                return False
+            if normalized in {"debug", "development", "dev", "true", "1", "yes", "on"}:
+                return True
+        return value
     
     class Config:
-        env_file = ".env"
+        env_file = str(ENV_FILE)
         case_sensitive = True
 
 
