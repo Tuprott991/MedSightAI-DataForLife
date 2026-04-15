@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Loader2, MapPin, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { resolveChatSession, sendMedGemmaChatMessage } from '../../services/patientApi';
 
 // Component để format markdown đơn giản
 const FormattedMessage = ({ text }) => {
@@ -42,6 +43,7 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
     const [inputMessage, setInputMessage] = useState('');
     const [isTyping, setIsTyping] = useState(false);
     const [streamingMessage, setStreamingMessage] = useState('');
+    const [chatSession, setChatSession] = useState(null);
     const messagesEndRef = useRef(null);
     const previousSubmissionData = useRef(null);
 
@@ -63,6 +65,38 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
         scrollToBottom();
     }, [messages, streamingMessage]);
 
+    useEffect(() => {
+        let isMounted = true;
+
+        const initSession = async () => {
+            if (!caseData?.imageUrl) return;
+
+            try {
+                const session = await resolveChatSession({ caseId: caseData.caseId });
+                if (isMounted) {
+                    setChatSession(session);
+                }
+            } catch (error) {
+                console.error('Failed to initialize MedGemma chat session:', error);
+                if (isMounted) {
+                    setMessages(prev => [...prev, {
+                        id: Date.now(),
+                        type: 'bot',
+                        text: `Unable to initialize the MedGemma chat session: ${error.message}`,
+                        timestamp: new Date(),
+                        messageType: 'error'
+                    }]);
+                }
+            }
+        };
+
+        initSession();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [caseData?.caseId, caseData?.imageUrl]);
+
     // Theo dõi khi sinh viên submit chẩn đoán
     useEffect(() => {
         if (submissionData && submissionData !== previousSubmissionData.current) {
@@ -71,43 +105,98 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
         }
     }, [submissionData]);
 
-    const handleSendMessage = async () => {
-        if (!inputMessage.trim()) return;
+    const buildPatientContext = () => ({
+        mode: 'student',
+        patientName: caseData?.patientName,
+        diagnosis: caseData?.diagnosis,
+        status: caseData?.status,
+        description: caseData?.description,
+        difficulty: caseData?.difficulty
+    });
 
-        // Add user message
-        const userMessage = {
-            id: Date.now(),
-            type: 'user',
-            text: inputMessage,
-            timestamp: new Date()
-        };
+    const sendToMedGemma = async ({
+        text,
+        annotationsOverride = annotations,
+        submittedDiagnosis = null,
+        showUserMessage = true
+    }) => {
+        if (!text.trim() || !caseData?.imageUrl) return;
 
-        setMessages(prev => [...prev, userMessage]);
-        setInputMessage('');
-        setIsTyping(true);
-
-        // Simulate AI response
-        setTimeout(() => {
-            const botMessage = {
-                id: Date.now() + 1,
-                type: 'bot',
-                text: generateMockResponse(inputMessage),
+        if (showUserMessage) {
+            const userMessage = {
+                id: Date.now(),
+                type: 'user',
+                text,
                 timestamp: new Date()
             };
+            setMessages(prev => [...prev, userMessage]);
+        }
+
+        setIsTyping(true);
+
+        try {
+            let activeSession = chatSession;
+            if (!activeSession) {
+                activeSession = await resolveChatSession({ caseId: caseData?.caseId });
+                setChatSession(activeSession);
+            }
+
+            const result = await sendMedGemmaChatMessage({
+                sessionId: activeSession.id,
+                message: text,
+                imageUrl: caseData.imageUrl,
+                mode: 'student',
+                patientContext: buildPatientContext(),
+                currentAnnotations: annotationsOverride,
+                submittedDiagnosis
+            });
+
+            const botMessage = {
+                id: result.assistant_message.id,
+                type: 'bot',
+                text: result.assistant_message.message,
+                timestamp: new Date(result.assistant_message.timestamp)
+            };
             setMessages(prev => [...prev, botMessage]);
+        } catch (error) {
+            console.error('MedGemma chat failed:', error);
+            setMessages(prev => [...prev, {
+                id: Date.now() + 1,
+                type: 'bot',
+                text: `MedGemma could not answer this turn: ${error.message}`,
+                timestamp: new Date(),
+                messageType: 'error'
+            }]);
+        } finally {
             setIsTyping(false);
-        }, 1500);
+        }
+    };
+
+    const handleSendMessage = async () => {
+        const text = inputMessage.trim();
+        if (!text || isTyping) return;
+
+        setInputMessage('');
+        await sendToMedGemma({ text });
     };
 
     // Phân tích submission của sinh viên
-    const analyzeSubmission = (submission) => {
-        setIsTyping(true);
+    const analyzeSubmission = async (submission) => {
+        const submittedDiagnosis = submission?.diagnosis || '';
+        const submittedAnnotations = submission?.annotations || annotations;
+        const text = [
+            'The student has submitted an answer for this X-ray practice case.',
+            submittedDiagnosis ? `Submitted diagnosis: ${submittedDiagnosis}` : null,
+            `Number of marked regions: ${submittedAnnotations?.length || 0}.`,
+            'Please give educational feedback based on the current image and annotations. Do not overstate certainty.'
+        ].filter(Boolean).join('\n');
 
-        // Delay 2 giây trước khi bắt đầu phản hồi
-        setTimeout(() => {
-            const analysis = analyzeAnnotationsAndDiagnosis(submission);
-            streamResponse(analysis);
-        }, 2000);
+        await sendToMedGemma({
+            text,
+            annotationsOverride: submittedAnnotations,
+            submittedDiagnosis,
+            showUserMessage: false
+        });
     };
 
     // Stream response từng chữ một

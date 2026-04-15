@@ -62,6 +62,7 @@ export const StudentDetail = () => {
                 // For students, anonymize patient information
                 const mockCase = {
                     id: data.id,
+                    caseId: data.latest_case?.id || null,
                     patientName: `Case ${data.id.substring(0, 8)}`, // Anonymize
                     age: null, // Hide age
                     gender: null, // Hide gender

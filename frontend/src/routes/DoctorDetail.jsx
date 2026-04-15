@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { Sparkles, RefreshCw, Bot, FileText, Send, X, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { getPatientDetail } from '../services/patientApi';
+import { getPatientDetail, resolveChatSession, sendMedGemmaChatMessage } from '../services/patientApi';
 import { generateAnalysisData, getFindingImagePath, getPrototypeImagePath } from '../constants/medicalData';
 import { generatePatientReport } from '../constants/reportData';
 import { getTranslatedDiagnosis } from '../utils/diagnosisHelper';
@@ -49,7 +49,7 @@ const buildPatientImageGroups = (patient) => {
 };
 
 export const DoctorDetail = () => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const { id } = useParams();
     const [patient, setPatient] = useState(null);
     const [isLoadingPatient, setIsLoadingPatient] = useState(true);
@@ -93,6 +93,18 @@ export const DoctorDetail = () => {
     const [selectedFindingIds, setSelectedFindingIds] = useState([]);
     const [selectedFindingId, setSelectedFindingId] = useState(null);
     const [showChatbot, setShowChatbot] = useState(false);
+    const [chatInput, setChatInput] = useState('');
+    const [chatMessages, setChatMessages] = useState([
+        {
+            id: 'initial',
+            type: 'bot',
+            text: 'Ask me about the currently displayed X-ray. I will use the image on screen and the patient context.',
+            timestamp: new Date()
+        }
+    ]);
+    const [chatSession, setChatSession] = useState(null);
+    const [isChatLoading, setIsChatLoading] = useState(false);
+    const chatMessagesEndRef = useRef(null);
     const [isGeneratingReport, setIsGeneratingReport] = useState(false);
     const [showReportModal, setShowReportModal] = useState(false);
     const [reportData, setReportData] = useState(null);
@@ -100,6 +112,101 @@ export const DoctorDetail = () => {
     const [similarCaseData, setSimilarCaseData] = useState(null);
     const [isLoadingSimilarAnalysis, setIsLoadingSimilarAnalysis] = useState(false);
     const imageGroups = buildPatientImageGroups(patient);
+
+    const getCurrentImageUrl = () => {
+        if (Array.isArray(selectedImage)) {
+            return selectedImage[0]?.url || patient?.latest_case?.image_path || patient?.latest_case?.processed_img_path;
+        }
+
+        return selectedImage?.url || patient?.latest_case?.image_path || patient?.latest_case?.processed_img_path;
+    };
+
+    useEffect(() => {
+        chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [chatMessages, isChatLoading]);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const initChatSession = async () => {
+            if (!patient?.latest_case?.id) return;
+
+            try {
+                const session = await resolveChatSession({ caseId: patient.latest_case.id });
+                if (isMounted) {
+                    setChatSession(session);
+                }
+            } catch (error) {
+                console.error('Failed to initialize doctor MedGemma chat session:', error);
+            }
+        };
+
+        initChatSession();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [patient?.latest_case?.id]);
+
+    const handleDoctorChatSubmit = async () => {
+        const text = chatInput.trim();
+        const imageUrl = getCurrentImageUrl();
+        if (!text || !imageUrl || isChatLoading) return;
+
+        setChatInput('');
+        setChatMessages(prev => [...prev, {
+            id: Date.now(),
+            type: 'user',
+            text,
+            timestamp: new Date()
+        }]);
+        setIsChatLoading(true);
+
+        try {
+            let activeSession = chatSession;
+            if (!activeSession) {
+                activeSession = await resolveChatSession({ caseId: patient?.latest_case?.id });
+                setChatSession(activeSession);
+            }
+
+            const result = await sendMedGemmaChatMessage({
+                sessionId: activeSession.id,
+                message: text,
+                imageUrl,
+                mode: 'doctor',
+                patientContext: {
+                    mode: 'doctor',
+                    patientName: patient?.name,
+                    age: patient?.age,
+                    gender: patient?.gender,
+                    status: patient?.status,
+                    diagnosis: patient?.latest_case?.diagnosis,
+                    findings: patient?.latest_case?.findings,
+                    history: patient?.history,
+                    underlying_condition: patient?.underlying_condition
+                },
+                currentAnnotations: []
+            });
+
+            setChatMessages(prev => [...prev, {
+                id: result.assistant_message.id,
+                type: 'bot',
+                text: result.assistant_message.message,
+                timestamp: new Date(result.assistant_message.timestamp)
+            }]);
+        } catch (error) {
+            console.error('Doctor MedGemma chat failed:', error);
+            setChatMessages(prev => [...prev, {
+                id: Date.now() + 1,
+                type: 'bot',
+                text: `MedGemma could not answer this turn: ${error.message}`,
+                timestamp: new Date(),
+                isError: true
+            }]);
+        } finally {
+            setIsChatLoading(false);
+        }
+    };
 
     const handleAIAnalyze = () => {
         if (!patient) return;
@@ -495,9 +602,27 @@ export const DoctorDetail = () => {
                                                             })()}
                                                         </div>
                                                     ) : (
-                                                        <p className="text-sm text-gray-300">
-                                                            {t('chatbot.greeting')}
-                                                        </p>
+                                                        <div className="space-y-3 text-sm text-gray-300">
+                                                            {chatMessages.map((message) => (
+                                                                <div
+                                                                    key={message.id}
+                                                                    className={`rounded-lg px-3 py-2 border ${message.type === 'user'
+                                                                        ? 'ml-6 bg-teal-500/20 border-teal-500/30 text-teal-100'
+                                                                        : message.isError
+                                                                            ? 'mr-6 bg-red-500/10 border-red-500/30 text-red-200'
+                                                                            : 'mr-6 bg-white/5 border-white/10 text-gray-200'
+                                                                        }`}
+                                                                >
+                                                                    <p className="whitespace-pre-line">{message.text}</p>
+                                                                </div>
+                                                            ))}
+                                                            {isChatLoading && (
+                                                                <div className="mr-6 bg-white/5 border border-white/10 rounded-lg px-3 py-2">
+                                                                    <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
+                                                                </div>
+                                                            )}
+                                                            <div ref={chatMessagesEndRef} />
+                                                        </div>
                                                     )}
                                                 </div>
                                             </div>
@@ -508,11 +633,23 @@ export const DoctorDetail = () => {
                                             <div className="flex gap-2">
                                                 <input
                                                     type="text"
+                                                    value={chatInput}
+                                                    onChange={(event) => setChatInput(event.target.value)}
+                                                    onKeyDown={(event) => {
+                                                        if (event.key === 'Enter' && !event.shiftKey) {
+                                                            event.preventDefault();
+                                                            handleDoctorChatSubmit();
+                                                        }
+                                                    }}
                                                     placeholder={t('chatbot.placeholder')}
                                                     className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-teal-500"
                                                 />
-                                                <button className="bg-teal-500 text-white rounded-lg px-4 py-2 hover:bg-teal-600 transition-colors">
-                                                    <Send className="w-4 h-4" />
+                                                <button
+                                                    onClick={handleDoctorChatSubmit}
+                                                    disabled={!chatInput.trim() || isChatLoading || !getCurrentImageUrl()}
+                                                    className="bg-teal-500 disabled:bg-white/10 disabled:text-gray-500 text-white rounded-lg px-4 py-2 hover:bg-teal-600 transition-colors"
+                                                >
+                                                    {isChatLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                                                 </button>
                                             </div>
                                         </div>
