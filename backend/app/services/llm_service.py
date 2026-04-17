@@ -19,7 +19,8 @@ class MedGemmaService:
     """Lazy-loaded MedGemma image-text chat service."""
 
     def __init__(self) -> None:
-        self._pipe = None
+        self.model = None
+        self.processor = None
         self._loaded_model_id: Optional[str] = None
         self._lock = Lock()
 
@@ -51,17 +52,17 @@ class MedGemmaService:
         # project's CUDA env currently uses torch 2.4 where it is absent.
         torch_module.nn.Module.set_submodule = set_submodule
 
-    def _get_pipeline(self):
+    def _ensure_model_loaded(self):
         model_id = settings.MEDGEMMA_MODEL_ID
-        if self._pipe is not None and self._loaded_model_id == model_id:
-            return self._pipe
+        if self.model is not None and self.processor is not None and self._loaded_model_id == model_id:
+            return
 
         with self._lock:
-            if self._pipe is not None and self._loaded_model_id == model_id:
-                return self._pipe
+            if self.model is not None and self.processor is not None and self._loaded_model_id == model_id:
+                return
 
             import torch
-            from transformers import AutoConfig, AutoModelForImageTextToText, AutoProcessor, pipeline
+            from transformers import AutoConfig, AutoModelForImageTextToText, AutoProcessor
 
             has_cuda = torch.cuda.is_available()
             requested_device = settings.MEDGEMMA_DEVICE.lower().strip()
@@ -164,11 +165,17 @@ class MedGemmaService:
                 pipeline_kwargs.pop("token", None)
                 pipeline_kwargs.pop("dtype", None)
             else:
-                pipeline_kwargs["device"] = device
+                model = AutoModelForImageTextToText.from_pretrained(
+                    model_id,
+                    token=token,
+                    dtype=torch_dtype,
+                    device_map={"": device},
+                )
+                processor = AutoProcessor.from_pretrained(model_id, token=token)
 
-            self._pipe = pipeline("image-text-to-text", **pipeline_kwargs)
+            self.model = model
+            self.processor = processor
             self._loaded_model_id = model_id
-            return self._pipe
 
     @staticmethod
     def _load_image(image_url: str) -> Image.Image:
@@ -323,6 +330,8 @@ User message:
             submitted_diagnosis=submitted_diagnosis,
         )
 
+        self._ensure_model_loaded()
+
         messages = [
             {
                 "role": "user",
@@ -333,11 +342,28 @@ User message:
             }
         ]
 
-        output = self._get_pipeline()(
-            text=messages,
-            max_new_tokens=settings.MEDGEMMA_MAX_NEW_TOKENS,
+        import torch
+        # Apply chat template and prepare inputs using the explicit processor
+        text_prompt = self.processor.apply_chat_template(messages, add_generation_prompt=True, tokenize=False)
+        inputs = self.processor(
+            text=text_prompt,
+            images=[image],
+            return_tensors="pt"
         )
-        response = self._extract_generated_text(output)
+        
+        # Move inputs to same device as model
+        # For BNB quantized models, model.device is often 'cuda:0'
+        inputs = {k: v.to(self.model.device) for k, v in inputs.items()}
+
+        with torch.inference_mode():
+            output_ids = self.model.generate(
+                **inputs,
+                max_new_tokens=settings.MEDGEMMA_MAX_NEW_TOKENS,
+            )
+
+        # Decode output, ignoring the prompt portion
+        input_len = inputs["input_ids"].shape[1]
+        response = self.processor.decode(output_ids[0][input_len:], skip_special_tokens=True)
         if not response:
             raise RuntimeError("MedGemma returned an empty response")
         return response

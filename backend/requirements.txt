@@ -20,8 +20,8 @@ botocore==1.34.34
 # Uses requests library for HTTP calls
 
 # AI/ML Dependencies (for integration)
-torch==2.4.0
-torchvision==0.16.2
+torch>=2.6.0
+torchvision>=0.21.0
 transformers>=4.50.0
 accelerate>=0.30.0
 bitsandbytes>=0.43.0
