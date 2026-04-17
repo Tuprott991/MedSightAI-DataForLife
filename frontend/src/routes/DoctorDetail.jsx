@@ -499,16 +499,11 @@ export const DoctorDetail = () => {
                             onRestoreOriginal={handleRestoreOriginal}
                             onSimilarCaseModeChange={(mode, data) => {
                                 if (mode && data) {
-                                    // Start loading for 6-7 seconds
-                                    setIsLoadingSimilarAnalysis(true);
-                                    const loadingDelay = Math.floor(Math.random() * (7000 - 6000 + 1)) + 6000;
-
-                                    setTimeout(() => {
-                                        setIsLoadingSimilarAnalysis(false);
-                                        setIsSimilarCaseMode(true);
-                                        setSimilarCaseData(data);
-                                    }, loadingDelay);
+                                    setIsLoadingSimilarAnalysis(false);
+                                    setIsSimilarCaseMode(true);
+                                    setSimilarCaseData(data);
                                 } else {
+                                    setIsLoadingSimilarAnalysis(false);
                                     setIsSimilarCaseMode(false);
                                     setSimilarCaseData(null);
                                 }

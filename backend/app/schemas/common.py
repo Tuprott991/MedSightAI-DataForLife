@@ -1,8 +1,10 @@
 """
 Common schemas and utilities
 """
-from pydantic import BaseModel
-from typing import Optional, Any
+from datetime import datetime
+from typing import Any, Optional
+
+from pydantic import BaseModel, Field
 
 
 class MessageResponse(BaseModel):
@@ -37,12 +39,25 @@ class SimilaritySearchRequest(BaseModel):
     """Similarity search request"""
     case_id: Optional[str] = None
     image_path: Optional[str] = None
-    text_description: Optional[str] = None
-    top_k: int = 5
+    top_k: int = Field(5, ge=1, le=50)
+
+
+class SimilarCaseDetail(BaseModel):
+    """Display-ready similar case payload for frontend consumption."""
+    case_id: str
+    patient_id: str
+    patient_name: str
+    age: Optional[int] = None
+    gender: Optional[str] = None
+    status: Optional[str] = None
+    diagnosis: Optional[str] = None
+    image_path: Optional[str] = None
+    processed_img_path: Optional[str] = None
+    timestamp: Optional[datetime] = None
 
 
 class SimilaritySearchResponse(BaseModel):
     """Similarity search response"""
-    similar_cases: list[str]
+    similar_case_ids: list[str]
     similarity_scores: list[float]
-    case_details: Optional[list[dict]] = None
+    case_details: list[SimilarCaseDetail] = Field(default_factory=list)

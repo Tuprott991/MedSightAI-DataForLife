@@ -1,4 +1,64 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const PATIENT_CACHE_TTL_MS = 5 * 60 * 1000;
+
+const patientResponseCache = new Map();
+const inFlightRequests = new Map();
+
+const buildCacheKey = (type, params) => `${type}:${JSON.stringify(params)}`;
+
+const getCachedValue = (key) => {
+    const cached = patientResponseCache.get(key);
+    if (!cached) return null;
+
+    if (Date.now() - cached.timestamp > PATIENT_CACHE_TTL_MS) {
+        patientResponseCache.delete(key);
+        return null;
+    }
+
+    return cached.data;
+};
+
+const setCachedValue = (key, data) => {
+    patientResponseCache.set(key, {
+        data,
+        timestamp: Date.now(),
+    });
+};
+
+const fetchJsonWithCache = async (key, url) => {
+    const cached = getCachedValue(key);
+    if (cached) {
+        return cached;
+    }
+
+    const existingRequest = inFlightRequests.get(key);
+    if (existingRequest) {
+        return existingRequest;
+    }
+
+    const request = fetch(url)
+        .then(async (response) => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            setCachedValue(key, data);
+            return data;
+        })
+        .finally(() => {
+            inFlightRequests.delete(key);
+        });
+
+    inFlightRequests.set(key, request);
+    return request;
+};
+
+export const getPatientListCacheKey = (page = 1, pageSize = 20, searchQuery = '') =>
+    buildCacheKey('patients', { page, pageSize, searchQuery });
+
+export const getCachedPatientList = (page = 1, pageSize = 20, searchQuery = '') =>
+    getCachedValue(getPatientListCacheKey(page, pageSize, searchQuery));
 
 export const getChatUserId = () => {
     const storageKey = 'medsight_chat_user_id';
@@ -10,24 +70,14 @@ export const getChatUserId = () => {
     return newId;
 };
 
-/**
- * Get list of patients with pagination and latest case info
- * @param {number} page - Page number (default: 1)
- * @param {number} pageSize - Number of items per page (default: 20)
- * @returns {Promise<Object>} - Response containing patients data with latest_case
- */
 export const getPatients = async (page = 1, pageSize = 20) => {
     try {
-        const response = await fetch(
+        const data = await fetchJsonWithCache(
+            getPatientListCacheKey(page, pageSize, ''),
             `${API_BASE_URL}/api/v1/patients/list/infor?page=${page}&page_size=${pageSize}`
         );
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        console.log('✅ API Response:', data);
+
+        console.log('API Response:', data);
         return data;
     } catch (error) {
         console.error('Error fetching patients:', error);
@@ -35,67 +85,34 @@ export const getPatients = async (page = 1, pageSize = 20) => {
     }
 };
 
-/**
- * Get detailed information of a specific patient
- * @param {string} patientId - Patient ID (UUID)
- * @returns {Promise<Object>} - Patient detailed information
- */
 export const getPatientDetail = async (patientId) => {
     try {
-        const response = await fetch(
+        return await fetchJsonWithCache(
+            buildCacheKey('patient-detail', { patientId }),
             `${API_BASE_URL}/api/v1/patients/${patientId}/infor`
         );
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        return data;
     } catch (error) {
         console.error('Error fetching patient detail:', error);
         throw error;
     }
 };
 
-/**
- * Keep the image URL exactly as stored in the database.
- * @param {string} s3Url - Original S3 URL
- * @returns {string} - Displayable image URL
- */
 export const getProxiedImageUrl = (s3Url) => {
     if (!s3Url) return null;
     return s3Url;
 };
 
-/**
- * Convert DICOM URL to displayable image URL
- * @param {string} dicomUrl - DICOM file URL from S3
- * @returns {string} - Converted image URL for display
- */
 export const getDicomImageUrl = (dicomUrl) => {
     return getProxiedImageUrl(dicomUrl);
 };
 
-/**
- * Search patients by name with latest case info
- * @param {string} searchQuery - Search query string
- * @param {number} page - Page number
- * @param {number} pageSize - Number of items per page
- * @returns {Promise<Object>} - Filtered patients data with latest_case
- */
 export const searchPatients = async (searchQuery, page = 1, pageSize = 20) => {
     try {
-        const response = await fetch(
-            `${API_BASE_URL}/api/v1/patients/list/infor?page=${page}&page_size=${pageSize}&search=${encodeURIComponent(searchQuery)}`
+        const normalizedSearchQuery = searchQuery.trim();
+        return await fetchJsonWithCache(
+            getPatientListCacheKey(page, pageSize, normalizedSearchQuery),
+            `${API_BASE_URL}/api/v1/patients/list/infor?page=${page}&page_size=${pageSize}&search=${encodeURIComponent(normalizedSearchQuery)}`
         );
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        return data;
     } catch (error) {
         console.error('Error searching patients:', error);
         throw error;
@@ -143,31 +160,6 @@ export const sendMedGemmaChatMessage = async ({ sessionId, message, imageUrl, mo
     return response.json();
 };
 
-/**
- * Run YOLOv5 chest-lesion localization on a case's X-ray image.
- *
- * On first call (cold cache):
- *   - Returns annotated_image_b64 (base64 JPEG) + detections immediately.
- *   - Background task persists to S3 + DB.
- *
- * On subsequent calls (cache hit):
- *   - Returns annotated_image_url (S3 URL) + detections from DB.
- *   - from_cache = true
- *
- * @param {string} caseId - Case UUID
- * @param {Object} options
- * @param {boolean} [options.forceRerun=false] - Force re-run even if cached
- * @param {number}  [options.confThres=0.25]   - YOLO confidence threshold
- * @param {number}  [options.iouThres=0.45]    - NMS IoU threshold
- * @returns {Promise<{
- *   case_id: string,
- *   detections: Array<{class_id, class_name_en, class_name_vi, confidence, x1, y1, x2, y2}>,
- *   annotated_image_url: string|null,
- *   annotated_image_b64: string|null,
- *   from_cache: boolean,
- *   total_lesions: number
- * }>}
- */
 export const analyzeCase = async (caseId, { forceRerun = false, confThres = 0.25, iouThres = 0.45 } = {}) => {
     const params = new URLSearchParams({
         force_rerun: forceRerun,
@@ -186,8 +178,68 @@ export const analyzeCase = async (caseId, { forceRerun = false, confThres = 0.25
         try {
             const parsed = JSON.parse(errorText);
             detail = parsed.detail || errorText;
-        } catch (_) { /* ignore */ }
-        throw new Error(`Analyze failed: ${response.status} — ${detail}`);
+        } catch (_) {
+            // Ignore JSON parse errors and keep the raw response text.
+        }
+        throw new Error(`Analyze failed: ${response.status} - ${detail}`);
+    }
+
+    return response.json();
+};
+
+export const searchSimilarCases = async ({ caseId = null, imagePath = null, topK = 6 } = {}) => {
+    const key = buildCacheKey('similarity-search', {
+        caseId,
+        imagePath,
+        topK,
+    });
+
+    const cached = getCachedValue(key);
+    if (cached) {
+        return cached;
+    }
+
+    const existingRequest = inFlightRequests.get(key);
+    if (existingRequest) {
+        return existingRequest;
+    }
+
+    const request = fetch(`${API_BASE_URL}/api/v1/similarity/search`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            case_id: caseId,
+            image_path: imagePath,
+            top_k: topK,
+        }),
+    })
+        .then(async (response) => {
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Similarity search failed: ${response.status} ${errorText}`);
+            }
+
+            const data = await response.json();
+            setCachedValue(key, data);
+            return data;
+        })
+        .finally(() => {
+            inFlightRequests.delete(key);
+        });
+
+    inFlightRequests.set(key, request);
+    return request;
+};
+
+export const generateSimilarityCam = async ({ caseId, similarCaseId }) => {
+    const response = await fetch(
+        `${API_BASE_URL}/api/v1/analysis/cam-inference/${caseId}/similar/${similarCaseId}`,
+        { method: 'POST' }
+    );
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Similarity CAM failed: ${response.status} ${errorText}`);
     }
 
     return response.json();

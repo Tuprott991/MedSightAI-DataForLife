@@ -247,12 +247,12 @@ def bootstrap_zilliz() -> None:
     config = require_vars(["ZILLIZ_CLOUD_URI"])
     api_key = env("ZILLIZ_CLOUD_API_KEY", "") or ""
     collection_name = env("ZILLIZ_COLLECTION_NAME", "med_vector")
-    txt_dim = int(env("ZILLIZ_TXT_DIMENSION", "1152"))
-    img_dim = int(env("ZILLIZ_IMG_DIMENSION", "1152"))
+    img_dim = int(env("ZILLIZ_IMG_DIMENSION", "1024"))
 
     print(f"Checking Zilliz collection '{collection_name}'...")
     if zilliz_collection_exists(config["ZILLIZ_CLOUD_URI"], api_key, collection_name):
         print("  - collection already exists")
+        print("  - existing collections are not mutated by this script; drop or rename the collection to apply schema changes")
         return
 
     payload = {
@@ -267,13 +267,6 @@ def bootstrap_zilliz() -> None:
                     "autoID": False,
                 },
                 {
-                    "fieldName": "txt_emb",
-                    "dataType": "FloatVector",
-                    "elementTypeParams": {
-                        "dim": txt_dim,
-                    },
-                },
-                {
                     "fieldName": "img_emb",
                     "dataType": "FloatVector",
                     "elementTypeParams": {
@@ -286,12 +279,6 @@ def bootstrap_zilliz() -> None:
             {
                 "fieldName": "primary_key",
                 "indexName": "primary_key_index",
-            },
-            {
-                "fieldName": "txt_emb",
-                "metricType": "COSINE",
-                "indexType": "AUTOINDEX",
-                "indexName": "txt_emb_index",
             },
             {
                 "fieldName": "img_emb",

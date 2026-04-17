@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Search, Filter, Users, Loader2 } from 'lucide-react';
-import { getPatients, searchPatients } from '../services/patientApi';
+import { getCachedPatientList, getPatients, searchPatients } from '../services/patientApi';
 import { PatientCard } from '../components/custom/PatientCard';
 import { Pagination } from '../components/custom/Pagination';
 import { ITEMS_PER_PAGE } from '../constants/general';
@@ -10,21 +10,32 @@ export const Doctor = () => {
     const { t } = useTranslation();
     const [searchQuery, setSearchQuery] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
+    const normalizedSearchQuery = searchQuery.trim();
+    const cachedList = getCachedPatientList(currentPage, ITEMS_PER_PAGE, normalizedSearchQuery);
     const [patients, setPatients] = useState([]);
     const [total, setTotal] = useState(0);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(() => !cachedList);
     const [error, setError] = useState(null);
+
+    useEffect(() => {
+        if (!cachedList) return;
+        setPatients(cachedList.patients || []);
+        setTotal(cachedList.total || 0);
+        setIsLoading(false);
+    }, [cachedList]);
 
     // Fetch patients data
     useEffect(() => {
         const fetchPatients = async () => {
-            setIsLoading(true);
+            if (!cachedList) {
+                setIsLoading(true);
+            }
             setError(null);
             try {
-                const data = searchQuery 
-                    ? await searchPatients(searchQuery, currentPage, ITEMS_PER_PAGE)
+                const data = normalizedSearchQuery
+                    ? await searchPatients(normalizedSearchQuery, currentPage, ITEMS_PER_PAGE)
                     : await getPatients(currentPage, ITEMS_PER_PAGE);
-                
+                 
                 setPatients(data.patients || []);
                 setTotal(data.total || 0);
             } catch (err) {
@@ -36,7 +47,7 @@ export const Doctor = () => {
         };
 
         fetchPatients();
-    }, [currentPage, searchQuery]);
+    }, [cachedList, currentPage, normalizedSearchQuery]);
 
     // Calculate pagination
     const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
