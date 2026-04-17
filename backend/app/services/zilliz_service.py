@@ -1,466 +1,177 @@
 """
-Zilliz Cloud Vector Database Service
-Handles embedding storage and similarity search using Zilliz Cloud REST API
+Zilliz Cloud vector database service for image-only CBIR retrieval.
 """
-import requests
-from typing import List, Tuple, Optional, Dict, Any
-from uuid import UUID
+from __future__ import annotations
+
 import hashlib
+from typing import Any, Dict, List, Optional, Tuple
+
+import requests
 from fastapi import HTTPException
+
 from app.config.settings import settings
 from app.config.zilliz import get_zilliz_headers
 
 
 class ZillizService:
-    """Service for Zilliz Cloud operations using REST API"""
-    
+    """Service for Zilliz Cloud operations using the REST API."""
+
     def __init__(self):
         self.base_url = settings.ZILLIZ_CLOUD_URI
-        self.api_key = settings.ZILLIZ_CLOUD_API_KEY
         self.collection_name = settings.ZILLIZ_COLLECTION_NAME
-        self.txt_dimension = settings.ZILLIZ_TXT_DIMENSION
         self.img_dimension = settings.ZILLIZ_IMG_DIMENSION
-        
-        # Request headers
         self.headers = get_zilliz_headers()
-    
-    def _uuid_to_int(self, uuid_str: str) -> int:
-        """
-        Convert UUID string to consistent integer for Zilliz primary_key
-        Uses hash function to ensure consistent conversion
-        """
-        # Use first 15 digits of hash to fit in int64 range
+
+    @staticmethod
+    def _uuid_to_int(uuid_str: str) -> int:
         hash_val = int(hashlib.sha256(uuid_str.encode()).hexdigest(), 16)
-        return hash_val % (2**63 - 1)  # Keep within int64 range
-    
-    def insert_embedding(
+        return hash_val % (2**63 - 1)
+
+    def _post(
         self,
-        case_id: str,
-        txt_embedding: Optional[List[float]] = None,
-        img_embedding: Optional[List[float]] = None
-    ) -> bool:
-        """
-        Insert case embeddings into Zilliz
-        
-        Args:
-            case_id: Case UUID as string
-            txt_embedding: Text embedding vector (1152 dimensions)
-            img_embedding: Image embedding vector (1152 dimensions)
-        
-        Returns:
-            True if successful
-        """
+        path: str,
+        payload: Dict[str, Any],
+        *,
+        action: str,
+        timeout: int = 30,
+        allow_missing: bool = False,
+    ) -> Optional[Dict[str, Any]]:
         try:
-            primary_key = self._uuid_to_int(case_id)
-            
-            # Prepare data
-            data = {"primary_key": primary_key}
-            
-            if txt_embedding:
-                if len(txt_embedding) != self.txt_dimension:
-                    raise ValueError(f"Text embedding must be {self.txt_dimension} dimensions")
-                data["txt_emb"] = txt_embedding
-            
-            if img_embedding:
-                if len(img_embedding) != self.img_dimension:
-                    raise ValueError(f"Image embedding must be {self.img_dimension} dimensions")
-                data["img_emb"] = img_embedding
-            
-            # Make request
-            url = f"{self.base_url}/v2/vectordb/entities/insert"
-            payload = {
-                "collectionName": self.collection_name,
-                "data": [data]
-            }
-            
-            response = requests.post(url, json=payload, headers=self.headers)
+            response = requests.post(
+                f"{self.base_url}{path}",
+                json=payload,
+                headers=self.headers,
+                timeout=timeout,
+            )
             response.raise_for_status()
-            
             result = response.json()
-            if result.get("code") == 0:
-                return True
-            else:
-                raise HTTPException(
-                    status_code=500, 
-                    detail=f"Zilliz insert failed: {result.get('message', 'Unknown error')}"
-                )
-        
-        except requests.exceptions.RequestException as e:
-            raise HTTPException(status_code=500, detail=f"Failed to insert embedding: {str(e)}")
-    
-    def upsert_embedding(
-        self,
-        case_id: str,
-        txt_embedding: Optional[List[float]] = None,
-        img_embedding: Optional[List[float]] = None
-    ) -> bool:
-        """
-        Upsert (insert or update) case embeddings in Zilliz
-        
-        Args:
-            case_id: Case UUID as string
-            txt_embedding: Text embedding vector
-            img_embedding: Image embedding vector
-        
-        Returns:
-            True if successful
-        """
-        try:
-            primary_key = self._uuid_to_int(case_id)
-            
-            # Prepare data
-            data = {"primary_key": primary_key}
-            
-            if txt_embedding:
-                data["txt_emb"] = txt_embedding
-            
-            if img_embedding:
-                data["img_emb"] = img_embedding
-            
-            # Make request
-            url = f"{self.base_url}/v2/vectordb/entities/upsert"
-            payload = {
-                "collectionName": self.collection_name,
-                "data": [data]
-            }
-            
-            response = requests.post(url, json=payload, headers=self.headers)
-            response.raise_for_status()
-            
-            result = response.json()
-            return result.get("code") == 0
-        
-        except requests.exceptions.RequestException as e:
-            raise HTTPException(status_code=500, detail=f"Failed to upsert embedding: {str(e)}")
-    
-    def search_similar_by_text(
-        self,
-        txt_embedding: List[float],
-        top_k: int = 5
-    ) -> Tuple[List[int], List[float]]:
-        """
-        Search for similar cases by text embedding
-        
-        Args:
-            txt_embedding: Query text embedding vector
-            top_k: Number of similar cases to return
-        
-        Returns:
-            Tuple of (primary_keys, similarity_scores)
-        """
-        try:
-            if len(txt_embedding) != self.txt_dimension:
-                raise ValueError(f"Text embedding must be {self.txt_dimension} dimensions")
-            
-            url = f"{self.base_url}/v2/vectordb/entities/search"
-            payload = {
-                "collectionName": self.collection_name,
-                "data": [txt_embedding],
-                "annsField": "txt_emb",
-                "limit": top_k,
-                "outputFields": ["*"]
-            }
-            
-            response = requests.post(url, json=payload, headers=self.headers)
-            response.raise_for_status()
-            
-            result = response.json()
-            
-            if result.get("code") != 0:
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Search failed: {result.get('message', 'Unknown error')}"
-                )
-            
-            # Extract results
-            data = result.get("data", [])
-            if isinstance(data, list) and len(data) > 0:
-                search_results = data[0] if isinstance(data[0], list) else data
-            else:
-                search_results = []
-            
-            primary_keys = []
-            scores = []
-            for item in search_results:
-                if isinstance(item, dict):
-                    primary_keys.append(item.get("id") or item.get("primary_key"))
-                    scores.append(item.get("distance", 0))
-            
-            return primary_keys, scores
-        
-        except requests.exceptions.RequestException as e:
-            raise HTTPException(status_code=500, detail=f"Failed to search similar cases: {str(e)}")
-    
+        except requests.exceptions.RequestException as exc:
+            raise HTTPException(status_code=500, detail=f"{action} failed: {exc}") from exc
+
+        if result.get("code") != 0:
+            if allow_missing:
+                return None
+            raise HTTPException(
+                status_code=500,
+                detail=f"{action} failed: {result.get('message', 'Unknown error')}",
+            )
+
+        return result
+
+    def _extract_search_results(self, result: Dict[str, Any]) -> List[Dict[str, Any]]:
+        data = result.get("data", [])
+        if isinstance(data, list) and data:
+            return data[0] if isinstance(data[0], list) else data
+        return []
+
+    def upsert_embedding(self, case_id: str, img_embedding: List[float]) -> bool:
+        if len(img_embedding) != self.img_dimension:
+            raise ValueError(f"Image embedding must be {self.img_dimension} dimensions")
+
+        payload = {
+            "collectionName": self.collection_name,
+            "data": [
+                {
+                    "primary_key": self._uuid_to_int(case_id),
+                    "img_emb": img_embedding,
+                }
+            ],
+        }
+        result = self._post(
+            "/v2/vectordb/entities/upsert",
+            payload,
+            action="Upsert embedding in Zilliz",
+        )
+        return bool(result and result.get("code") == 0)
+
     def search_similar_by_image(
         self,
         img_embedding: List[float],
-        top_k: int = 5
-    ) -> Tuple[List[int], List[float]]:
-        """
-        Search for similar cases by image embedding
-        
-        Args:
-            img_embedding: Query image embedding vector
-            top_k: Number of similar cases to return
-        
-        Returns:
-            Tuple of (primary_keys, similarity_scores)
-        """
-        try:
-            if len(img_embedding) != self.img_dimension:
-                raise ValueError(f"Image embedding must be {self.img_dimension} dimensions")
-            
-            url = f"{self.base_url}/v2/vectordb/entities/search"
-            payload = {
-                "collectionName": self.collection_name,
-                "data": [img_embedding],
-                "annsField": "img_emb",
-                "limit": top_k,
-                "outputFields": ["*"]
-            }
-            
-            response = requests.post(url, json=payload, headers=self.headers)
-            response.raise_for_status()
-            
-            result = response.json()
-            
-            if result.get("code") != 0:
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Search failed: {result.get('message', 'Unknown error')}"
-                )
-            
-            # Extract results
-            data = result.get("data", [])
-            if isinstance(data, list) and len(data) > 0:
-                search_results = data[0] if isinstance(data[0], list) else data
-            else:
-                search_results = []
-            
-            primary_keys = []
-            scores = []
-            for item in search_results:
-                if isinstance(item, dict):
-                    primary_keys.append(item.get("id") or item.get("primary_key"))
-                    scores.append(item.get("distance", 0))
-            
-            return primary_keys, scores
-        
-        except requests.exceptions.RequestException as e:
-            raise HTTPException(status_code=500, detail=f"Failed to search similar cases: {str(e)}")
-    
-    def hybrid_search(
-        self,
-        txt_embedding: Optional[List[float]] = None,
-        img_embedding: Optional[List[float]] = None,
+        *,
         top_k: int = 5,
-        rerank_strategy: str = "rrf",
-        rerank_k: int = 10
+        exclude_case_id: Optional[str] = None,
     ) -> Tuple[List[int], List[float]]:
-        """
-        Hybrid search using both text and image embeddings
-        
-        Args:
-            txt_embedding: Text embedding vector
-            img_embedding: Image embedding vector
-            top_k: Number of results to return
-            rerank_strategy: Reranking strategy ("rrf" or "weighted")
-            rerank_k: Reranking parameter
-        
-        Returns:
-            Tuple of (primary_keys, similarity_scores)
-        """
-        try:
-            search_requests = []
-            
-            if txt_embedding:
-                if len(txt_embedding) != self.txt_dimension:
-                    raise ValueError(f"Text embedding must be {self.txt_dimension} dimensions")
-                search_requests.append({
-                    "data": [txt_embedding],
-                    "annsField": "txt_emb",
-                    "limit": top_k,
-                    "outputFields": ["*"]
-                })
-            
-            if img_embedding:
-                if len(img_embedding) != self.img_dimension:
-                    raise ValueError(f"Image embedding must be {self.img_dimension} dimensions")
-                search_requests.append({
-                    "data": [img_embedding],
-                    "annsField": "img_emb",
-                    "limit": top_k,
-                    "outputFields": ["*"]
-                })
-            
-            if not search_requests:
-                raise ValueError("Must provide at least one embedding (text or image)")
-            
-            url = f"{self.base_url}/v2/vectordb/entities/hybrid_search"
-            payload = {
-                "collectionName": self.collection_name,
-                "search": search_requests,
-                "rerank": {
-                    "strategy": rerank_strategy,
-                    "params": {"k": rerank_k}
-                }
-            }
-            
-            response = requests.post(url, json=payload, headers=self.headers)
-            response.raise_for_status()
-            
-            result = response.json()
-            
-            if result.get("code") != 0:
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Hybrid search failed: {result.get('message', 'Unknown error')}"
-                )
-            
-            # Extract results
-            data = result.get("data", [])
-            if isinstance(data, list) and len(data) > 0:
-                # data is a list of lists, get first element
-                search_results = data[0] if isinstance(data[0], list) else data
-            else:
-                search_results = []
-            
-            primary_keys = []
-            scores = []
-            
-            for item in search_results:
-                if isinstance(item, dict):
-                    primary_keys.append(item.get("id") or item.get("primary_key"))
-                    scores.append(item.get("distance", 0))
-            
-            return primary_keys, scores
-        
-        except requests.exceptions.RequestException as e:
-            raise HTTPException(status_code=500, detail=f"Failed to perform hybrid search: {str(e)}")
-    
+        if len(img_embedding) != self.img_dimension:
+            raise ValueError(f"Image embedding must be {self.img_dimension} dimensions")
+
+        exclude_primary_key = self._uuid_to_int(exclude_case_id) if exclude_case_id else None
+        limit = top_k + 1 if exclude_primary_key is not None else top_k
+
+        payload = {
+            "collectionName": self.collection_name,
+            "data": [img_embedding],
+            "annsField": "img_emb",
+            "limit": limit,
+            "outputFields": ["*"],
+        }
+        result = self._post(
+            "/v2/vectordb/entities/search",
+            payload,
+            action="Search similar images in Zilliz",
+        )
+
+        primary_keys: List[int] = []
+        scores: List[float] = []
+        for item in self._extract_search_results(result or {}):
+            if not isinstance(item, dict):
+                continue
+
+            primary_key = item.get("id") or item.get("primary_key")
+            if primary_key is None:
+                continue
+            if exclude_primary_key is not None and primary_key == exclude_primary_key:
+                continue
+
+            primary_keys.append(primary_key)
+            scores.append(float(item.get("distance", 0.0)))
+
+            if len(primary_keys) >= top_k:
+                break
+
+        return primary_keys, scores
+
     def get_by_case_id(self, case_id: str) -> Optional[Dict[str, Any]]:
-        """
-        Get embedding by case ID
-        
-        Args:
-            case_id: Case UUID as string
-        
-        Returns:
-            Dictionary with embeddings or None if not found
-        """
-        try:
-            primary_key = self._uuid_to_int(case_id)
-            
-            url = f"{self.base_url}/v2/vectordb/entities/get"
-            payload = {
-                "collectionName": self.collection_name,
-                "id": [primary_key]
-            }
-            
-            response = requests.post(url, json=payload, headers=self.headers)
-            response.raise_for_status()
-            
-            result = response.json()
-            
-            if result.get("code") != 0:
-                return None
-            
-            data = result.get("data", [])
-            return data[0] if data else None
-        
-        except requests.exceptions.RequestException as e:
-            raise HTTPException(status_code=500, detail=f"Failed to get embedding: {str(e)}")
-    
-    def query_by_filter(self, filter_expr: str) -> List[Dict[str, Any]]:
-        """
-        Query embeddings by filter expression
-        
-        Args:
-            filter_expr: Filter expression (e.g., "primary_key in [1,2,3]")
-        
-        Returns:
-            List of matching records
-        """
-        try:
-            url = f"{self.base_url}/v2/vectordb/entities/query"
-            payload = {
-                "collectionName": self.collection_name,
-                "filter": filter_expr
-            }
-            
-            response = requests.post(url, json=payload, headers=self.headers)
-            response.raise_for_status()
-            
-            result = response.json()
-            
-            if result.get("code") != 0:
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Query failed: {result.get('message', 'Unknown error')}"
-                )
-            
-            return result.get("data", [])
-        
-        except requests.exceptions.RequestException as e:
-            raise HTTPException(status_code=500, detail=f"Failed to query: {str(e)}")
-    
+        payload = {
+            "collectionName": self.collection_name,
+            "id": [self._uuid_to_int(case_id)],
+        }
+        result = self._post(
+            "/v2/vectordb/entities/get",
+            payload,
+            action="Get embedding from Zilliz",
+            allow_missing=True,
+        )
+        if not result:
+            return None
+
+        data = result.get("data", [])
+        return data[0] if data else None
+
     def delete_by_case_id(self, case_id: str) -> bool:
-        """
-        Delete embedding by case ID
-        
-        Args:
-            case_id: Case UUID as string
-        
-        Returns:
-            True if successful
-        """
-        try:
-            primary_key = self._uuid_to_int(case_id)
-            
-            url = f"{self.base_url}/v2/vectordb/entities/delete"
-            payload = {
-                "collectionName": self.collection_name,
-                "filter": f"primary_key in [{primary_key}]"
-            }
-            
-            response = requests.post(url, json=payload, headers=self.headers)
-            response.raise_for_status()
-            
-            result = response.json()
-            return result.get("code") == 0
-        
-        except requests.exceptions.RequestException as e:
-            raise HTTPException(status_code=500, detail=f"Failed to delete embedding: {str(e)}")
-    
+        primary_key = self._uuid_to_int(case_id)
+        payload = {
+            "collectionName": self.collection_name,
+            "filter": f"primary_key in [{primary_key}]",
+        }
+        result = self._post(
+            "/v2/vectordb/entities/delete",
+            payload,
+            action="Delete embedding from Zilliz",
+        )
+        return bool(result and result.get("code") == 0)
+
     def delete_batch(self, case_ids: List[str]) -> bool:
-        """
-        Delete multiple embeddings by case IDs
-        
-        Args:
-            case_ids: List of case UUID strings
-        
-        Returns:
-            True if successful
-        """
-        try:
-            primary_keys = [self._uuid_to_int(cid) for cid in case_ids]
-            primary_keys_str = ",".join(map(str, primary_keys))
-            
-            url = f"{self.base_url}/v2/vectordb/entities/delete"
-            payload = {
-                "collectionName": self.collection_name,
-                "filter": f"primary_key in [{primary_keys_str}]"
-            }
-            
-            response = requests.post(url, json=payload, headers=self.headers)
-            response.raise_for_status()
-            
-            result = response.json()
-            return result.get("code") == 0
-        
-        except requests.exceptions.RequestException as e:
-            raise HTTPException(status_code=500, detail=f"Failed to delete embeddings: {str(e)}")
+        primary_keys = ",".join(str(self._uuid_to_int(case_id)) for case_id in case_ids)
+        payload = {
+            "collectionName": self.collection_name,
+            "filter": f"primary_key in [{primary_keys}]",
+        }
+        result = self._post(
+            "/v2/vectordb/entities/delete",
+            payload,
+            action="Delete batch embeddings from Zilliz",
+        )
+        return bool(result and result.get("code") == 0)
 
 
-# Create singleton instance
 zilliz_service = ZillizService()

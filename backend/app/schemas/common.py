@@ -1,7 +1,7 @@
 """
 Common schemas and utilities
 """
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, Any
 
 
@@ -37,12 +37,11 @@ class SimilaritySearchRequest(BaseModel):
     """Similarity search request"""
     case_id: Optional[str] = None
     image_path: Optional[str] = None
-    text_description: Optional[str] = None
-    top_k: int = 5
+    top_k: int = Field(5, ge=1, le=50)
 
 
 class SimilaritySearchResponse(BaseModel):
     """Similarity search response"""
-    similar_cases: list[str]
+    similar_case_ids: list[str]
     similarity_scores: list[float]
-    case_details: Optional[list[dict]] = None
+    case_details: list[dict] = Field(default_factory=list)

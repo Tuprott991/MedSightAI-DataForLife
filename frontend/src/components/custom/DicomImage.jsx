@@ -1,25 +1,33 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Loader2, Image as ImageIcon } from 'lucide-react';
 
+const loadedImageUrls = new Set();
+
 /**
- * Component to display medical images (PNG/JPG) from S3 URL
+ * Component to display medical images (PNG/JPG) from S3 URL.
  */
 export const DicomImage = ({ src, alt, className, onLoad, onError }) => {
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(() => Boolean(src) && !loadedImageUrls.has(src));
     const [error, setError] = useState(false);
 
+    useEffect(() => {
+        setError(false);
+        setIsLoading(Boolean(src) && !loadedImageUrls.has(src));
+    }, [src]);
+
     const handleLoad = () => {
+        if (src) {
+            loadedImageUrls.add(src);
+        }
         setIsLoading(false);
         setError(false);
-        console.log('✅ Image loaded successfully:', src);
         if (onLoad) onLoad();
     };
 
-    const handleError = (e) => {
+    const handleError = (event) => {
         setIsLoading(false);
         setError(true);
-        console.error('❌ Image failed to load:', src, e);
-        if (onError) onError(e);
+        if (onError) onError(event);
     };
 
     if (!src) {
@@ -33,8 +41,6 @@ export const DicomImage = ({ src, alt, className, onLoad, onError }) => {
         );
     }
 
-    console.log('🖼️  Loading image from:', src);
-
     return (
         <div className={`relative ${className || ''}`}>
             {isLoading && (
@@ -42,17 +48,16 @@ export const DicomImage = ({ src, alt, className, onLoad, onError }) => {
                     <Loader2 className="w-8 h-8 text-teal-500 animate-spin" />
                 </div>
             )}
-            
+
             {error && !isLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-gray-800/50 rounded-lg">
                     <div className="text-center">
                         <ImageIcon className="w-12 h-12 text-red-600 mx-auto mb-2" />
                         <p className="text-red-400 text-sm">Failed to load image</p>
-                        <p className="text-red-300 text-xs mt-1 px-2 break-all">{src}</p>
                     </div>
                 </div>
             )}
-            
+
             <img
                 src={src}
                 alt={alt || 'Medical Image'}

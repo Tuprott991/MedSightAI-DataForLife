@@ -19,6 +19,5 @@ def get_zilliz_config():
     return {
         "base_url": settings.ZILLIZ_CLOUD_URI,
         "collection_name": settings.ZILLIZ_COLLECTION_NAME,
-        "txt_dimension": settings.ZILLIZ_TXT_DIMENSION,
         "img_dimension": settings.ZILLIZ_IMG_DIMENSION
     }

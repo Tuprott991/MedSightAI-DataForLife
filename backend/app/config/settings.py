@@ -64,8 +64,7 @@ class Settings(BaseSettings):
     ZILLIZ_CLOUD_URI: str
     ZILLIZ_CLOUD_API_KEY: Optional[str] = None
     ZILLIZ_COLLECTION_NAME: str = "med_vector"
-    ZILLIZ_TXT_DIMENSION: int = 1152
-    ZILLIZ_IMG_DIMENSION: int = 1152
+    ZILLIZ_IMG_DIMENSION: int = 1024
     
     # CORS
     BACKEND_CORS_ORIGINS: list = ["http://localhost:3000", "http://localhost:5173"]
@@ -79,6 +78,11 @@ class Settings(BaseSettings):
     MODEL_INFERENCE_PATH: str = "../MedSightAI"
     MEDGEMMA_PATH: str = "../medgemma"
     VINDR_DATASET_PATH: str = "../VindrDataset"
+    RETRIEVAL_MODEL_PATH: str = str(
+        BACKEND_DIR.parent / "retrieval_model" / "covid_convnextv2_seed_0_epoch_16_backbone.onnx"
+    )
+    RETRIEVAL_RESIZE_SIZE: int = 384
+    RETRIEVAL_IMAGE_SIZE: int = 384
     MEDGEMMA_MODEL_ID: str = "unsloth/medgemma-1.5-4b-it-bnb-4bit"
     MEDGEMMA_DEVICE: str = "cuda"
     MEDGEMMA_MAX_NEW_TOKENS: int = 900
@@ -105,6 +109,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = str(ENV_FILE)
         case_sensitive = True
+        extra = "ignore"
 
 
 # Global settings instance

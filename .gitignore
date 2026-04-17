@@ -2,3 +2,4 @@ train.csv
 __pycache__/
 covidx_sample_300/
 .env
+retrieval_model/
