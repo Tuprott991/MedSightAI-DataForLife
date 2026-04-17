@@ -81,6 +81,12 @@ class Settings(BaseSettings):
     RETRIEVAL_MODEL_PATH: str = str(
         BACKEND_DIR.parent / "retrieval_model" / "covid_convnextv2_seed_0_epoch_16_backbone.onnx"
     )
+    SALIENCY_MODEL_CODE_PATH: str = str(
+        BACKEND_DIR.parent.parent / "Image-Retrieval---Thesis-2026"
+    )
+    SALIENCY_MODEL_WEIGHTS_PATH: str = str(
+        BACKEND_DIR.parent.parent / "Image-Retrieval---Thesis-2026" / "model.pth"
+    )
     RETRIEVAL_RESIZE_SIZE: int = 384
     RETRIEVAL_IMAGE_SIZE: int = 384
     MEDGEMMA_MODEL_ID: str = "unsloth/medgemma-1.5-4b-it-bnb-4bit"

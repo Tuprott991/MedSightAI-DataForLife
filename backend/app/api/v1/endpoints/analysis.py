@@ -18,11 +18,11 @@ from app.core import case as crud_case, ai_result as crud_ai_result
 from app.schemas import (
     AIAnalysisRequest, AIAnalysisResponse, AIResultResponse,
     AIResultCreate, MessageResponse,
-    DetectionItem, LocalizeResponse,
+    DetectionItem, LocalizeResponse, SimilarityCamResponse,
 )
 from app.services import (
     ai_model_service, medsigclip_service,
-    zilliz_service, s3_service,
+    zilliz_service, s3_service, similarity_cam_service,
 )
 from app.utils.single_image_infer import run_localization
 from app.utils.s3_paths import S3PathBuilder
@@ -359,6 +359,63 @@ async def run_cam_inference(
     except Exception as e:
         logger.error(f"[CAM-INFERENCE] Unexpected error: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error processing inference: {str(e)}")
+
+
+@router.post("/cam-inference/{case_id}/similar/{similar_case_id}", response_model=SimilarityCamResponse)
+async def run_similarity_cam_inference(
+    case_id: UUID,
+    similar_case_id: UUID,
+    db: Session = Depends(get_db),
+):
+    """
+    Generate saliency overlays for a query case and one retrieved similar case.
+
+    This endpoint is used by the doctor compare flow:
+    - query case: the original patient image
+    - similar case: one retrieved gallery image
+    """
+    logger.info(
+        "[SIMILARITY-CAM] Generating saliency comparison for case_id=%s similar_case_id=%s",
+        case_id,
+        similar_case_id,
+    )
+
+    query_case = crud_case.get(db, case_id)
+    if not query_case or not query_case.image_path:
+        raise HTTPException(status_code=404, detail="Query case not found")
+
+    similar_case = crud_case.get(db, similar_case_id)
+    if not similar_case or not similar_case.image_path:
+        raise HTTPException(status_code=404, detail="Similar case not found")
+
+    try:
+        query_image_bytes = s3_service.download_file(_s3_key_from_url(query_case.image_path))
+        similar_image_bytes = s3_service.download_file(_s3_key_from_url(similar_case.image_path))
+
+        saliency_result = similarity_cam_service.generate_pair_saliency(
+            query_image_bytes=query_image_bytes,
+            similar_image_bytes=similar_image_bytes,
+        )
+
+        return SimilarityCamResponse(
+            query_case_id=case_id,
+            similar_case_id=similar_case_id,
+            method=saliency_result["method"],
+            image_size=saliency_result["image_size"],
+            query_overlay_b64=base64.b64encode(saliency_result["query_overlay_bytes"]).decode("ascii"),
+            similar_overlay_b64=base64.b64encode(saliency_result["similar_overlay_bytes"]).decode("ascii"),
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error(
+            "[SIMILARITY-CAM] Failed saliency comparison for case_id=%s similar_case_id=%s: %s",
+            case_id,
+            similar_case_id,
+            exc,
+            exc_info=True,
+        )
+        raise HTTPException(status_code=500, detail=f"Failed to generate similarity CAM: {exc}") from exc
 
 
 # ---------------------------------------------------------------------------

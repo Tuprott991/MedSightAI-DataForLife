@@ -186,3 +186,61 @@ export const analyzeCase = async (caseId, { forceRerun = false, confThres = 0.25
 
     return response.json();
 };
+
+export const searchSimilarCases = async ({ caseId = null, imagePath = null, topK = 6 } = {}) => {
+    const key = buildCacheKey('similarity-search', {
+        caseId,
+        imagePath,
+        topK,
+    });
+
+    const cached = getCachedValue(key);
+    if (cached) {
+        return cached;
+    }
+
+    const existingRequest = inFlightRequests.get(key);
+    if (existingRequest) {
+        return existingRequest;
+    }
+
+    const request = fetch(`${API_BASE_URL}/api/v1/similarity/search`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            case_id: caseId,
+            image_path: imagePath,
+            top_k: topK,
+        }),
+    })
+        .then(async (response) => {
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Similarity search failed: ${response.status} ${errorText}`);
+            }
+
+            const data = await response.json();
+            setCachedValue(key, data);
+            return data;
+        })
+        .finally(() => {
+            inFlightRequests.delete(key);
+        });
+
+    inFlightRequests.set(key, request);
+    return request;
+};
+
+export const generateSimilarityCam = async ({ caseId, similarCaseId }) => {
+    const response = await fetch(
+        `${API_BASE_URL}/api/v1/analysis/cam-inference/${caseId}/similar/${similarCaseId}`,
+        { method: 'POST' }
+    );
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Similarity CAM failed: ${response.status} ${errorText}`);
+    }
+
+    return response.json();
+};

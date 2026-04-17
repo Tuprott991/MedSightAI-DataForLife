@@ -106,3 +106,13 @@ class LocalizeResponse(BaseModel):
     from_cache: bool = Field(False, description="True when served from DB + S3 cache")
     total_lesions: int = Field(0, description="Number of detected lesions")
 
+
+class SimilarityCamResponse(BaseModel):
+    """Response for saliency-based comparison between a query case and a retrieved case."""
+    query_case_id: UUID
+    similar_case_id: UUID
+    method: str = Field(..., description="Saliency method used to generate the overlays")
+    image_size: int = Field(..., description="Spatial size used for saliency inference")
+    query_overlay_b64: str = Field(..., description="Base64-encoded PNG saliency overlay for the query image")
+    similar_overlay_b64: str = Field(..., description="Base64-encoded PNG saliency overlay for the similar image")
+

@@ -29,7 +29,7 @@ export const SimilarCaseCard = ({ caseData, onSelect, isSelected }) => {
                 />
                 {/* Similarity Badge */}
                 <div className="absolute top-2 right-2 bg-teal-500 text-white text-xs font-bold px-2 py-1 rounded">
-                    {similarity}% {t('similarCase.match')}
+                    {similarity.toFixed(1)}% {t('similarCase.match')}
                 </div>
                 {/* Status Badge */}
                 {status && (
@@ -37,7 +37,10 @@ export const SimilarCaseCard = ({ caseData, onSelect, isSelected }) => {
                         {status === 'Resolved' ? t('similarCase.resolved') :
                             status === 'Stable' ? t('similarCase.stable') :
                                 status === 'Under Treatment' ? t('similarCase.underTreatment') :
-                                    status === 'Critical' ? t('similarCase.critical') : status}
+                                    status === 'Critical' ? t('similarCase.critical') :
+                                        status === 'Processed' ? 'Processed' :
+                                            status === 'Unprocessed' || status === 'Unprocesed' ? 'Unprocessed' :
+                                                status}
                     </div>
                 )}
             </div>

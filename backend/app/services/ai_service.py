@@ -3,6 +3,7 @@ AI and retrieval model services.
 """
 from __future__ import annotations
 
+import importlib.util
 import io
 import os
 import sys
@@ -14,7 +15,7 @@ import onnxruntime as ort
 from fastapi import HTTPException
 from PIL import Image
 
-from app.config.settings import settings
+from app.config.settings import BACKEND_DIR, settings
 
 
 # Add model paths to system path for other team modules.
@@ -31,9 +32,6 @@ except AttributeError:
 
 class AIModelService:
     """Placeholder service for the main diagnostic model stack."""
-
-    def __init__(self):
-        pass
 
     def preprocess_image(self, image_path: str) -> str:
         raise NotImplementedError("Connect to MedSightAI preprocessing module")
@@ -96,10 +94,7 @@ class ImageRetrievalService:
 
         model_path = self._resolve_model_path()
         if not model_path.exists():
-            raise HTTPException(
-                status_code=500,
-                detail=f"Retrieval model not found at {model_path}",
-            )
+            raise HTTPException(status_code=500, detail=f"Retrieval model not found at {model_path}")
 
         try:
             self.providers = self._select_providers()
@@ -126,10 +121,34 @@ class ImageRetrievalService:
         except HTTPException:
             raise
         except Exception as exc:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to load retrieval model: {exc}",
-            ) from exc
+            raise HTTPException(status_code=500, detail=f"Failed to load retrieval model: {exc}") from exc
+
+    @staticmethod
+    def _resize_shortest_side(image: Image.Image, resize_size: int) -> Image.Image:
+        width, height = image.size
+        if width <= 0 or height <= 0:
+            raise ValueError(f"Invalid image size: {(width, height)}")
+
+        if width < height:
+            new_width = resize_size
+            new_height = round(height * (resize_size / width))
+        else:
+            new_height = resize_size
+            new_width = round(width * (resize_size / height))
+
+        return image.resize((new_width, new_height), _BICUBIC)
+
+    @staticmethod
+    def _center_crop(image: Image.Image, crop_size: int) -> Image.Image:
+        width, height = image.size
+        if crop_size > width or crop_size > height:
+            raise ValueError(f"Center crop size {crop_size} is larger than resized image {(width, height)}")
+
+        left = (width - crop_size) // 2
+        top = (height - crop_size) // 2
+        right = left + crop_size
+        bottom = top + crop_size
+        return image.crop((left, top, right, bottom))
 
     def _prepare_image(self, image_bytes: bytes) -> np.ndarray:
         if self.input_size is None:
@@ -154,40 +173,10 @@ class ImageRetrievalService:
             image_array = (image_array - 0.5) / 0.5
             image_array = np.transpose(image_array, (2, 0, 1))
             return np.expand_dims(image_array, axis=0).astype(np.float32, copy=False)
+        except HTTPException:
+            raise
         except Exception as exc:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to preprocess retrieval image: {exc}",
-            ) from exc
-
-    @staticmethod
-    def _resize_shortest_side(image: Image.Image, resize_size: int) -> Image.Image:
-        width, height = image.size
-        if width <= 0 or height <= 0:
-            raise ValueError(f"Invalid image size: {(width, height)}")
-
-        if width < height:
-            new_width = resize_size
-            new_height = round(height * (resize_size / width))
-        else:
-            new_height = resize_size
-            new_width = round(width * (resize_size / height))
-
-        return image.resize((new_width, new_height), _BICUBIC)
-
-    @staticmethod
-    def _center_crop(image: Image.Image, crop_size: int) -> Image.Image:
-        width, height = image.size
-        if crop_size > width or crop_size > height:
-            raise ValueError(
-                f"Center crop size {crop_size} is larger than resized image {(width, height)}"
-            )
-
-        left = (width - crop_size) // 2
-        top = (height - crop_size) // 2
-        right = left + crop_size
-        bottom = top + crop_size
-        return image.crop((left, top, right, bottom))
+            raise HTTPException(status_code=500, detail=f"Failed to preprocess retrieval image: {exc}") from exc
 
     def get_model_info(self) -> Dict[str, Any]:
         self._lazy_load()
@@ -220,14 +209,162 @@ class ImageRetrievalService:
         except HTTPException:
             raise
         except Exception as exc:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to generate image embedding: {exc}",
-            ) from exc
+            raise HTTPException(status_code=500, detail=f"Failed to generate image embedding: {exc}") from exc
+
+
+class SimilarityCamService:
+    """Local SimCAM service for comparing a query case against a retrieved case."""
+
+    def __init__(self):
+        self._initialized = False
+        self.device = None
+        self.explainer = None
+        self.transform = None
+        self.image_size = 384
+        self.method = "simcam"
+
+    @staticmethod
+    def _load_module(module_name: str, module_path: Path):
+        spec = importlib.util.spec_from_file_location(module_name, module_path)
+        if spec is None or spec.loader is None:
+            raise HTTPException(status_code=500, detail=f"Failed to load module spec for {module_path}")
+
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def _lazy_load(self) -> None:
+        if self._initialized:
+            return
+
+        code_dir = Path(settings.SALIENCY_MODEL_CODE_PATH).expanduser().resolve()
+        weights_path = Path(settings.SALIENCY_MODEL_WEIGHTS_PATH).expanduser().resolve()
+        explanations_path = BACKEND_DIR / "saliency_map" / "explanations.py"
+
+        if not code_dir.exists():
+            raise HTTPException(status_code=500, detail=f"Saliency code path not found at {code_dir}")
+        if not weights_path.exists():
+            raise HTTPException(status_code=500, detail=f"Saliency model weights not found at {weights_path}")
+        if not explanations_path.exists():
+            raise HTTPException(status_code=500, detail=f"Saliency explanations file not found at {explanations_path}")
+
+        try:
+            import torch
+            from torchvision import transforms
+
+            model_module = self._load_module("saliency_model_module", code_dir / "model.py")
+            explanations_module = self._load_module("saliency_explanations_module", explanations_path)
+
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+            model = model_module.ConvNeXtV2(pretrained=False)
+            checkpoint = torch.load(weights_path, map_location=self.device)
+            if isinstance(checkpoint, dict) and "state-dict" in checkpoint:
+                checkpoint = checkpoint["state-dict"]
+            model.load_state_dict(checkpoint, strict=False)
+            model = model.to(self.device)
+            model.eval()
+
+            backbone = model.convnext
+            target_layer = backbone.stages[3].blocks[2]
+            self.explainer = explanations_module.SimCAM(model=backbone, target_layer=target_layer, fc=None)
+            self.explainer = self.explainer.to(self.device)
+            self.explainer.eval()
+
+            normalize = transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+            self.transform = transforms.Compose(
+                [
+                    transforms.Lambda(lambda image: image.convert("RGB")),
+                    transforms.Resize((self.image_size, self.image_size), interpolation=_BICUBIC),
+                    transforms.ToTensor(),
+                    normalize,
+                ]
+            )
+
+            self._initialized = True
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Failed to initialize saliency service: {exc}") from exc
+
+    @staticmethod
+    def _normalize_map(heatmap: np.ndarray) -> np.ndarray:
+        heatmap = np.asarray(heatmap, dtype=np.float32)
+        heatmap = np.clip(heatmap, 0.0, None)
+        maximum = float(heatmap.max())
+        minimum = float(heatmap.min())
+        if maximum - minimum < 1e-8:
+            return np.zeros_like(heatmap, dtype=np.float32)
+        return (heatmap - minimum) / (maximum - minimum)
+
+    @staticmethod
+    def _jet_colormap(heatmap: np.ndarray) -> np.ndarray:
+        x = np.clip(heatmap, 0.0, 1.0)
+        red = np.clip(1.5 - np.abs(4.0 * x - 3.0), 0.0, 1.0)
+        green = np.clip(1.5 - np.abs(4.0 * x - 2.0), 0.0, 1.0)
+        blue = np.clip(1.5 - np.abs(4.0 * x - 1.0), 0.0, 1.0)
+        return np.stack([red, green, blue], axis=-1)
+
+    def _overlay_image(self, image: Image.Image, heatmap: np.ndarray) -> bytes:
+        normalized_map = self._normalize_map(heatmap)
+        resized_image = image.convert("RGB").resize((self.image_size, self.image_size), _BICUBIC)
+
+        image_array = np.asarray(resized_image, dtype=np.float32) / 255.0
+        color_map = self._jet_colormap(normalized_map)
+        overlay = (0.6 * image_array) + (0.4 * color_map)
+        overlay = np.clip(overlay * 255.0, 0.0, 255.0).astype(np.uint8)
+
+        buffer = io.BytesIO()
+        Image.fromarray(overlay).save(buffer, format="PNG")
+        return buffer.getvalue()
+
+    def _prepare_tensor(self, image_bytes: bytes):
+        self._lazy_load()
+        if self.transform is None or self.device is None:
+            raise HTTPException(status_code=500, detail="Saliency service is not initialized")
+
+        try:
+            import torch
+
+            image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+            tensor = self.transform(image).unsqueeze(0).to(self.device)
+            return image, tensor.to(dtype=torch.float32)
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Failed to preprocess saliency image: {exc}") from exc
+
+    def generate_pair_saliency(self, query_image_bytes: bytes, similar_image_bytes: bytes) -> Dict[str, Any]:
+        self._lazy_load()
+        if self.explainer is None:
+            raise HTTPException(status_code=500, detail="Saliency service is not initialized")
+
+        query_image, query_tensor = self._prepare_tensor(query_image_bytes)
+        similar_image, similar_tensor = self._prepare_tensor(similar_image_bytes)
+
+        try:
+            saliency_maps = self.explainer(query_tensor, similar_tensor)
+            saliency_maps = saliency_maps.detach().cpu().numpy()
+
+            if saliency_maps.ndim != 4 or saliency_maps.shape[0] < 1 or saliency_maps.shape[1] < 2:
+                raise HTTPException(status_code=500, detail=f"Unexpected saliency output shape: {saliency_maps.shape}")
+
+            query_overlay = self._overlay_image(query_image, saliency_maps[0, 0])
+            similar_overlay = self._overlay_image(similar_image, saliency_maps[0, 1])
+
+            return {
+                "method": self.method,
+                "image_size": self.image_size,
+                "query_overlay_bytes": query_overlay,
+                "similar_overlay_bytes": similar_overlay,
+            }
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Failed to generate saliency map: {exc}") from exc
 
 
 ai_model_service = AIModelService()
 retrieval_embedding_service = ImageRetrievalService()
+similarity_cam_service = SimilarityCamService()
 
 # Backward-compatible alias while the rest of the codebase is updated.
 medsigclip_service = retrieval_embedding_service

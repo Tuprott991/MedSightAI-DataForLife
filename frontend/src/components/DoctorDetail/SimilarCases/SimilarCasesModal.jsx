@@ -1,8 +1,52 @@
 import { X, Loader2, AlertCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { generateSimilarityCam, searchSimilarCases } from '../../../services/patientApi';
 import { getTranslatedDiagnosis } from '../../../utils/diagnosisHelper';
 import { SimilarCaseCard } from './SimilarCaseCard';
+
+const DEFAULT_TOP_K = 6;
+const GENERATING_SALIENCY_LABEL = 'Generating saliency map...';
+
+const translateStatus = (status, t) => {
+    const statusMap = {
+        Resolved: t('similarCase.resolved'),
+        Stable: t('similarCase.stable'),
+        'Under Treatment': t('similarCase.underTreatment'),
+        Critical: t('similarCase.critical'),
+        Processed: 'Processed',
+        Unprocessed: 'Unprocessed',
+        Unprocesed: 'Unprocessed',
+    };
+
+    return statusMap[status] || status || '-';
+};
+
+const translateGender = (gender, language) => {
+    if (gender === 'M') return language === 'vi' ? 'Nam' : 'Male';
+    if (gender === 'F') return language === 'vi' ? 'Nữ' : 'Female';
+    return gender || '-';
+};
+
+const normalizeSimilarCases = (response, t) =>
+    (response.case_details || []).map((caseDetail, index) => {
+        const rawScore = response.similarity_scores?.[index] ?? 0;
+        const similarityPercent = Number((rawScore * 100).toFixed(1));
+        return {
+            id: caseDetail.case_id,
+            caseId: caseDetail.case_id,
+            patientId: caseDetail.patient_id,
+            patientName: caseDetail.patient_name || `Case ${index + 1}`,
+            age: caseDetail.age ?? '-',
+            gender: caseDetail.gender || '-',
+            diagnosis: caseDetail.diagnosis || t('similarCase.noResults'),
+            imageUrl: caseDetail.image_path || caseDetail.processed_img_path || '',
+            similarity: Math.max(0, Math.min(100, similarityPercent)),
+            similarityScore: rawScore,
+            date: caseDetail.timestamp,
+            status: caseDetail.status || 'Processed',
+        };
+    });
 
 export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo, onCompareImages }) => {
     const { t, i18n } = useTranslation();
@@ -10,163 +54,76 @@ export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo, 
     const [error, setError] = useState(null);
     const [similarCases, setSimilarCases] = useState([]);
     const [selectedCase, setSelectedCase] = useState(null);
+    const [requestVersion, setRequestVersion] = useState(0);
+    const [comparingCaseId, setComparingCaseId] = useState(null);
 
-    // Helper function to translate status
-    const getTranslatedStatus = (status) => {
-        const statusMap = {
-            'Resolved': t('similarCase.resolved'),
-            'Stable': t('similarCase.stable'),
-            'Under Treatment': t('similarCase.underTreatment'),
-            'Critical': t('similarCase.critical')
-        };
-        return statusMap[status] || status;
-    };
+    const currentCaseId = patientInfo?.latest_case?.id || null;
+    const currentImagePath = patientInfo?.latest_case?.image_path || currentImage?.url || null;
+    const originalCaseImageUrl = patientInfo?.latest_case?.image_path || currentImage?.url || null;
 
-    // Helper function to translate gender
-    const getTranslatedGender = (gender) => {
-        if (gender === 'M') return i18n.language === 'vi' ? 'Nam' : 'Male';
-        if (gender === 'F') return i18n.language === 'vi' ? 'Nữ' : 'Female';
-        return gender;
-    };
-
-    // Reset selected case when modal opens
     useEffect(() => {
         if (isOpen) {
-            setSelectedCase(null); // Reset selection when modal opens
+            setSelectedCase(null);
         }
     }, [isOpen]);
 
-    // Fetch similar cases when modal opens
     useEffect(() => {
+        let isMounted = true;
+
         const fetchSimilarCases = async () => {
-            if (!isOpen || !currentImage) return;
+            if (!isOpen || (!currentCaseId && !currentImagePath)) {
+                return;
+            }
 
             setLoading(true);
             setError(null);
 
             try {
-                // TODO: Replace with actual API endpoint
-                // const response = await fetch(`/api/similar-cases`, {
-                //     method: 'POST',
-                //     headers: { 'Content-Type': 'application/json' },
-                //     body: JSON.stringify({
-                //         imageUrl: currentImage.url,
-                //         patientId: patientInfo?.id,
-                //         diagnosis: patientInfo?.diagnosis
-                //     })
-                // });
-                // const data = await response.json();
+                const response = await searchSimilarCases({
+                    caseId: currentCaseId,
+                    imagePath: currentCaseId ? null : currentImagePath,
+                    topK: DEFAULT_TOP_K,
+                });
 
-                // Mock API call - simulate network delay
-                await new Promise(resolve => setTimeout(resolve, 1500));
-
-                // Determine disease category based on current patient diagnosis
-                const currentDiagnosis = patientInfo?.diagnosis || "";
-                let diseaseCategory = "";
-
-                if (currentDiagnosis.includes("Viêm phổi")) {
-                    diseaseCategory = "Viêm phổi";
-                } else if (currentDiagnosis.includes("Lao phổi")) {
-                    diseaseCategory = "Lao phổi";
-                } else if (currentDiagnosis.includes("COVID-19")) {
-                    diseaseCategory = "COVID-19";
-                } else {
-                    diseaseCategory = currentDiagnosis; // fallback
+                if (!isMounted) {
+                    return;
                 }
 
-                // Mock data with Vietnamese names and related diagnoses
-                const mockData = [
-                    {
-                        id: 1,
-                        patientName: "Nguyễn Văn An",
-                        age: 52,
-                        gender: "M",
-                        diagnosis: diseaseCategory,
-                        imageUrl: "/src/mock_data/similar/85f4441055a2d9fc80b3.jpg",
-                        similarity: 94,
-                        date: "2025-10-15",
-                        status: "Resolved"
-                    },
-                    {
-                        id: 2,
-                        patientName: "Trần Thị Bình",
-                        age: 48,
-                        gender: "F",
-                        diagnosis: diseaseCategory,
-                        imageUrl: "/src/mock_data/similar/1cea1c080dba81e4d8ab.jpg",
-                        similarity: 89,
-                        date: "2025-09-22",
-                        status: "Stable"
-                    },
-                    {
-                        id: 3,
-                        patientName: "Lê Văn Cường",
-                        age: 55,
-                        gender: "M",
-                        diagnosis: diseaseCategory,
-                        imageUrl: "/src/mock_data/similar/5c5f83be920c1e52471d.jpg",
-                        similarity: 87,
-                        date: "2025-08-10",
-                        status: "Under Treatment"
-                    },
-                    {
-                        id: 4,
-                        patientName: "Nguyễn Văn Dũng",
-                        age: 46,
-                        gender: "F",
-                        diagnosis: diseaseCategory,
-                        imageUrl: "/src/mock_data/similar/56b2d159c0eb4cb515fa.jpg",
-                        similarity: 85,
-                        date: "2025-11-12",
-                        status: "Critical"
-                    },
-                    {
-                        id: 5,
-                        patientName: "Hoàng Văn Em",
-                        age: 60,
-                        gender: "M",
-                        diagnosis: diseaseCategory,
-                        imageUrl: "/src/mock_data/similar/50399ed98f6b03355a7a.jpg",
-                        similarity: 83,
-                        date: "2025-07-18",
-                        status: "Resolved"
-                    },
-                    {
-                        id: 6,
-                        patientName: "Đỗ Thị Phương",
-                        age: 51,
-                        gender: "F",
-                        diagnosis: diseaseCategory,
-                        imageUrl: "/src/mock_data/similar/c83f2fdc3e6eb230eb7f.jpg",
-                        similarity: 81,
-                        date: "2025-06-25",
-                        status: "Stable"
-                    }
-                ];
-
-                setSimilarCases(mockData);
-                setLoading(false);
+                const normalizedCases = normalizeSimilarCases(response, t);
+                setSimilarCases(normalizedCases);
+                setSelectedCase(normalizedCases[0] || null);
             } catch (err) {
-                setError(t('similarCase.errorLoading'));
-                setLoading(false);
+                if (!isMounted) {
+                    return;
+                }
+
+                setError(err.message || t('similarCase.errorLoading'));
+                setSimilarCases([]);
+                setSelectedCase(null);
                 console.error('Error fetching similar cases:', err);
+            } finally {
+                if (isMounted) {
+                    setLoading(false);
+                }
             }
         };
 
         fetchSimilarCases();
-    }, [isOpen, currentImage, patientInfo]);
 
-    // Close modal on ESC key
+        return () => {
+            isMounted = false;
+        };
+    }, [currentCaseId, currentImagePath, isOpen, requestVersion, t]);
+
     useEffect(() => {
-        const handleEscape = (e) => {
-            if (e.key === 'Escape') {
+        const handleEscape = (event) => {
+            if (event.key === 'Escape') {
                 onClose();
             }
         };
 
         if (isOpen) {
             document.addEventListener('keydown', handleEscape);
-            // Prevent body scroll when modal is open
             document.body.style.overflow = 'hidden';
         }
 
@@ -180,19 +137,16 @@ export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo, 
 
     return (
         <>
-            {/* Backdrop */}
             <div
                 className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 transition-opacity"
                 onClick={onClose}
             />
 
-            {/* Modal Container */}
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
                 <div
                     className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col pointer-events-auto"
-                    onClick={(e) => e.stopPropagation()}
+                    onClick={(event) => event.stopPropagation()}
                 >
-                    {/* Modal Header */}
                     <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-[#141414] rounded-t-2xl shrink-0">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 bg-teal-500/20 rounded-lg flex items-center justify-center">
@@ -204,7 +158,6 @@ export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo, 
                             </div>
                         </div>
 
-                        {/* Close Button */}
                         <button
                             onClick={onClose}
                             className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
@@ -214,9 +167,7 @@ export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo, 
                         </button>
                     </div>
 
-                    {/* Modal Content - Two Column Layout (4:1) */}
                     <div className="flex-1 overflow-hidden flex gap-4 p-6">
-                        {/* Left Section - Similar Cases Grid (4/5) */}
                         <div className="flex-4 flex flex-col">
                             <div className="mb-4">
                                 <h3 className="text-sm font-semibold text-white mb-1">
@@ -227,10 +178,8 @@ export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo, 
                                 </p>
                             </div>
 
-                            {/* Scrollable Cases Grid */}
                             <div className="flex-1 overflow-y-auto custom-scrollbar">
                                 {loading ? (
-                                    // Loading State
                                     <div className="flex items-center justify-center h-full">
                                         <div className="text-center">
                                             <Loader2 className="w-12 h-12 text-teal-500 mx-auto mb-3 animate-spin" />
@@ -238,13 +187,17 @@ export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo, 
                                         </div>
                                     </div>
                                 ) : error ? (
-                                    // Error State
                                     <div className="flex items-center justify-center h-full">
                                         <div className="text-center">
                                             <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-3" />
                                             <p className="text-sm text-gray-400 mb-3">{error}</p>
                                             <button
-                                                onClick={() => window.location.reload()}
+                                                onClick={() => {
+                                                    setError(null);
+                                                    setSelectedCase(null);
+                                                    setSimilarCases([]);
+                                                    setRequestVersion((previous) => previous + 1);
+                                                }}
                                                 className="px-4 py-2 text-sm bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors"
                                             >
                                                 {t('similarCase.retry')}
@@ -252,7 +205,6 @@ export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo, 
                                         </div>
                                     </div>
                                 ) : similarCases.length > 0 ? (
-                                    // Cases Grid
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
                                         {similarCases.map((caseData) => (
                                             <SimilarCaseCard
@@ -264,7 +216,6 @@ export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo, 
                                         ))}
                                     </div>
                                 ) : (
-                                    // No Results
                                     <div className="flex items-center justify-center h-full">
                                         <div className="text-center">
                                             <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -277,10 +228,8 @@ export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo, 
                             </div>
                         </div>
 
-                        {/* Right Section - Case Details (1/5) */}
                         <div className="flex-1 bg-[#141414] border border-white/10 rounded-lg p-4">
                             {selectedCase ? (
-                                // Selected Case Details
                                 <div className="space-y-4">
                                     <div>
                                         <h3 className="text-sm font-semibold text-white mb-2">{t('similarCase.caseDetails')}</h3>
@@ -291,7 +240,9 @@ export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo, 
                                             </div>
                                             <div>
                                                 <p className="text-xs text-gray-500">{t('similarCase.ageGender')}</p>
-                                                <p className="text-sm text-white">{selectedCase.age} {t('similarCase.yearsOld')}, {getTranslatedGender(selectedCase.gender)}</p>
+                                                <p className="text-sm text-white">
+                                                    {selectedCase.age} {t('similarCase.yearsOld')}, {translateGender(selectedCase.gender, i18n.language)}
+                                                </p>
                                             </div>
                                             <div>
                                                 <p className="text-xs text-gray-500">{t('similarCase.diagnosis')}</p>
@@ -299,11 +250,15 @@ export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo, 
                                             </div>
                                             <div>
                                                 <p className="text-xs text-gray-500">{t('similarCase.examinationDate')}</p>
-                                                <p className="text-sm text-white">{new Date(selectedCase.date).toLocaleDateString(i18n.language === 'vi' ? 'vi-VN' : 'en-US')}</p>
+                                                <p className="text-sm text-white">
+                                                    {selectedCase.date
+                                                        ? new Date(selectedCase.date).toLocaleDateString(i18n.language === 'vi' ? 'vi-VN' : 'en-US')
+                                                        : '-'}
+                                                </p>
                                             </div>
                                             <div>
                                                 <p className="text-xs text-gray-500">{t('similarCase.status')}</p>
-                                                <p className="text-sm text-white">{getTranslatedStatus(selectedCase.status)}</p>
+                                                <p className="text-sm text-white">{translateStatus(selectedCase.status, t)}</p>
                                             </div>
                                             <div>
                                                 <p className="text-xs text-gray-500">{t('similarCase.similarity')}</p>
@@ -315,46 +270,87 @@ export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo, 
                                                         />
                                                     </div>
                                                     <span className="text-sm text-teal-500 font-semibold">
-                                                        {selectedCase.similarity}%
+                                                        {selectedCase.similarity.toFixed(1)}%
                                                     </span>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* Action Buttons */}
                                     <div className="pt-4 border-t border-white/10">
                                         <button
-                                            onClick={() => {
-                                                // Create comparison image data
-                                                const comparisonImages = [
-                                                    currentImage, // Original image on the left
-                                                    {
-                                                        id: selectedCase.id + 1000,
-                                                        url: selectedCase.imageUrl,
-                                                        type: `${t('similarCase.similarCase')}: ${selectedCase.patientName}`,
-                                                        imageCode: `SIMILAR-${selectedCase.id}`,
-                                                        modality: "Comparison"
-                                                    }
-                                                ];
-                                                // Pass case data with diagnosis for findings extraction
-                                                const caseData = {
-                                                    patientName: selectedCase.patientName,
-                                                    diagnosis: selectedCase.diagnosis,
-                                                    imageUrl: selectedCase.imageUrl,
-                                                    similarity: selectedCase.similarity
-                                                };
-                                                onCompareImages(comparisonImages, caseData);
-                                                onClose();
+                                            onClick={async () => {
+                                                if (!selectedCase.imageUrl || !currentCaseId) {
+                                                    return;
+                                                }
+
+                                                setComparingCaseId(selectedCase.id);
+                                                setError(null);
+
+                                                try {
+                                                    const camResult = await generateSimilarityCam({
+                                                        caseId: currentCaseId,
+                                                        similarCaseId: selectedCase.id,
+                                                    });
+
+                                                    const queryOverlayUrl = camResult.query_overlay_b64
+                                                        ? `data:image/png;base64,${camResult.query_overlay_b64}`
+                                                        : originalCaseImageUrl;
+                                                    const similarOverlayUrl = camResult.similar_overlay_b64
+                                                        ? `data:image/png;base64,${camResult.similar_overlay_b64}`
+                                                        : selectedCase.imageUrl;
+
+                                                    const comparisonImages = [
+                                                        {
+                                                            id: `query-${currentCaseId}`,
+                                                            url: originalCaseImageUrl || queryOverlayUrl,
+                                                            type: t('imageViewer.patientImage'),
+                                                            imageCode: `CASE-${String(currentCaseId).slice(0, 8)}`,
+                                                            modality: 'Comparison',
+                                                        },
+                                                        {
+                                                            id: `similar-${selectedCase.id}`,
+                                                            url: similarOverlayUrl,
+                                                            type: `${t('similarCase.similarCase')}: ${selectedCase.patientName}`,
+                                                            imageCode: `SIMILAR-${String(selectedCase.id).slice(0, 8)}`,
+                                                            modality: 'Saliency',
+                                                        },
+                                                    ];
+
+                                                    onCompareImages(comparisonImages, {
+                                                        id: selectedCase.id,
+                                                        patientId: selectedCase.patientId,
+                                                        patientName: selectedCase.patientName,
+                                                        diagnosis: selectedCase.diagnosis,
+                                                        imageUrl: similarOverlayUrl,
+                                                        originalImageUrl: selectedCase.imageUrl,
+                                                        queryCamImageUrl: queryOverlayUrl,
+                                                        similarity: selectedCase.similarity,
+                                                    });
+                                                    onClose();
+                                                } catch (err) {
+                                                    setError(err.message || t('similarCase.errorLoading'));
+                                                    console.error('Error generating similarity CAM:', err);
+                                                } finally {
+                                                    setComparingCaseId(null);
+                                                }
                                             }}
-                                            className="w-full px-3 py-2 text-xs bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors font-medium"
+                                            disabled={!selectedCase.imageUrl || !currentCaseId || comparingCaseId === selectedCase.id}
+                                            className="w-full px-3 py-2 text-xs bg-teal-500 hover:bg-teal-600 disabled:bg-white/10 disabled:text-gray-500 text-white rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
                                         >
-                                            {t('similarCase.compareImages')}
+                                            {comparingCaseId === selectedCase.id ? (
+                                                <>
+                                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                    <span>{GENERATING_SALIENCY_LABEL}</span>
+                                                </>
+                                            ) : (
+                                                <span>{t('similarCase.compareImages')}</span>
+                                            )}
+                                            
                                         </button>
                                     </div>
                                 </div>
                             ) : (
-                                // No Selection Placeholder
                                 <div className="flex items-center justify-center h-full text-center">
                                     <p className="text-xs text-gray-500">
                                         {t('similarCase.selectCase')}
@@ -366,7 +362,6 @@ export const SimilarCasesModal = ({ isOpen, onClose, currentImage, patientInfo, 
                 </div>
             </div>
 
-            {/* Custom Scrollbar Styles */}
             <style jsx>{`
                 .custom-scrollbar::-webkit-scrollbar {
                     width: 6px;
