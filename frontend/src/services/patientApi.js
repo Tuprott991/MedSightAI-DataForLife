@@ -54,11 +54,11 @@ const fetchJsonWithCache = async (key, url) => {
     return request;
 };
 
-export const getPatientListCacheKey = (page = 1, pageSize = 20, searchQuery = '') =>
-    buildCacheKey('patients', { page, pageSize, searchQuery });
+export const getPatientListCacheKey = (page = 1, pageSize = 20, searchQuery = '', processingStatus = 'all') =>
+    buildCacheKey('patients', { page, pageSize, searchQuery, processingStatus });
 
-export const getCachedPatientList = (page = 1, pageSize = 20, searchQuery = '') =>
-    getCachedValue(getPatientListCacheKey(page, pageSize, searchQuery));
+export const getCachedPatientList = (page = 1, pageSize = 20, searchQuery = '', processingStatus = 'all') =>
+    getCachedValue(getPatientListCacheKey(page, pageSize, searchQuery, processingStatus));
 
 export const getChatUserId = () => {
     const storageKey = 'medsight_chat_user_id';
@@ -70,11 +70,19 @@ export const getChatUserId = () => {
     return newId;
 };
 
-export const getPatients = async (page = 1, pageSize = 20) => {
+export const getPatients = async (page = 1, pageSize = 20, processingStatus = 'all') => {
     try {
+        const params = new URLSearchParams({
+            page: String(page),
+            page_size: String(pageSize),
+        });
+        if (processingStatus !== 'all') {
+            params.set('processing_status', processingStatus);
+        }
+
         const data = await fetchJsonWithCache(
-            getPatientListCacheKey(page, pageSize, ''),
-            `${API_BASE_URL}/api/v1/patients/list/infor?page=${page}&page_size=${pageSize}`
+            getPatientListCacheKey(page, pageSize, '', processingStatus),
+            `${API_BASE_URL}/api/v1/patients/list/infor?${params.toString()}`
         );
 
         console.log('API Response:', data);
@@ -106,17 +114,91 @@ export const getDicomImageUrl = (dicomUrl) => {
     return getProxiedImageUrl(dicomUrl);
 };
 
-export const searchPatients = async (searchQuery, page = 1, pageSize = 20) => {
+export const searchPatients = async (searchQuery, page = 1, pageSize = 20, processingStatus = 'all') => {
     try {
         const normalizedSearchQuery = searchQuery.trim();
+        const params = new URLSearchParams({
+            page: String(page),
+            page_size: String(pageSize),
+            search: normalizedSearchQuery,
+        });
+        if (processingStatus !== 'all') {
+            params.set('processing_status', processingStatus);
+        }
         return await fetchJsonWithCache(
-            getPatientListCacheKey(page, pageSize, normalizedSearchQuery),
-            `${API_BASE_URL}/api/v1/patients/list/infor?page=${page}&page_size=${pageSize}&search=${encodeURIComponent(normalizedSearchQuery)}`
+            getPatientListCacheKey(page, pageSize, normalizedSearchQuery, processingStatus),
+            `${API_BASE_URL}/api/v1/patients/list/infor?${params.toString()}`
         );
     } catch (error) {
         console.error('Error searching patients:', error);
         throw error;
     }
+};
+
+export const createPatient = async (payload) => {
+    const response = await fetch(`${API_BASE_URL}/api/v1/patients/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Create patient failed: ${response.status} ${errorText}`);
+    }
+
+    patientResponseCache.clear();
+    return response.json();
+};
+
+export const createCase = async (payload) => {
+    const response = await fetch(`${API_BASE_URL}/api/v1/cases/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Create case failed: ${response.status} ${errorText}`);
+    }
+
+    patientResponseCache.clear();
+    return response.json();
+};
+
+export const importPatientCase = async ({ name, age, gender, phoneNumber, diagnosis, findings, file }) => {
+    const formData = new FormData();
+    formData.append('name', name);
+    if (age !== '' && age !== null && age !== undefined) {
+        formData.append('age', String(age));
+    }
+    if (gender) {
+        formData.append('gender', gender);
+    }
+    if (phoneNumber) {
+        formData.append('phone_number', phoneNumber);
+    }
+    if (diagnosis) {
+        formData.append('diagnosis', diagnosis);
+    }
+    if (findings) {
+        formData.append('findings', findings);
+    }
+    formData.append('file', file);
+
+    const response = await fetch(`${API_BASE_URL}/api/v1/patients/import-case`, {
+        method: 'POST',
+        body: formData,
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Import patient case failed: ${response.status} ${errorText}`);
+    }
+
+    patientResponseCache.clear();
+    return response.json();
 };
 
 export const resolveChatSession = async ({ caseId, sessionType = 'tutoring' }) => {

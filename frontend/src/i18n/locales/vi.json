@@ -75,7 +75,9 @@
       "all": "Tất Cả",
       "critical": "Nguy Kịch",
       "stable": "Ổn Định",
-      "improving": "Đang Cải Thiện"
+      "improving": "Đang Cải Thiện",
+      "processed": "Đã Xử Lý",
+      "unprocessed": "Chưa Xử Lý"
     },
     "patientCard": {
       "years": "tuổi",
@@ -344,9 +346,9 @@
     "description": "Cấu hình kết nối đến hệ thống lưu trữ hình ảnh y tế (PACS) và kho lưu trữ trung lập (VNA)",
     "pacsTab": "Cài Đặt PACS",
     "vnaTab": "Cài Đặt VNA",
-    "pacs": {
-      "title": "Cài đặt PACS",
-      "subtitle": "Cấu hình kết nối đến PACS Server",
+      "pacs": {
+        "title": "Cài đặt PACS",
+        "subtitle": "Cấu hình kết nối đến PACS Server",
       "host": "Host",
       "hostPlaceholder": "192.168.1.100 hoặc pacs.example.com",
       "port": "Port",
@@ -363,11 +365,23 @@
       "save": "Lưu cấu hình",
       "saving": "Đang lưu...",
       "serverInfo": "Server",
-      "responseTime": "Response Time",
-      "localAE": "Local AE",
-      "remoteAE": "Remote AE",
-      "errorCode": "Error Code"
-    },
+        "responseTime": "Response Time",
+        "localAE": "Local AE",
+        "remoteAE": "Remote AE",
+        "errorCode": "Error Code",
+        "importTitle": "Nhập Ca Bệnh Nhân",
+        "importSubtitle": "Tạo bệnh nhân và tải ảnh ca bệnh mới lên. Backend sẽ upload ảnh lên S3 và tạo ca ở trạng thái chưa xử lý cho đến khi chạy AI.",
+        "patientName": "Tên Bệnh Nhân",
+        "patientAge": "Tuổi",
+        "patientGender": "Giới Tính",
+        "patientPhone": "Số Điện Thoại",
+        "imageFile": "Tệp Ảnh",
+        "caseDiagnosis": "Chẩn Đoán",
+        "caseFindings": "Kết Luận",
+        "importAction": "Tạo Ca Chưa Xử Lý",
+        "importing": "Đang tạo ca...",
+        "importSuccess": "Đã tạo bệnh nhân và ca chưa xử lý thành công."
+      },
     "vna": {
       "title": "Cài đặt VNA",
       "subtitle": "Cấu hình kết nối đến VNA Server (DICOMweb)",

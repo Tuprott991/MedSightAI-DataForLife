@@ -1,7 +1,7 @@
 import { User, Droplet, Image as ImageIcon } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { getTranslatedDiagnosis, getTranslatedGender, getTranslatedStatus, getStatusColor } from '../../utils/diagnosisHelper';
+import { getTranslatedDiagnosis, getTranslatedGender } from '../../utils/diagnosisHelper';
 import { DicomImage } from './DicomImage';
 import { getProxiedImageUrl } from '../../services/patientApi';
 
@@ -12,9 +12,19 @@ export const PatientCard = ({ patient, isStudentView = false }) => {
 
     // Get image URL - either from patient.image or latest_case
     const rawImageUrl = patient.image || patient.latest_case?.image_path || patient.latest_case?.processed_img_path;
+    const processingStatus = patient.latest_case
+        ? (patient.latest_case.processed_img_path ? 'processed' : 'unprocessed')
+        : null;
     
     // Use the S3 URL exactly as it is stored in the database.
     const imageUrl = getProxiedImageUrl(rawImageUrl);
+
+    const processingStatusLabel = processingStatus
+        ? t(`doctor.filters.${processingStatus}`)
+        : null;
+    const processingStatusColor = processingStatus === 'processed'
+        ? 'bg-green-500/25 text-green-300 border-green-500/40'
+        : 'bg-red-500/25 text-red-300 border-red-500/40';
 
     return (
         <div className="group bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden transition-all duration-300 hover:border-teal-500/30 hover:shadow-lg hover:shadow-teal-500/10">
@@ -33,10 +43,10 @@ export const PatientCard = ({ patient, isStudentView = false }) => {
                         <p className="text-gray-600 text-xs mt-1">ID: {patient.id.substring(0, 8)}</p>
                     </div>
                 )}
-                {patient.status && (
+                {processingStatusLabel && (
                     <div className="absolute top-3 right-3">
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(patient.status)}`}>
-                            {getTranslatedStatus(patient.status, t)}
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${processingStatusColor}`}>
+                            {processingStatusLabel}
                         </span>
                     </div>
                 )}

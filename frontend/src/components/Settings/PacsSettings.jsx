@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Server, Wifi, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { mockPacsTest, mockSavePacsConfig, loadPacsConfig } from '../../services/mockApi';
+import { importPatientCase } from '../../services/patientApi';
 import { Toast } from '../custom/Toast';
 
 /**
@@ -21,8 +22,18 @@ const PacsSettings = () => {
     // UI state
     const [isTesting, setIsTesting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [isImporting, setIsImporting] = useState(false);
     const [testResult, setTestResult] = useState(null);
     const [toast, setToast] = useState(null);
+    const [importForm, setImportForm] = useState({
+        name: '',
+        age: '',
+        gender: 'Male',
+        phoneNumber: '',
+        diagnosis: '',
+        findings: '',
+        imageFile: null,
+    });
 
     // Load saved config khi mount
     useEffect(() => {
@@ -82,6 +93,51 @@ const PacsSettings = () => {
             });
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const handleImportChange = (field, value) => {
+        setImportForm((previous) => ({
+            ...previous,
+            [field]: value,
+        }));
+    };
+
+    const handleImportCase = async () => {
+        setIsImporting(true);
+
+        try {
+            await importPatientCase({
+                name: importForm.name.trim(),
+                age: importForm.age ? Number(importForm.age) : null,
+                gender: importForm.gender,
+                phoneNumber: importForm.phoneNumber.trim() || null,
+                diagnosis: importForm.diagnosis.trim() || null,
+                findings: importForm.findings.trim() || null,
+                file: importForm.imageFile,
+            });
+
+            setImportForm({
+                name: '',
+                age: '',
+                gender: 'Male',
+                phoneNumber: '',
+                diagnosis: '',
+                findings: '',
+                imageFile: null,
+            });
+
+            setToast({
+                type: 'success',
+                message: t('settings.pacs.importSuccess'),
+            });
+        } catch (error) {
+            setToast({
+                type: 'error',
+                message: error.message || t('settings.error'),
+            });
+        } finally {
+            setIsImporting(false);
         }
     };
 
@@ -229,6 +285,122 @@ const PacsSettings = () => {
                         </>
                     ) : (
                         <span>{t('settings.pacs.save')}</span>
+                    )}
+                </button>
+            </div>
+
+            <div className="mt-8 pt-8 border-t border-white/10">
+                <div className="mb-6">
+                    <h3 className="text-lg font-semibold text-white">{t('settings.pacs.importTitle')}</h3>
+                    <p className="text-sm text-gray-400 mt-1">{t('settings.pacs.importSubtitle')}</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                            {t('settings.pacs.patientName')} <span className="text-red-400">{t('settings.required')}</span>
+                        </label>
+                        <input
+                            type="text"
+                            value={importForm.name}
+                            onChange={(e) => handleImportChange('name', e.target.value)}
+                            className="w-full px-4 py-2.5 bg-[#1a1a1a] border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                            {t('settings.pacs.patientAge')}
+                        </label>
+                        <input
+                            type="number"
+                            min="0"
+                            value={importForm.age}
+                            onChange={(e) => handleImportChange('age', e.target.value)}
+                            className="w-full px-4 py-2.5 bg-[#1a1a1a] border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                            {t('settings.pacs.patientGender')}
+                        </label>
+                        <select
+                            value={importForm.gender}
+                            onChange={(e) => handleImportChange('gender', e.target.value)}
+                            className="w-full px-4 py-2.5 bg-[#1a1a1a] border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
+                        >
+                            <option value="Male">{t('doctorDetail.patientInfo.male')}</option>
+                            <option value="Female">{t('doctorDetail.patientInfo.female')}</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                            {t('settings.pacs.patientPhone')}
+                        </label>
+                        <input
+                            type="text"
+                            value={importForm.phoneNumber}
+                            onChange={(e) => handleImportChange('phoneNumber', e.target.value)}
+                            className="w-full px-4 py-2.5 bg-[#1a1a1a] border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
+                        />
+                    </div>
+                </div>
+
+                <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                        {t('settings.pacs.imageFile')} <span className="text-red-400">{t('settings.required')}</span>
+                    </label>
+                    <input
+                        type="file"
+                        accept=".png,.jpg,.jpeg,.dcm,.dicom,image/png,image/jpeg,application/dicom"
+                        onChange={(e) => handleImportChange('imageFile', e.target.files?.[0] || null)}
+                        className="w-full px-4 py-2.5 bg-[#1a1a1a] border border-white/10 rounded-lg text-white file:mr-4 file:px-4 file:py-2 file:border-0 file:rounded-md file:bg-teal-500/20 file:text-teal-300 hover:file:bg-teal-500/30 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
+                    />
+                    {importForm.imageFile && (
+                        <p className="text-xs text-gray-400 mt-2">{importForm.imageFile.name}</p>
+                    )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                            {t('settings.pacs.caseDiagnosis')}
+                        </label>
+                        <input
+                            type="text"
+                            value={importForm.diagnosis}
+                            onChange={(e) => handleImportChange('diagnosis', e.target.value)}
+                            className="w-full px-4 py-2.5 bg-[#1a1a1a] border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                            {t('settings.pacs.caseFindings')}
+                        </label>
+                        <input
+                            type="text"
+                            value={importForm.findings}
+                            onChange={(e) => handleImportChange('findings', e.target.value)}
+                            className="w-full px-4 py-2.5 bg-[#1a1a1a] border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
+                        />
+                    </div>
+                </div>
+
+                <button
+                    onClick={handleImportCase}
+                    disabled={isImporting || !importForm.name.trim() || !importForm.imageFile}
+                    className="mt-6 w-full md:w-auto flex items-center justify-center gap-2 px-5 py-3 bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-500/40 text-white font-medium rounded-lg transition-all disabled:cursor-not-allowed"
+                >
+                    {isImporting ? (
+                        <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>{t('settings.pacs.importing')}</span>
+                        </>
+                    ) : (
+                        <span>{t('settings.pacs.importAction')}</span>
                     )}
                 </button>
             </div>

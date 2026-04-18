@@ -9,9 +9,10 @@ import { useTranslation } from 'react-i18next';
 export const Doctor = () => {
     const { t } = useTranslation();
     const [searchQuery, setSearchQuery] = useState('');
+    const [processingFilter, setProcessingFilter] = useState('all');
     const [currentPage, setCurrentPage] = useState(1);
     const normalizedSearchQuery = searchQuery.trim();
-    const cachedList = getCachedPatientList(currentPage, ITEMS_PER_PAGE, normalizedSearchQuery);
+    const cachedList = getCachedPatientList(currentPage, ITEMS_PER_PAGE, normalizedSearchQuery, processingFilter);
     const [patients, setPatients] = useState([]);
     const [total, setTotal] = useState(0);
     const [isLoading, setIsLoading] = useState(() => !cachedList);
@@ -33,8 +34,8 @@ export const Doctor = () => {
             setError(null);
             try {
                 const data = normalizedSearchQuery
-                    ? await searchPatients(normalizedSearchQuery, currentPage, ITEMS_PER_PAGE)
-                    : await getPatients(currentPage, ITEMS_PER_PAGE);
+                    ? await searchPatients(normalizedSearchQuery, currentPage, ITEMS_PER_PAGE, processingFilter)
+                    : await getPatients(currentPage, ITEMS_PER_PAGE, processingFilter);
                  
                 setPatients(data.patients || []);
                 setTotal(data.total || 0);
@@ -47,7 +48,7 @@ export const Doctor = () => {
         };
 
         fetchPatients();
-    }, [cachedList, currentPage, normalizedSearchQuery]);
+    }, [cachedList, currentPage, normalizedSearchQuery, processingFilter]);
 
     // Calculate pagination
     const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
@@ -58,6 +59,11 @@ export const Doctor = () => {
     const handleSearch = (e) => {
         setSearchQuery(e.target.value);
         setCurrentPage(1); // Reset to first page when searching
+    };
+
+    const handleProcessingFilterChange = (filter) => {
+        setProcessingFilter(filter);
+        setCurrentPage(1);
     };
 
     // Handle page change
@@ -96,11 +102,28 @@ export const Doctor = () => {
                         />
                     </div>
 
-                    {/* Filter Button */}
-                    <button className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-teal-500/50 px-6 py-3 rounded-lg transition-all cursor-pointer">
-                        <Filter className="w-5 h-5" />
-                        <span className="font-medium">{t('common.filter')}</span>
-                    </button>
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-3 rounded-lg">
+                            <Filter className="w-5 h-5 text-gray-400" />
+                            <span className="text-sm font-medium text-gray-300">{t('common.filter')}</span>
+                        </div>
+                        {['all', 'processed', 'unprocessed'].map((filter) => (
+                            <button
+                                key={filter}
+                                onClick={() => handleProcessingFilterChange(filter)}
+                                className={`px-4 py-3 rounded-lg text-sm font-medium border transition-all ${processingFilter === filter
+                                    ? filter === 'processed'
+                                        ? 'bg-green-500/15 border-green-500/40 text-green-300'
+                                        : filter === 'unprocessed'
+                                            ? 'bg-red-500/15 border-red-500/40 text-red-300'
+                                            : 'bg-teal-500/15 border-teal-500/40 text-teal-300'
+                                    : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:text-white'
+                                    }`}
+                            >
+                                {t(`doctor.filters.${filter}`)}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 {/* Results Info */}
@@ -108,9 +131,13 @@ export const Doctor = () => {
                     <p className="text-gray-400">
                         {t('doctor.pagination.showing')} <span className="text-white font-semibold">{startIndex + 1}-{endIndex}</span> {t('doctor.pagination.of')} <span className="text-white font-semibold">{total}</span> {t('doctor.pagination.patients')}
                     </p>
-                    {searchQuery && (
+                    {(searchQuery || processingFilter !== 'all') && (
                         <button
-                            onClick={() => setSearchQuery('')}
+                            onClick={() => {
+                                setSearchQuery('');
+                                setProcessingFilter('all');
+                                setCurrentPage(1);
+                            }}
                             className="text-sm text-teal-400 hover:text-teal-300 transition-colors"
                         >
                             {t('common.clear')}

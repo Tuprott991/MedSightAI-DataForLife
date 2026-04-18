@@ -75,7 +75,9 @@
       "all": "All",
       "critical": "Critical",
       "stable": "Stable",
-      "improving": "Improving"
+      "improving": "Improving",
+      "processed": "Processed",
+      "unprocessed": "Unprocessed"
     },
     "patientCard": {
       "years": "years",
@@ -344,9 +346,9 @@
     "description": "Configure connection to medical image storage system (PACS) and vendor neutral archive (VNA)",
     "pacsTab": "PACS Settings",
     "vnaTab": "VNA Settings",
-    "pacs": {
-      "title": "PACS Settings",
-      "subtitle": "Configure connection to PACS Server",
+      "pacs": {
+        "title": "PACS Settings",
+        "subtitle": "Configure connection to PACS Server",
       "host": "Host",
       "hostPlaceholder": "192.168.1.100 or pacs.example.com",
       "port": "Port",
@@ -363,11 +365,23 @@
       "save": "Save Configuration",
       "saving": "Saving...",
       "serverInfo": "Server",
-      "responseTime": "Response Time",
-      "localAE": "Local AE",
-      "remoteAE": "Remote AE",
-      "errorCode": "Error Code"
-    },
+        "responseTime": "Response Time",
+        "localAE": "Local AE",
+        "remoteAE": "Remote AE",
+        "errorCode": "Error Code",
+        "importTitle": "Import Patient Case",
+        "importSubtitle": "Create a patient and upload a new case image. The backend will upload it to S3 and create the case as unprocessed until AI analysis runs.",
+        "patientName": "Patient Name",
+        "patientAge": "Patient Age",
+        "patientGender": "Patient Gender",
+        "patientPhone": "Phone Number",
+        "imageFile": "Image File",
+        "caseDiagnosis": "Diagnosis",
+        "caseFindings": "Findings",
+        "importAction": "Create Unprocessed Case",
+        "importing": "Creating case...",
+        "importSuccess": "Patient and unprocessed case created successfully."
+      },
     "vna": {
       "title": "VNA Settings",
       "subtitle": "Configure connection to VNA Server (DICOMweb)",
