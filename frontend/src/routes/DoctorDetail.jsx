@@ -2,10 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { Sparkles, RefreshCw, Bot, FileText, Send, X, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { getPatientDetail, resolveChatSession, sendMedGemmaChatMessage, analyzeCase } from '../services/patientApi';
+import { getPatientDetail, resolveChatSession, streamOpenAIChatMessage, analyzeCase, generateMedicalReport } from '../services/patientApi';
 import { generateAnalysisData, getFindingImagePath, getPrototypeImagePath } from '../constants/medicalData';
-import { generatePatientReport } from '../constants/reportData';
 import { getTranslatedDiagnosis } from '../utils/diagnosisHelper';
+import { StreamingMarkdown } from '../components/custom/StreamingMarkdown';
 import {
     ImageListGrouped,
     ImageViewer
@@ -122,6 +122,24 @@ export const DoctorDetail = () => {
         return selectedImage?.url || patient?.latest_case?.image_path || patient?.latest_case?.processed_img_path;
     };
 
+    const buildReportAiFindings = () => {
+        if (!analysisData) return null;
+
+        return {
+            findings: (analysisData.findings || []).map((finding) => ({
+                id: finding.id,
+                text: finding.text,
+                confidence: finding.confidence,
+                confidenceRaw: finding.confidenceRaw,
+                bbox: finding.bbox,
+                classNameEn: finding.classNameEn,
+            })),
+            suspectedDiseases: analysisData.suspectedDiseases || [],
+            recommendations: analysisData.recommendations || [],
+            fromCache: analysisData.fromCache || false,
+        };
+    };
+
     useEffect(() => {
         chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [chatMessages, isChatLoading]);
@@ -138,7 +156,7 @@ export const DoctorDetail = () => {
                     setChatSession(session);
                 }
             } catch (error) {
-                console.error('Failed to initialize doctor MedGemma chat session:', error);
+                console.error('Failed to initialize doctor AI chat session:', error);
             }
         };
 
@@ -163,6 +181,15 @@ export const DoctorDetail = () => {
         }]);
         setIsChatLoading(true);
 
+        const assistantMessageId = `assistant-${Date.now()}`;
+        setChatMessages(prev => [...prev, {
+            id: assistantMessageId,
+            type: 'bot',
+            text: '',
+            timestamp: new Date(),
+            isStreaming: true
+        }]);
+
         try {
             let activeSession = chatSession;
             if (!activeSession) {
@@ -170,7 +197,7 @@ export const DoctorDetail = () => {
                 setChatSession(activeSession);
             }
 
-            const result = await sendMedGemmaChatMessage({
+            await streamOpenAIChatMessage({
                 sessionId: activeSession.id,
                 message: text,
                 imageUrl,
@@ -186,24 +213,43 @@ export const DoctorDetail = () => {
                     history: patient?.history,
                     underlying_condition: patient?.underlying_condition
                 },
-                currentAnnotations: []
+                currentAnnotations: [],
+                onDelta: (delta) => {
+                    setChatMessages(prev => prev.map(message =>
+                        message.id === assistantMessageId
+                            ? { ...message, text: `${message.text || ''}${delta}`, isStreaming: true }
+                            : message
+                    ));
+                },
+                onDone: (result) => {
+                    setChatMessages(prev => prev.map(message =>
+                        message.id === assistantMessageId
+                            ? {
+                                ...message,
+                                id: result.assistant_message?.id || message.id,
+                                text: result.assistant_message?.message || message.text,
+                                timestamp: result.assistant_message?.timestamp
+                                    ? new Date(result.assistant_message.timestamp)
+                                    : message.timestamp,
+                                isStreaming: false
+                            }
+                            : message
+                    ));
+                }
             });
-
-            setChatMessages(prev => [...prev, {
-                id: result.assistant_message.id,
-                type: 'bot',
-                text: result.assistant_message.message,
-                timestamp: new Date(result.assistant_message.timestamp)
-            }]);
         } catch (error) {
-            console.error('Doctor MedGemma chat failed:', error);
-            setChatMessages(prev => [...prev, {
-                id: Date.now() + 1,
-                type: 'bot',
-                text: `MedGemma could not answer this turn: ${error.message}`,
-                timestamp: new Date(),
-                isError: true
-            }]);
+            console.error('Doctor AI chat failed:', error);
+            setChatMessages(prev => prev.map(message =>
+                message.id === assistantMessageId
+                    ? {
+                        ...message,
+                        text: `AI could not answer this turn: ${error.message}`,
+                        timestamp: new Date(),
+                        isError: true,
+                        isStreaming: false
+                    }
+                    : message
+            ));
         } finally {
             setIsChatLoading(false);
         }
@@ -300,19 +346,36 @@ export const DoctorDetail = () => {
         setShowChatbot(!showChatbot);
     };
 
-    const handleGenerateReport = () => {
+    const handleGenerateReport = async () => {
+        if (!patient?.latest_case?.id || isGeneratingReport || isSimilarCaseMode) return;
+
         setIsGeneratingReport(true);
 
-        // Random delay từ 6-9 giây
-        const randomDelay = Math.floor(Math.random() * (9000 - 6000 + 1)) + 6000;
+        try {
+            const generatedReport = await generateMedicalReport({
+                caseId: patient.latest_case.id,
+                patientHistory: patient?.history || patient?.underlying_condition || null,
+                aiFindings: buildReportAiFindings(),
+            });
 
-        setTimeout(() => {
-            // Generate report data
-            const report = generatePatientReport(patient);
-            setReportData(report);
+            if (!generatedReport?.model_report) {
+                throw new Error('Backend returned an empty report payload');
+            }
+
+            setReportData(generatedReport.model_report);
             setIsGeneratingReport(false);
             setShowReportModal(true);
-        }, randomDelay);
+        } catch (error) {
+            console.error('Report generation failed:', error);
+            setIsGeneratingReport(false);
+            setChatMessages(prev => [...prev, {
+                id: Date.now() + 2,
+                type: 'bot',
+                text: `Report generation failed: ${error.message}`,
+                timestamp: new Date(),
+                isError: true
+            }]);
+        }
     };
 
     const handleUpdateClick = async () => {
@@ -691,7 +754,11 @@ export const DoctorDetail = () => {
                                                                             : 'mr-6 bg-white/5 border-white/10 text-gray-200'
                                                                         }`}
                                                                 >
-                                                                    <p className="whitespace-pre-line">{message.text}</p>
+                                                                    {message.type === 'bot' ? (
+                                                                        <StreamingMarkdown text={message.text} isStreaming={message.isStreaming} />
+                                                                    ) : (
+                                                                        <p className="whitespace-pre-line">{message.text}</p>
+                                                                    )}
                                                                 </div>
                                                             ))}
                                                             {isChatLoading && (

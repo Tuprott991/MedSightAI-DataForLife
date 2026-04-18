@@ -5,8 +5,8 @@ from uuid import UUID
 from typing import Dict, Any, List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-import requests
 import logging
+from starlette.concurrency import run_in_threadpool
 
 from app.config.database import get_db
 from app.core import report as crud_report, case as crud_case, patient as crud_patient, ai_result as crud_ai_result
@@ -14,15 +14,44 @@ from app.schemas import (
     ReportCreate, ReportUpdate, ReportResponse,
     ReportGenerationRequest, MessageResponse, PatientFullReportResponse
 )
-from app.services import medgemma_service
+from app.services import openai_llm_service
 
 # Configure logger
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# External report generation API
-REPORT_GENERATION_API_URL = "https://noncoalescent-faucial-elli.ngrok-free.dev/generate-report"
+def _extract_indication(patient) -> str:
+    if not patient.underlying_condition:
+        return "None"
+
+    conditions = [
+        condition
+        for condition, value in patient.underlying_condition.items()
+        if value is True
+    ]
+    return ", ".join(conditions) if conditions else "None"
+
+
+def _extract_bbox_list(ai_result) -> List[Dict[str, Any]]:
+    bbox_list: List[Dict[str, Any]] = []
+    if not ai_result or not ai_result.bounding_box:
+        return bbox_list
+
+    for detection in ai_result.bounding_box.get("detections", []):
+        bbox_coords = detection.get("bbox")
+        if not bbox_coords or len(bbox_coords) != 4:
+            continue
+
+        bbox_list.append({
+            "class_name": detection.get("concept") or detection.get("class_name") or "Unknown",
+            "x_min": int(bbox_coords[0]),
+            "y_min": int(bbox_coords[1]),
+            "x_max": int(bbox_coords[2]),
+            "y_max": int(bbox_coords[3]),
+            "probability": detection.get("probability") or detection.get("confidence"),
+        })
+    return bbox_list
 
 
 @router.post("/generate", response_model=ReportResponse)
@@ -31,14 +60,14 @@ async def generate_report(
     db: Session = Depends(get_db)
 ):
     """
-    Generate medical report using external report generation API
+    Generate medical report using OpenAI GPT vision
     
     Flow:
     1. Get case, patient, and AI result data
     2. Extract image_url from case.image_path
-    3. Extract indication from patient.underlying_condition (convert JSON to string)
-    4. Extract bounding boxes from ai_result.bounding_box
-    5. Call external API to generate report
+    3. Extract indication from patient.underlying_condition
+    4. Extract bounding boxes from ai_result.bounding_box if present
+    5. Call GPT vision/text service to generate a structured report
     6. Store report in database
     
     Args:
@@ -58,13 +87,13 @@ async def generate_report(
     
     logger.info(f"[REPORT-GEN] Found case with image_path: {case.image_path}")
     
-    # Get AI results
+    # Get AI results if available. Report generation can still draft from the image.
     ai_result = crud_ai_result.get_by_case(db, case_id=request.case_id)
-    if not ai_result:
-        logger.error(f"[REPORT-GEN] AI analysis not found for case: {request.case_id}")
-        raise HTTPException(status_code=404, detail="AI analysis not found. Run CAM inference first")
-    
-    logger.info(f"[REPORT-GEN] Found AI result with {len(ai_result.bounding_box.get('detections', []))} detections")
+    if ai_result and ai_result.bounding_box:
+        detection_count = len(ai_result.bounding_box.get("detections", []))
+        logger.info(f"[REPORT-GEN] Found AI result with {detection_count} detections")
+    else:
+        logger.info(f"[REPORT-GEN] No AI result found for case {request.case_id}; generating report from image and context")
     
     # Get patient info
     patient = crud_patient.get(db, case.patient_id)
@@ -76,76 +105,45 @@ async def generate_report(
     if not image_url:
         raise HTTPException(status_code=400, detail="Case has no image")
     
-    # Extract indication from patient.underlying_condition
-    # Convert {"hypertension":true,"diabetes":true,"asthma":false} to "hypertension, diabetes"
-    indication = "None"
-    if patient.underlying_condition:
-        conditions = []
-        for condition, value in patient.underlying_condition.items():
-            if value is True:
-                conditions.append(condition)
-        if conditions:
-            indication = ", ".join(conditions)
-    
+    indication = _extract_indication(patient)
     logger.info(f"[REPORT-GEN] Extracted indication: {indication}")
-    
-    # Extract bounding boxes from ai_result
-    # Format: {"detections":[{"bbox":[x1,y1,x2,y2],"concept":"...","class_idx":...,"probability":...}]}
-    bbox_list = []
-    if ai_result.bounding_box and "detections" in ai_result.bounding_box:
-        for detection in ai_result.bounding_box["detections"]:
-            if "bbox" in detection and "concept" in detection:
-                bbox_coords = detection["bbox"]
-                if len(bbox_coords) == 4:
-                    bbox_list.append({
-                        "class_name": detection["concept"],
-                        "x_min": int(bbox_coords[0]),
-                        "y_min": int(bbox_coords[1]),
-                        "x_max": int(bbox_coords[2]),
-                        "y_max": int(bbox_coords[3])
-                    })
-    
+
+    bbox_list = _extract_bbox_list(ai_result)
     logger.info(f"[REPORT-GEN] Extracted {len(bbox_list)} bounding boxes")
     
-    if not bbox_list:
-        logger.error(f"[REPORT-GEN] No bounding boxes found in AI result")
-        raise HTTPException(
-            status_code=400, 
-            detail="No bounding boxes found in AI result. Run CAM inference first"
-        )
-    
-    # Prepare request payload for external API
-    payload = {
-        "image_url": image_url,
-        "indication": indication,
-        "bbox": bbox_list
-    }
-    
     try:
-        # Call external report generation API
-        logger.info(f"[REPORT-GEN] Calling external API: {REPORT_GENERATION_API_URL}")
-        logger.info(f"[REPORT-GEN] Payload: image_url={image_url}, indication={indication}, bbox_count={len(bbox_list)}")
-        
-        response = requests.post(
-            REPORT_GENERATION_API_URL,
-            json=payload,
-            timeout=60,
-            headers={"Content-Type": "application/json"}
+        logger.info(f"[REPORT-GEN] Calling OpenAI report service for case {request.case_id}")
+
+        radiology_report = await run_in_threadpool(
+            openai_llm_service.generate_medical_report,
+            image_url=image_url,
+            patient_context={
+                "name": patient.name,
+                "age": patient.age,
+                "gender": patient.gender,
+                "blood_type": patient.blood_type,
+                "status": patient.status,
+                "underlying_condition": patient.underlying_condition,
+                "indication": indication,
+                "patient_history": request.patient_history,
+            },
+            case_context={
+                "case_id": str(case.id),
+                "image_path": case.image_path,
+                "processed_img_path": case.processed_img_path,
+                "timestamp": case.timestamp.isoformat() if case.timestamp else None,
+                "diagnosis": case.diagnosis,
+                "findings": case.findings,
+                "ai_findings_from_request": request.ai_findings,
+            },
+            ai_context={
+                "predicted_diagnosis": ai_result.predicted_diagnosis if ai_result else None,
+                "confident_score": ai_result.confident_score if ai_result else None,
+                "concepts": ai_result.concepts if ai_result else None,
+                "raw_bounding_box": ai_result.bounding_box if ai_result else None,
+            } if ai_result else None,
+            detections=bbox_list,
         )
-        
-        logger.info(f"[REPORT-GEN] API response status: {response.status_code}")
-        response.raise_for_status()
-        
-        result = response.json()
-        logger.info(f"[REPORT-GEN] Received response with keys: {result.keys()}")
-        
-        # Extract radiology_report from response
-        radiology_report = result.get("radiology_report")
-        if not radiology_report:
-            raise HTTPException(
-                status_code=500,
-                detail="Invalid response from report generation API: missing radiology_report"
-            )
         
         # Check if report already exists for this case
         existing_report = crud_report.get_by_case(db, case_id=request.case_id)
@@ -174,12 +172,6 @@ async def generate_report(
         logger.info(f"[REPORT-GEN] Successfully generated report for case {request.case_id}")
         return report
         
-    except requests.exceptions.RequestException as e:
-        logger.error(f"[REPORT-GEN] Request error: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to connect to report generation API: {str(e)}"
-        )
     except Exception as e:
         logger.error(f"[REPORT-GEN] Unexpected error: {str(e)}", exc_info=True)
         raise HTTPException(

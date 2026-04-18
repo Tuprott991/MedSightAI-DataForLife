@@ -93,6 +93,14 @@ class Settings(BaseSettings):
     MEDGEMMA_DEVICE: str = "cuda"
     MEDGEMMA_MAX_NEW_TOKENS: int = 900
     HF_TOKEN: Optional[str] = None
+
+    # OpenAI GPT service
+    OPENAI_API_KEY: Optional[str] = None
+    OPENAI_LLM_MODEL: str = "gpt-5.4-mini"
+    OPENAI_TIMEOUT_SECONDS: int = 90
+    OPENAI_MAX_RETRIES: int = 2
+    OPENAI_CHAT_MAX_OUTPUT_TOKENS: int = 900
+    OPENAI_REPORT_MAX_OUTPUT_TOKENS: int = 1800
     
     # Model Inference Service
     MODEL_INFERENCE_URL: str = "http://localhost:8001"  # URL of model_inference FastAPI service

@@ -1,10 +1,13 @@
 """
 Education Mode API endpoints
 """
+import json
 from uuid import UUID
 from uuid import uuid4
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 
@@ -21,9 +24,24 @@ from app.schemas import (
     ChatSessionResolveRequest, StudentSubmission, StudentScoreResponse,
     MessageResponse
 )
-from app.services import medgemma_service, ai_model_service
+from app.services import openai_llm_service, ai_model_service
 
 router = APIRouter()
+
+
+def _sse_event(event: str, data: dict) -> str:
+    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False, default=str)}\n\n"
+
+
+def _resolve_chat_image_url(session, message_in: ChatMessageRequest, db: Session) -> str:
+    image_url = message_in.image_url
+    if not image_url and session.case_id:
+        case = crud_case.get(db, session.case_id)
+        if case:
+            image_url = case.image_path or case.processed_img_path
+    if not image_url:
+        raise HTTPException(status_code=400, detail="image_url is required for GPT chat")
+    return image_url
 
 
 @router.get("/practice-cases")
@@ -60,7 +78,7 @@ async def submit_student_answer(
     1. Compare student's bounding boxes with ground truth (IoU metric)
     2. Compare diagnosis with correct answer
     3. Calculate overall score
-    4. Generate detailed feedback using MedGemma
+    4. Generate detailed feedback using GPT
     """
     # Get session
     session = crud_chat_session.get(db, submission.session_id)
@@ -77,7 +95,7 @@ async def submit_student_answer(
     # diagnosis_accuracy = calculate_diagnosis_accuracy(submission.diagnosis, ground_truth['diagnosis'])
     
     # TODO: Generate feedback
-    # feedback = medgemma_service.generate_feedback(
+    # feedback = openai_llm_service.generate_feedback(
     #     student_answer={
     #         'diagnosis': submission.diagnosis,
     #         'bounding_boxes': submission.bounding_boxes
@@ -169,19 +187,12 @@ async def send_message(
     message_in: ChatMessageRequest,
     db: Session = Depends(get_db)
 ):
-    """Send a persisted chat message and get a MedGemma image-grounded response."""
+    """Send a persisted chat message and get a GPT image-grounded response."""
     session = crud_chat_session.get(db, session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    image_url = message_in.image_url
-    if not image_url and session.case_id:
-        case = crud_case.get(db, session.case_id)
-        if case:
-            image_url = case.image_path or case.processed_img_path
-
-    if not image_url:
-        raise HTTPException(status_code=400, detail="image_url is required for MedGemma chat")
+    image_url = _resolve_chat_image_url(session, message_in, db)
     
     # Save user message
     user_message_data = {
@@ -195,7 +206,7 @@ async def send_message(
     
     try:
         ai_response = await run_in_threadpool(
-            medgemma_service.generate_chat_response,
+            openai_llm_service.generate_chat_response,
             conversation_history=history,
             student_query=message_in.message,
             image_url=image_url,
@@ -205,7 +216,7 @@ async def send_message(
             submitted_diagnosis=message_in.submitted_diagnosis,
         )
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"MedGemma chat failed: {exc}") from exc
+        raise HTTPException(status_code=502, detail=f"GPT chat failed: {exc}") from exc
     
     ai_message = crud_chat_message.create(
         db,
@@ -221,6 +232,87 @@ async def send_message(
         "user_message": user_message,
         "assistant_message": ai_message,
     }
+
+
+@router.post("/sessions/{session_id}/messages/stream")
+def stream_message(
+    session_id: UUID,
+    message_in: ChatMessageRequest,
+    db: Session = Depends(get_db)
+):
+    """Send a persisted chat message and stream a GPT image-grounded response."""
+    session = crud_chat_session.get(db, session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    image_url = _resolve_chat_image_url(session, message_in, db)
+
+    user_message = crud_chat_message.create(
+        db,
+        obj_in={
+            "session_id": session_id,
+            "sender": "user",
+            "message": message_in.message,
+        },
+    )
+    history = crud_chat_message.get_by_session(db, session_id=session_id)
+
+    def event_generator():
+        response_parts: list[str] = []
+        yield _sse_event(
+            "user_message",
+            {
+                "session": jsonable_encoder(session),
+                "user_message": jsonable_encoder(user_message),
+            },
+        )
+
+        try:
+            for delta in openai_llm_service.stream_chat_response(
+                conversation_history=history,
+                student_query=message_in.message,
+                image_url=image_url,
+                mode=message_in.mode,
+                patient_context=message_in.patient_context,
+                current_annotations=message_in.current_annotations,
+                submitted_diagnosis=message_in.submitted_diagnosis,
+            ):
+                if not delta:
+                    continue
+                response_parts.append(delta)
+                yield _sse_event("delta", {"delta": delta})
+
+            ai_response = "".join(response_parts).strip()
+            if not ai_response:
+                raise RuntimeError("OpenAI returned an empty streamed response")
+
+            ai_message = crud_chat_message.create(
+                db,
+                obj_in={
+                    "session_id": session_id,
+                    "sender": "ai",
+                    "message": ai_response,
+                },
+            )
+            yield _sse_event(
+                "done",
+                {
+                    "session": jsonable_encoder(session),
+                    "user_message": jsonable_encoder(user_message),
+                    "assistant_message": jsonable_encoder(ai_message),
+                },
+            )
+        except Exception as exc:
+            yield _sse_event("error", {"detail": f"GPT chat stream failed: {exc}"})
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.delete("/sessions/{session_id}", response_model=MessageResponse)

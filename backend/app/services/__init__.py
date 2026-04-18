@@ -11,6 +11,7 @@ from app.services.ai_service import (
 )
 from app.services.disease_detection_service import disease_detection_service
 from app.services.llm_service import medgemma_service
+from app.services.openai_llm_service import openai_llm_service
 
 __all__ = [
     "s3_service",
@@ -20,5 +21,6 @@ __all__ = [
     "retrieval_embedding_service",
     "similarity_cam_service",
     "disease_detection_service",
-    "medgemma_service"
+    "medgemma_service",
+    "openai_llm_service",
 ]

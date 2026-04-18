@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Loader2, MapPin, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { resolveChatSession, sendMedGemmaChatMessage } from '../../services/patientApi';
+import { resolveChatSession, streamOpenAIChatMessage } from '../../services/patientApi';
+import { StreamingMarkdown } from '../custom/StreamingMarkdown';
 
 // Component để format markdown đơn giản
 const FormattedMessage = ({ text }) => {
@@ -77,12 +78,12 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
                     setChatSession(session);
                 }
             } catch (error) {
-                console.error('Failed to initialize MedGemma chat session:', error);
+                console.error('Failed to initialize AI chat session:', error);
                 if (isMounted) {
                     setMessages(prev => [...prev, {
                         id: Date.now(),
                         type: 'bot',
-                        text: `Unable to initialize the MedGemma chat session: ${error.message}`,
+                        text: `Unable to initialize the AI chat session: ${error.message}`,
                         timestamp: new Date(),
                         messageType: 'error'
                     }]);
@@ -114,7 +115,7 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
         difficulty: caseData?.difficulty
     });
 
-    const sendToMedGemma = async ({
+    const sendToAI = async ({
         text,
         annotationsOverride = annotations,
         submittedDiagnosis = null,
@@ -133,6 +134,14 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
         }
 
         setIsTyping(true);
+        const assistantMessageId = `assistant-${Date.now()}`;
+        setMessages(prev => [...prev, {
+            id: assistantMessageId,
+            type: 'bot',
+            text: '',
+            timestamp: new Date(),
+            isStreaming: true
+        }]);
 
         try {
             let activeSession = chatSession;
@@ -141,32 +150,50 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
                 setChatSession(activeSession);
             }
 
-            const result = await sendMedGemmaChatMessage({
+            await streamOpenAIChatMessage({
                 sessionId: activeSession.id,
                 message: text,
                 imageUrl: caseData.imageUrl,
                 mode: 'student',
                 patientContext: buildPatientContext(),
                 currentAnnotations: annotationsOverride,
-                submittedDiagnosis
+                submittedDiagnosis,
+                onDelta: (delta) => {
+                    setMessages(prev => prev.map(message =>
+                        message.id === assistantMessageId
+                            ? { ...message, text: `${message.text || ''}${delta}`, isStreaming: true }
+                            : message
+                    ));
+                },
+                onDone: (result) => {
+                    setMessages(prev => prev.map(message =>
+                        message.id === assistantMessageId
+                            ? {
+                                ...message,
+                                id: result.assistant_message?.id || message.id,
+                                text: result.assistant_message?.message || message.text,
+                                timestamp: result.assistant_message?.timestamp
+                                    ? new Date(result.assistant_message.timestamp)
+                                    : message.timestamp,
+                                isStreaming: false
+                            }
+                            : message
+                    ));
+                }
             });
-
-            const botMessage = {
-                id: result.assistant_message.id,
-                type: 'bot',
-                text: result.assistant_message.message,
-                timestamp: new Date(result.assistant_message.timestamp)
-            };
-            setMessages(prev => [...prev, botMessage]);
         } catch (error) {
-            console.error('MedGemma chat failed:', error);
-            setMessages(prev => [...prev, {
-                id: Date.now() + 1,
-                type: 'bot',
-                text: `MedGemma could not answer this turn: ${error.message}`,
-                timestamp: new Date(),
-                messageType: 'error'
-            }]);
+            console.error('AI chat failed:', error);
+            setMessages(prev => prev.map(message =>
+                message.id === assistantMessageId
+                    ? {
+                        ...message,
+                        text: `AI could not answer this turn: ${error.message}`,
+                        timestamp: new Date(),
+                        messageType: 'error',
+                        isStreaming: false
+                    }
+                    : message
+            ));
         } finally {
             setIsTyping(false);
         }
@@ -177,7 +204,7 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
         if (!text || isTyping) return;
 
         setInputMessage('');
-        await sendToMedGemma({ text });
+        await sendToAI({ text });
     };
 
     // Phân tích submission của sinh viên
@@ -191,7 +218,7 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
             'Please give educational feedback based on the current image and annotations. Do not overstate certainty.'
         ].filter(Boolean).join('\n');
 
-        await sendToMedGemma({
+        await sendToAI({
             text,
             annotationsOverride: submittedAnnotations,
             submittedDiagnosis,
@@ -565,8 +592,7 @@ export const ChatbotSection = ({ annotations = [], caseData = null, submissionDa
                                 : 'bg-teal-500 text-white'
                                 }`}>
                                 <div className="whitespace-pre-line">
-                                    <FormattedMessage text={message.text} />
-                                    {message.isStreaming && <span className="animate-pulse">▋</span>}
+                                    <StreamingMarkdown text={message.text} isStreaming={message.isStreaming} />
                                 </div>
 
                                 {/* Hiển thị hình ảnh nếu có */}

@@ -54,7 +54,7 @@ class ChatHistoryResponse(BaseModel):
 
 
 class ChatMessageRequest(BaseModel):
-    """Request body for a MedGemma-backed chat turn."""
+    """Request body for a GPT-backed image chat turn."""
     message: str = Field(..., min_length=1, description="User message")
     image_url: Optional[str] = Field(None, description="Current image URL shown in the UI")
     mode: Literal["doctor", "student"] = "student"

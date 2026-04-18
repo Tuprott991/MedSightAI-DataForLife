@@ -220,7 +220,7 @@ export const resolveChatSession = async ({ caseId, sessionType = 'tutoring' }) =
     return response.json();
 };
 
-export const sendMedGemmaChatMessage = async ({ sessionId, message, imageUrl, mode, patientContext, currentAnnotations, submittedDiagnosis }) => {
+export const sendOpenAIChatMessage = async ({ sessionId, message, imageUrl, mode, patientContext, currentAnnotations, submittedDiagnosis }) => {
     const response = await fetch(`${API_BASE_URL}/api/v1/education/sessions/${sessionId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -236,9 +236,138 @@ export const sendMedGemmaChatMessage = async ({ sessionId, message, imageUrl, mo
 
     if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`MedGemma chat failed: ${response.status} ${errorText}`);
+        throw new Error(`AI chat failed: ${response.status} ${errorText}`);
     }
 
+    return response.json();
+};
+
+export const sendMedGemmaChatMessage = sendOpenAIChatMessage;
+
+const parseSseBlock = (block) => {
+    let event = 'message';
+    const dataLines = [];
+
+    block.split(/\r?\n/).forEach((line) => {
+        if (!line || line.startsWith(':')) return;
+        if (line.startsWith('event:')) {
+            event = line.slice(6).trim();
+        } else if (line.startsWith('data:')) {
+            dataLines.push(line.slice(5).trimStart());
+        }
+    });
+
+    if (dataLines.length === 0) return null;
+
+    const rawData = dataLines.join('\n');
+    try {
+        return { event, data: JSON.parse(rawData) };
+    } catch (error) {
+        throw new Error(`Invalid streaming event payload: ${rawData}`);
+    }
+};
+
+export const streamOpenAIChatMessage = async ({
+    sessionId,
+    message,
+    imageUrl,
+    mode,
+    patientContext,
+    currentAnnotations,
+    submittedDiagnosis,
+    onUserMessage,
+    onDelta,
+    onDone,
+    onError,
+    signal
+}) => {
+    const response = await fetch(`${API_BASE_URL}/api/v1/education/sessions/${sessionId}/messages/stream`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'text/event-stream',
+        },
+        body: JSON.stringify({
+            message,
+            image_url: imageUrl,
+            mode,
+            patient_context: patientContext || null,
+            current_annotations: currentAnnotations || [],
+            submitted_diagnosis: submittedDiagnosis || null
+        }),
+        signal,
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`AI chat stream failed: ${response.status} ${errorText}`);
+    }
+    if (!response.body) {
+        throw new Error('AI chat stream failed: empty response body');
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    const handleEvent = ({ event, data }) => {
+        if (event === 'user_message') {
+            onUserMessage?.(data);
+            return;
+        }
+        if (event === 'delta') {
+            onDelta?.(data.delta || '');
+            return;
+        }
+        if (event === 'done') {
+            onDone?.(data);
+            return;
+        }
+        if (event === 'error') {
+            const error = new Error(data.detail || 'AI chat stream failed');
+            onError?.(error);
+            throw error;
+        }
+    };
+
+    while (true) {
+        const { value, done } = await reader.read();
+        buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+
+        const blocks = buffer.split(/\r?\n\r?\n/);
+        buffer = blocks.pop() || '';
+
+        for (const block of blocks) {
+            const parsed = parseSseBlock(block);
+            if (parsed) handleEvent(parsed);
+        }
+
+        if (done) break;
+    }
+
+    if (buffer.trim()) {
+        const parsed = parseSseBlock(buffer);
+        if (parsed) handleEvent(parsed);
+    }
+};
+
+export const generateMedicalReport = async ({ caseId, patientHistory = null, aiFindings = null }) => {
+    const response = await fetch(`${API_BASE_URL}/api/v1/reports/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            case_id: caseId,
+            patient_history: patientHistory,
+            ai_findings: aiFindings,
+        }),
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Report generation failed: ${response.status} ${errorText}`);
+    }
+
+    patientResponseCache.clear();
     return response.json();
 };
 
