@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
+import cv2
 import numpy as np
 import onnxruntime as ort
 from fastapi import HTTPException
@@ -213,15 +214,19 @@ class ImageRetrievalService:
 
 
 class SimilarityCamService:
-    """Local SimCAM service for comparing a query case against a retrieved case."""
+    """CSR CAM service for generating per-image saliency overlays."""
 
     def __init__(self):
         self._initialized = False
         self.device = None
-        self.explainer = None
-        self.transform = None
+        self.model = None
+        self.model_module = None
         self.image_size = 384
-        self.method = "simcam"
+        self.method = "csr_phase1_cam"
+        self.alpha = 0.75
+        self.blur_ksize = 31
+        self.percentile = 99.7
+        self.gamma = 0.6
 
     @staticmethod
     def _load_module(module_name: str, module_path: Path):
@@ -237,81 +242,64 @@ class SimilarityCamService:
         if self._initialized:
             return
 
-        code_dir = Path(settings.SALIENCY_MODEL_CODE_PATH).expanduser().resolve()
-        weights_path = Path(settings.SALIENCY_MODEL_WEIGHTS_PATH).expanduser().resolve()
-        explanations_path = BACKEND_DIR / "saliency_map" / "explanations.py"
+        model_service_path = BACKEND_DIR.parent / "model_inference" / "service.py"
+        checkpoint_path = BACKEND_DIR.parent / "csr_phase1.pth"
 
-        if not code_dir.exists():
-            raise HTTPException(status_code=500, detail=f"Saliency code path not found at {code_dir}")
-        if not weights_path.exists():
-            raise HTTPException(status_code=500, detail=f"Saliency model weights not found at {weights_path}")
-        if not explanations_path.exists():
-            raise HTTPException(status_code=500, detail=f"Saliency explanations file not found at {explanations_path}")
+        if not model_service_path.exists():
+            raise HTTPException(status_code=500, detail=f"CSR inference service not found at {model_service_path}")
+        if not checkpoint_path.exists():
+            raise HTTPException(status_code=500, detail=f"CSR checkpoint not found at {checkpoint_path}")
 
         try:
             import torch
-            from torchvision import transforms
 
-            model_module = self._load_module("saliency_model_module", code_dir / "model.py")
-            explanations_module = self._load_module("saliency_explanations_module", explanations_path)
+            self.model_module = self._load_module("csr_similarity_model_service", model_service_path)
 
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-            model = model_module.ConvNeXtV2(pretrained=False)
-            checkpoint = torch.load(weights_path, map_location=self.device)
-            if isinstance(checkpoint, dict) and "state-dict" in checkpoint:
-                checkpoint = checkpoint["state-dict"]
-            model.load_state_dict(checkpoint, strict=False)
-            model = model.to(self.device)
-            model.eval()
-
-            backbone = model.convnext
-            target_layer = backbone.stages[3].blocks[2]
-            self.explainer = explanations_module.SimCAM(model=backbone, target_layer=target_layer, fc=None)
-            self.explainer = self.explainer.to(self.device)
-            self.explainer.eval()
-
-            normalize = transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-            self.transform = transforms.Compose(
-                [
-                    transforms.Lambda(lambda image: image.convert("RGB")),
-                    transforms.Resize((self.image_size, self.image_size), interpolation=_BICUBIC),
-                    transforms.ToTensor(),
-                    normalize,
-                ]
+            self.model = self.model_module.load_csr_model(
+                str(checkpoint_path),
+                self.device,
             )
-
+            self.image_size = int(getattr(self.model_module, "IMG_SIZE", self.image_size))
             self._initialized = True
         except HTTPException:
             raise
         except Exception as exc:
-            raise HTTPException(status_code=500, detail=f"Failed to initialize saliency service: {exc}") from exc
+            raise HTTPException(status_code=500, detail=f"Failed to initialize CSR saliency service: {exc}") from exc
 
     @staticmethod
-    def _normalize_map(heatmap: np.ndarray) -> np.ndarray:
+    def _normalize_map(heatmap: np.ndarray, percentile: float) -> np.ndarray:
         heatmap = np.asarray(heatmap, dtype=np.float32)
-        heatmap = np.clip(heatmap, 0.0, None)
-        maximum = float(heatmap.max())
-        minimum = float(heatmap.min())
-        if maximum - minimum < 1e-8:
+        heatmap = np.maximum(heatmap, 0.0)
+        upper = float(np.percentile(heatmap, percentile))
+        if upper <= 1e-8:
+            upper = float(heatmap.max())
+        if upper <= 1e-8:
             return np.zeros_like(heatmap, dtype=np.float32)
-        return (heatmap - minimum) / (maximum - minimum)
-
-    @staticmethod
-    def _jet_colormap(heatmap: np.ndarray) -> np.ndarray:
-        x = np.clip(heatmap, 0.0, 1.0)
-        red = np.clip(1.5 - np.abs(4.0 * x - 3.0), 0.0, 1.0)
-        green = np.clip(1.5 - np.abs(4.0 * x - 2.0), 0.0, 1.0)
-        blue = np.clip(1.5 - np.abs(4.0 * x - 1.0), 0.0, 1.0)
-        return np.stack([red, green, blue], axis=-1)
+        return np.clip(heatmap / upper, 0.0, 1.0)
 
     def _overlay_image(self, image: Image.Image, heatmap: np.ndarray) -> bytes:
-        normalized_map = self._normalize_map(heatmap)
-        resized_image = image.convert("RGB").resize((self.image_size, self.image_size), _BICUBIC)
+        base_image = image.convert("L")
+        image_array = np.asarray(base_image, dtype=np.float32)
+        heatmap_resized = np.asarray(heatmap, dtype=np.float32)
+        heatmap_resized = np.clip(heatmap_resized, 0.0, None)
+        heatmap_resized = np.array(
+            Image.fromarray(heatmap_resized).resize(base_image.size, _BICUBIC),
+            dtype=np.float32,
+        )
 
-        image_array = np.asarray(resized_image, dtype=np.float32) / 255.0
-        color_map = self._jet_colormap(normalized_map)
-        overlay = (0.6 * image_array) + (0.4 * color_map)
+        if self.blur_ksize > 1:
+            heatmap_resized = cv2.GaussianBlur(heatmap_resized, (self.blur_ksize, self.blur_ksize), 0)
+
+        normalized_map = self._normalize_map(heatmap_resized, percentile=self.percentile)
+        if self.gamma != 1.0:
+            normalized_map = np.power(normalized_map, self.gamma)
+
+        image_rgb = np.repeat((image_array / 255.0)[..., None], 3, axis=-1)
+        color_map = cv2.applyColorMap((normalized_map * 255.0).astype(np.uint8), cv2.COLORMAP_JET)
+        color_map = cv2.cvtColor(color_map, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
+        blend = (normalized_map * self.alpha)[..., None]
+        overlay = image_rgb * (1.0 - blend) + color_map * blend
         overlay = np.clip(overlay * 255.0, 0.0, 255.0).astype(np.uint8)
 
         buffer = io.BytesIO()
@@ -320,35 +308,37 @@ class SimilarityCamService:
 
     def _prepare_tensor(self, image_bytes: bytes):
         self._lazy_load()
-        if self.transform is None or self.device is None:
-            raise HTTPException(status_code=500, detail="Saliency service is not initialized")
+        if self.device is None:
+            raise HTTPException(status_code=500, detail="CSR saliency service is not initialized")
 
         try:
             import torch
 
-            image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-            tensor = self.transform(image).unsqueeze(0).to(self.device)
-            return image, tensor.to(dtype=torch.float32)
+            image = Image.open(io.BytesIO(image_bytes)).convert("L")
+            resized_image = image.resize((self.image_size, self.image_size), _BICUBIC)
+            image_array = np.asarray(resized_image, dtype=np.float32) / 255.0
+            tensor = torch.from_numpy(image_array).unsqueeze(0).unsqueeze(0).to(self.device, dtype=torch.float32)
+            return image, tensor
         except Exception as exc:
-            raise HTTPException(status_code=500, detail=f"Failed to preprocess saliency image: {exc}") from exc
+            raise HTTPException(status_code=500, detail=f"Failed to preprocess CSR saliency image: {exc}") from exc
 
     def generate_pair_saliency(self, query_image_bytes: bytes, similar_image_bytes: bytes) -> Dict[str, Any]:
         self._lazy_load()
-        if self.explainer is None:
-            raise HTTPException(status_code=500, detail="Saliency service is not initialized")
+        if self.model is None or self.model_module is None:
+            raise HTTPException(status_code=500, detail="CSR saliency service is not initialized")
 
         query_image, query_tensor = self._prepare_tensor(query_image_bytes)
         similar_image, similar_tensor = self._prepare_tensor(similar_image_bytes)
 
         try:
-            saliency_maps = self.explainer(query_tensor, similar_tensor)
-            saliency_maps = saliency_maps.detach().cpu().numpy()
+            query_probs, query_cams = self.model_module.infer_cams(self.model, query_tensor, self.device)
+            similar_probs, similar_cams = self.model_module.infer_cams(self.model, similar_tensor, self.device)
 
-            if saliency_maps.ndim != 4 or saliency_maps.shape[0] < 1 or saliency_maps.shape[1] < 2:
-                raise HTTPException(status_code=500, detail=f"Unexpected saliency output shape: {saliency_maps.shape}")
+            query_top_idx = int(np.argmax(query_probs))
+            similar_top_idx = int(np.argmax(similar_probs))
 
-            query_overlay = self._overlay_image(query_image, saliency_maps[0, 0])
-            similar_overlay = self._overlay_image(similar_image, saliency_maps[0, 1])
+            query_overlay = self._overlay_image(query_image, query_cams[query_top_idx])
+            similar_overlay = self._overlay_image(similar_image, similar_cams[similar_top_idx])
 
             return {
                 "method": self.method,
@@ -359,7 +349,7 @@ class SimilarityCamService:
         except HTTPException:
             raise
         except Exception as exc:
-            raise HTTPException(status_code=500, detail=f"Failed to generate saliency map: {exc}") from exc
+            raise HTTPException(status_code=500, detail=f"Failed to generate CSR saliency map: {exc}") from exc
 
 
 ai_model_service = AIModelService()

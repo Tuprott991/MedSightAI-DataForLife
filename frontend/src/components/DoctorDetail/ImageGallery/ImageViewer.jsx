@@ -21,6 +21,7 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal, onSimilarCa
     const [isPanMode, setIsPanMode] = useState(false);
     const [isPrototypeCollapsed, setIsPrototypeCollapsed] = useState(false);
     const [showPrototype, setShowPrototype] = useState(false); // Toggle between Original and Prototype for right image
+    const [showRetrieveCamOverlay, setShowRetrieveCamOverlay] = useState(true);
     const { isLeftCollapsed, setIsLeftCollapsed } = useSidebar();
     const [comparisonImages, setComparisonImages] = useState(null);
 
@@ -57,6 +58,23 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal, onSimilarCa
     // Check if image is an array (multiple images from finding click) or single image
     const images = comparisonImages || (Array.isArray(image) ? image : (image ? [image] : []));
     const isMultipleImages = images.length > 1;
+    const hasRetrieveOverlayToggle = isMultipleImages && images.some((img, index) => index === 1 && (img?.overlayUrl || img?.originalUrl));
+
+    const getDisplayedImageUrl = (img, index) => {
+        if (index === 1 && img.original && img.prototype) {
+            return showPrototype ? (img.prototype.url || img.original.url) : img.original.url;
+        }
+        if (img.overlayUrl || img.originalUrl) {
+            if (index === 0) {
+                return img.originalUrl || img.url || img.overlayUrl;
+            }
+            if (showRetrieveCamOverlay) {
+                return img.overlayUrl || img.url || img.originalUrl;
+            }
+            return img.originalUrl || img.url || img.overlayUrl;
+        }
+        return img.url;
+    };
 
     // Use the appropriate annotations based on current mode
     const annotations = isMultipleImages ? multipleImageAnnotations : singleImageAnnotations;
@@ -80,6 +98,7 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal, onSimilarCa
         setActiveAdjustment(null);
         setActiveTool(null);
         setIsPanMode(false);
+        setShowRetrieveCamOverlay(true);
 
         // Exit similar case mode if active
         if (comparisonImages) {
@@ -102,6 +121,7 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal, onSimilarCa
 
     const handleCompareImages = (images, caseData) => {
         setComparisonImages(images);
+        setShowRetrieveCamOverlay(true);
         if (onSimilarCaseModeChange) {
             onSimilarCaseModeChange(true, caseData);
         }
@@ -677,27 +697,42 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal, onSimilarCa
                     <SimilarCasesButton onClick={() => setIsModalOpen(true)} />
 
                     {/* Group 3: Original Image Button */}
-                    <button
-                        onClick={() => {
-                            if (comparisonImages) {
-                                setComparisonImages(null);
-                            }
-                            // Always call onRestoreOriginal to reset similar case mode
-                            onRestoreOriginal();
-                        }}
-                        disabled={!isMultipleImages}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded transition-all font-medium ${isMultipleImages
-                            ? 'bg-white/5 hover:bg-white/10 border border-white/10 hover:border-teal-500/50 text-gray-300 hover:text-white cursor-pointer'
-                            : 'bg-white/5 border border-white/10 text-gray-600 cursor-not-allowed opacity-50'
-                            }`}
-                        title={isMultipleImages ? t('doctorDetail.imageViewer.backToOriginal') : t('doctorDetail.imageViewer.availableWhenTwoImages')}
-                    >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        <span>{t('doctorDetail.imageViewer.originalImage')}</span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {hasRetrieveOverlayToggle && (
+                            <button
+                                onClick={() => setShowRetrieveCamOverlay((previous) => !previous)}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded transition-all font-medium border ${showRetrieveCamOverlay
+                                    ? 'bg-teal-500/15 border-teal-500/40 text-teal-300 hover:bg-teal-500/25'
+                                    : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:text-white'
+                                    }`}
+                                title={showRetrieveCamOverlay ? t('imageViewer.hideCamOverlay') : t('imageViewer.showCamOverlay')}
+                            >
+                                <span>{showRetrieveCamOverlay ? t('imageViewer.hideCamOverlay') : t('imageViewer.showCamOverlay')}</span>
+                            </button>
+                        )}
+
+                        <button
+                            onClick={() => {
+                                if (comparisonImages) {
+                                    setComparisonImages(null);
+                                }
+                                // Always call onRestoreOriginal to reset similar case mode
+                                onRestoreOriginal();
+                            }}
+                            disabled={!isMultipleImages}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded transition-all font-medium ${isMultipleImages
+                                ? 'bg-white/5 hover:bg-white/10 border border-white/10 hover:border-teal-500/50 text-gray-300 hover:text-white cursor-pointer'
+                                : 'bg-white/5 border border-white/10 text-gray-600 cursor-not-allowed opacity-50'
+                                }`}
+                            title={isMultipleImages ? t('doctorDetail.imageViewer.backToOriginal') : t('doctorDetail.imageViewer.availableWhenTwoImages')}
+                        >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <span>{t('doctorDetail.imageViewer.originalImage')}</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -810,11 +845,7 @@ export const ImageViewer = ({ image, patientInfo, onRestoreOriginal, onSimilarCa
                                             >
                                                 <img
                                                     ref={index === 0 ? imageRef : null}
-                                                    src={
-                                                        index === 1 && img.original && img.prototype
-                                                            ? (showPrototype ? (img.prototype.url || img.original.url) : img.original.url)
-                                                            : img.url
-                                                    }
+                                                    src={getDisplayedImageUrl(img, index)}
                                                     alt={img.type}
                                                     className="max-w-full max-h-full object-contain select-none"
                                                     style={{ filter: index === 0 ? `brightness(${brightness}%) contrast(${contrast}%)` : 'none' }}

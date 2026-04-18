@@ -1,3 +1,6 @@
+import os
+from pathlib import Path
+
 from fastapi import APIRouter, UploadFile, File, HTTPException
 import tempfile
 import torch
@@ -14,7 +17,8 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-CHECKPOINT_PATH = "/home/nghia-duong/SoftAI---DataForLife---MedSightAI_2/csr_phase1.pth"  # Sửa lại đường dẫn checkpoint
+REPO_ROOT = Path(__file__).resolve().parent.parent
+CHECKPOINT_PATH = Path(os.getenv("CSR_PHASE1_CHECKPOINT", REPO_ROOT / "csr_phase1.pth"))
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 CLASS_NAMES = [
@@ -24,7 +28,13 @@ CLASS_NAMES = [
     'Pneumothorax', 'Pulmonary fibrosis'
 ]
 
-model = load_csr_model(CHECKPOINT_PATH, DEVICE)
+if not CHECKPOINT_PATH.exists():
+    raise FileNotFoundError(
+        f"Checkpoint not found: {CHECKPOINT_PATH}. "
+        "Set CSR_PHASE1_CHECKPOINT to override the default path."
+    )
+
+model = load_csr_model(str(CHECKPOINT_PATH), DEVICE)
 
 @router.post("/cam-inference/")
 async def cam_inference(file: UploadFile = File(...), threshold: float = 0.5):

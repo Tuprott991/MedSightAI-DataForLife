@@ -1,0 +1,21 @@
+{
+  "image": "C:\\Users\\HP\\Coding\\MedSightAI-DataForLife\\covidx_sample_300\\0a8d486f-1aa6-4fcf-b7be-4bf04fc8628b.png",
+  "checkpoint": "C:\\Users\\HP\\Coding\\MedSightAI-DataForLife\\csr_phase1.pth",
+  "device": "cpu",
+  "threshold": 0.5,
+  "alpha": 0.75,
+  "blur_ksize": 31,
+  "percentile": 99.7,
+  "gamma": 0.6,
+  "top_class_idx": 7,
+  "top_concept": "Lung Opacity",
+  "top_probability": 0.9842893481254578,
+  "detections": [
+    {
+      "class_idx": 7,
+      "concept": "Lung Opacity",
+      "probability": 0.9842893481254578,
+      "overlay_path": "C:\\Users\\HP\\Coding\\MedSightAI-DataForLife\\outputs\\csr_phase1\\07_Lung_Opacity.png"
+    }
+  ]
+}

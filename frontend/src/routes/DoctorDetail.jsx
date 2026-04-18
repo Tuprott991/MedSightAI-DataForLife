@@ -379,6 +379,8 @@ export const DoctorDetail = () => {
                 const rightImage = {
                     id: `similar-${similarCaseData.patientName}`,
                     url: similarCaseData.imageUrl,
+                    originalUrl: similarCaseData.originalImageUrl || similarCaseData.imageUrl,
+                    overlayUrl: similarCaseData.overlayImageUrl || similarCaseData.imageUrl,
                     type: `${t('similarCase.similarCase')}: ${similarCaseData.patientName}`,
                     imageCode: 'SIMILAR-CASE',
                     modality: 'Comparison',
@@ -408,6 +410,8 @@ export const DoctorDetail = () => {
                 const rightImage = {
                     id: `similar-${similarCaseData.patientName}`,
                     url: similarCaseData.imageUrl,
+                    originalUrl: similarCaseData.originalImageUrl || similarCaseData.imageUrl,
+                    overlayUrl: similarCaseData.overlayImageUrl || similarCaseData.imageUrl,
                     type: `${t('similarCase.similarCase')}: ${similarCaseData.patientName}`,
                     imageCode: 'SIMILAR-CASE',
                     modality: 'Comparison',
