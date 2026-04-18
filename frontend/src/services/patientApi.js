@@ -242,7 +242,7 @@ export const sendMedGemmaChatMessage = async ({ sessionId, message, imageUrl, mo
     return response.json();
 };
 
-export const analyzeCase = async (caseId, { forceRerun = false, confThres = 0.25, iouThres = 0.45 } = {}) => {
+export const analyzeCase = async (caseId, { forceRerun = false, confThres = 0.1, iouThres = 0.45 } = {}) => {
     const params = new URLSearchParams({
         force_rerun: forceRerun,
         conf_thres: confThres,
@@ -250,7 +250,7 @@ export const analyzeCase = async (caseId, { forceRerun = false, confThres = 0.25
     });
 
     const response = await fetch(
-        `${API_BASE_URL}/api/v1/analysis/localize/${caseId}?${params}`,
+        `${API_BASE_URL}/api/v1/disease-detection/${caseId}?${params}`,
         { method: 'POST' }
     );
 

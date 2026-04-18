@@ -33,6 +33,7 @@ pillow==10.2.0
 opencv-python==4.9.0.80
 onnxruntime>=1.17.0
 huggingface_hub>=0.21.0
+ensemble-boxes>=1.0.9
 
 # Medical Imaging (optional, if needed)
 pydicom==2.4.4

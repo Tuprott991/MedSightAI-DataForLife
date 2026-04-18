@@ -22,9 +22,8 @@ from app.schemas import (
 )
 from app.services import (
     ai_model_service, medsigclip_service,
-    zilliz_service, s3_service, similarity_cam_service,
+    zilliz_service, s3_service, similarity_cam_service, disease_detection_service,
 )
-from app.utils.single_image_infer import run_localization
 from app.utils.s3_paths import S3PathBuilder
 
 logger = logging.getLogger(__name__)
@@ -59,7 +58,7 @@ def _persist_localization(
     detections: list[dict],
     annotated_bytes: bytes,
     db: Session,
-) -> None:
+) -> str:
     """
     Upload the annotated image to S3 and upsert the AIResult record.
     Runs as a FastAPI BackgroundTask.
@@ -130,8 +129,99 @@ def _persist_localization(
             crud_ai_result.create(db, obj_in=ai_result_data)
             logger.info("[Localize] Created new AIResult for case %s.", case_id)
 
+        return annotated_url
+
     except Exception as exc:
         logger.error("[Localize] Background persist failed for case %s: %s", case_id, exc, exc_info=True)
+        raise
+
+
+async def _run_disease_detection_for_case(
+    *,
+    case_id: UUID,
+    db: Session,
+    force_rerun: bool,
+    conf_thres: float,
+    iou_thres: float,
+    persist_immediately: bool,
+) -> tuple[LocalizeResponse, bytes | None]:
+    logger.info("[Localize] POST /localize/%s (force_rerun=%s)", case_id, force_rerun)
+
+    case = crud_case.get(db, case_id)
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+    if not case.image_path:
+        raise HTTPException(status_code=400, detail="Case has no image_path")
+
+    if not force_rerun and case.processed_img_path:
+        ai_result = crud_ai_result.get_by_case(db, case_id=case_id)
+        if ai_result and ai_result.bounding_box:
+            detections_raw = ai_result.bounding_box.get("detections", [])
+            detections = [DetectionItem(**d) for d in detections_raw]
+            logger.info("[Localize] Cache hit for case %s - %d detection(s).", case_id, len(detections))
+            return (
+                LocalizeResponse(
+                    case_id=case_id,
+                    detections=detections,
+                    annotated_image_url=case.processed_img_path,
+                    annotated_image_b64=None,
+                    from_cache=True,
+                    total_lesions=len(detections),
+                ),
+                None,
+            )
+
+    s3_key = _s3_key_from_url(case.image_path)
+    logger.info("[Localize] Downloading image for case %s from S3 key: %s", case_id, s3_key)
+    try:
+        image_bytes = s3_service.download_file(s3_key)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("[Localize] S3 download failed: %s", exc, exc_info=True)
+        raise HTTPException(status_code=502, detail=f"Failed to download case image: {exc}")
+
+    logger.info("[Localize] Running disease detection for case %s (%d bytes).", case_id, len(image_bytes))
+    try:
+        detections_raw, annotated_bytes = disease_detection_service.analyze_image(
+            image_bytes,
+            wbf_iou=iou_thres,
+            score_thres=conf_thres,
+        )
+    except FileNotFoundError as exc:
+        logger.error("[Localize] Missing ONNX weights: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(exc))
+    except ValueError as exc:
+        logger.error("[Localize] Invalid image input: %s", exc, exc_info=True)
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        logger.error("[Localize] Inference failed: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Inference failed: {exc}")
+
+    logger.info("[Localize] Inference complete - %d detection(s) for case %s.", len(detections_raw), case_id)
+
+    detections = [DetectionItem(**d) for d in detections_raw]
+    annotated_b64 = base64.b64encode(annotated_bytes).decode("ascii")
+    annotated_image_url = None
+    if persist_immediately:
+        annotated_image_url = _persist_localization(
+            case_id=case_id,
+            detections=detections_raw,
+            annotated_bytes=annotated_bytes,
+            db=db,
+        )
+
+    return (
+        LocalizeResponse(
+            case_id=case_id,
+            detections=detections,
+            annotated_image_url=annotated_image_url,
+            annotated_image_b64=None if persist_immediately else annotated_b64,
+            from_cache=False,
+            total_lesions=len(detections),
+        ),
+        annotated_bytes,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -143,7 +233,7 @@ async def localize_case(
     case_id: UUID,
     background_tasks: BackgroundTasks,
     force_rerun: bool = Query(False, description="Force re-run even if cached result exists"),
-    conf_thres: float = Query(0.25, ge=0.0, le=1.0, description="Confidence threshold"),
+    conf_thres: float = Query(0.1, ge=0.0, le=1.0, description="Confidence threshold"),
     iou_thres: float = Query(0.45, ge=0.0, le=1.0, description="NMS IoU threshold"),
     db: Session = Depends(get_db),
 ) -> LocalizeResponse:
@@ -159,6 +249,16 @@ async def localize_case(
 
     Set `force_rerun=true` to skip the cache and re-run inference.
     """
+    response, _ = await _run_disease_detection_for_case(
+        case_id=case_id,
+        db=db,
+        force_rerun=force_rerun,
+        conf_thres=conf_thres,
+        iou_thres=iou_thres,
+        persist_immediately=True,
+    )
+    return response
+
     logger.info("[Localize] POST /localize/%s (force_rerun=%s)", case_id, force_rerun)
 
     # ── Fetch case ───────────────────────────────────────────────────────────

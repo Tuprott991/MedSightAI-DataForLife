@@ -9,6 +9,7 @@ from app.services.ai_service import (
     retrieval_embedding_service,
     similarity_cam_service,
 )
+from app.services.disease_detection_service import disease_detection_service
 from app.services.llm_service import medgemma_service
 
 __all__ = [
@@ -18,5 +19,6 @@ __all__ = [
     "medsigclip_service",
     "retrieval_embedding_service",
     "similarity_cam_service",
+    "disease_detection_service",
     "medgemma_service"
 ]
