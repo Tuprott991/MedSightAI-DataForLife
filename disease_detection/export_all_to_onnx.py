@@ -25,7 +25,7 @@ def convert_one(weights_path: Path, img_size=640, batch_size=1):
         print(f"skip_exists={onnx_path}")
         return onnx_path
 
-    model = attempt_load(str(weights_path), map_location=torch.device("cpu"))
+    model = attempt_load(str(weights_path), device=torch.device("cpu"))
     gs = int(max(model.stride))
     img_size = [check_img_size(img_size, gs), check_img_size(img_size, gs)]
     img = torch.zeros(batch_size, 3, *img_size)
