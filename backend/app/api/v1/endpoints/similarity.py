@@ -100,12 +100,18 @@ async def search_similar_cases(
             similarity_scores = cached_scores[:request.top_k]
         else:
             existing_embedding = zilliz_service.get_by_case_id(request.case_id)
-            if existing_embedding and existing_embedding.get("img_emb"):
-                image_embedding = existing_embedding["img_emb"]
+            vector_field_name = zilliz_service.vector_field_name
+            if existing_embedding and existing_embedding.get(vector_field_name):
+                image_embedding = existing_embedding[vector_field_name]
             else:
                 image_bytes = s3_service.download_file(_extract_s3_key(case.image_path))
                 image_embedding = retrieval_embedding_service.generate_image_embedding(image_bytes)
-                zilliz_service.upsert_embedding(str(case.id), image_embedding)
+                zilliz_service.upsert_embedding(
+                    str(case.id),
+                    image_embedding,
+                    image_path=case.image_path,
+                    label=case.diagnosis or "unknown",
+                )
 
             primary_keys, similarity_scores = zilliz_service.search_similar_by_image(
                 image_embedding,
@@ -156,6 +162,8 @@ async def generate_embeddings(case_id: UUID, db: Session = Depends(get_db)):
         success = zilliz_service.upsert_embedding(
             case_id=str(case_id),
             img_embedding=image_embedding,
+            image_path=case.image_path,
+            label=case.diagnosis or "unknown",
         )
         if not success:
             raise HTTPException(status_code=500, detail="Failed to store embedding in Zilliz")

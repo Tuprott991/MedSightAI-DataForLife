@@ -65,6 +65,11 @@ class Settings(BaseSettings):
     ZILLIZ_CLOUD_API_KEY: Optional[str] = None
     ZILLIZ_COLLECTION_NAME: str = "med_vector"
     ZILLIZ_IMG_DIMENSION: int = 1024
+    ZILLIZ_VECTOR_FIELD_NAME: str = "img_emb"
+    ZILLIZ_PRIMARY_FIELD_NAME: str = "primary_key"
+    ZILLIZ_AUTO_ID: bool = False
+    ZILLIZ_IMAGE_PATH_FIELD_NAME: str = "image_path"
+    ZILLIZ_LABEL_FIELD_NAME: str = "label"
     
     # CORS
     BACKEND_CORS_ORIGINS: list = ["http://localhost:3000", "http://localhost:5173"]

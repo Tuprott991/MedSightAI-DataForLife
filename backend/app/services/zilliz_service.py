@@ -20,6 +20,11 @@ class ZillizService:
         self.base_url = settings.ZILLIZ_CLOUD_URI
         self.collection_name = settings.ZILLIZ_COLLECTION_NAME
         self.img_dimension = settings.ZILLIZ_IMG_DIMENSION
+        self.vector_field_name = settings.ZILLIZ_VECTOR_FIELD_NAME
+        self.primary_field_name = settings.ZILLIZ_PRIMARY_FIELD_NAME
+        self.auto_id = settings.ZILLIZ_AUTO_ID
+        self.image_path_field_name = settings.ZILLIZ_IMAGE_PATH_FIELD_NAME
+        self.label_field_name = settings.ZILLIZ_LABEL_FIELD_NAME
         self.headers = get_zilliz_headers()
 
     @staticmethod
@@ -64,23 +69,37 @@ class ZillizService:
             return data[0] if isinstance(data[0], list) else data
         return []
 
-    def upsert_embedding(self, case_id: str, img_embedding: List[float]) -> bool:
+    def upsert_embedding(
+        self,
+        case_id: str,
+        img_embedding: List[float],
+        *,
+        image_path: Optional[str] = None,
+        label: Optional[str] = None,
+    ) -> bool:
         if len(img_embedding) != self.img_dimension:
             raise ValueError(f"Image embedding must be {self.img_dimension} dimensions")
 
+        entity: Dict[str, Any] = {
+            self.vector_field_name: img_embedding,
+        }
+        if self.auto_id:
+            if image_path is not None:
+                entity[self.image_path_field_name] = image_path
+            if label is not None:
+                entity[self.label_field_name] = label
+        else:
+            entity[self.primary_field_name] = self._uuid_to_int(case_id)
+
         payload = {
             "collectionName": self.collection_name,
-            "data": [
-                {
-                    "primary_key": self._uuid_to_int(case_id),
-                    "img_emb": img_embedding,
-                }
-            ],
+            "data": [entity],
         }
+        path = "/v2/vectordb/entities/insert" if self.auto_id else "/v2/vectordb/entities/upsert"
         result = self._post(
-            "/v2/vectordb/entities/upsert",
+            path,
             payload,
-            action="Upsert embedding in Zilliz",
+            action="Insert embedding in Zilliz" if self.auto_id else "Upsert embedding in Zilliz",
         )
         return bool(result and result.get("code") == 0)
 
@@ -100,7 +119,7 @@ class ZillizService:
         payload = {
             "collectionName": self.collection_name,
             "data": [img_embedding],
-            "annsField": "img_emb",
+            "annsField": self.vector_field_name,
             "limit": limit,
             "outputFields": ["*"],
         }
@@ -116,7 +135,7 @@ class ZillizService:
             if not isinstance(item, dict):
                 continue
 
-            primary_key = item.get("id") or item.get("primary_key")
+            primary_key = item.get("id") or item.get(self.primary_field_name)
             if primary_key is None:
                 continue
             if exclude_primary_key is not None and primary_key == exclude_primary_key:
@@ -131,6 +150,9 @@ class ZillizService:
         return primary_keys, scores
 
     def get_by_case_id(self, case_id: str) -> Optional[Dict[str, Any]]:
+        if self.auto_id:
+            return None
+
         payload = {
             "collectionName": self.collection_name,
             "id": [self._uuid_to_int(case_id)],
@@ -148,10 +170,13 @@ class ZillizService:
         return data[0] if data else None
 
     def delete_by_case_id(self, case_id: str) -> bool:
+        if self.auto_id:
+            return False
+
         primary_key = self._uuid_to_int(case_id)
         payload = {
             "collectionName": self.collection_name,
-            "filter": f"primary_key in [{primary_key}]",
+            "filter": f"{self.primary_field_name} in [{primary_key}]",
         }
         result = self._post(
             "/v2/vectordb/entities/delete",
@@ -161,10 +186,13 @@ class ZillizService:
         return bool(result and result.get("code") == 0)
 
     def delete_batch(self, case_ids: List[str]) -> bool:
+        if self.auto_id:
+            return False
+
         primary_keys = ",".join(str(self._uuid_to_int(case_id)) for case_id in case_ids)
         payload = {
             "collectionName": self.collection_name,
-            "filter": f"primary_key in [{primary_keys}]",
+            "filter": f"{self.primary_field_name} in [{primary_keys}]",
         }
         result = self._post(
             "/v2/vectordb/entities/delete",

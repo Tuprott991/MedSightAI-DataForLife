@@ -248,6 +248,7 @@ def bootstrap_zilliz() -> None:
     api_key = env("ZILLIZ_CLOUD_API_KEY", "") or ""
     collection_name = env("ZILLIZ_COLLECTION_NAME", "med_vector")
     img_dim = int(env("ZILLIZ_IMG_DIMENSION", "1024"))
+    vector_field_name = env("ZILLIZ_VECTOR_FIELD_NAME", "img_emb")
 
     print(f"Checking Zilliz collection '{collection_name}'...")
     if zilliz_collection_exists(config["ZILLIZ_CLOUD_URI"], api_key, collection_name):
@@ -267,7 +268,7 @@ def bootstrap_zilliz() -> None:
                     "autoID": False,
                 },
                 {
-                    "fieldName": "img_emb",
+                    "fieldName": vector_field_name,
                     "dataType": "FloatVector",
                     "elementTypeParams": {
                         "dim": img_dim,
@@ -281,10 +282,10 @@ def bootstrap_zilliz() -> None:
                 "indexName": "primary_key_index",
             },
             {
-                "fieldName": "img_emb",
+                "fieldName": vector_field_name,
                 "metricType": "COSINE",
                 "indexType": "AUTOINDEX",
-                "indexName": "img_emb_index",
+                "indexName": f"{vector_field_name}_index",
             },
         ],
     }
